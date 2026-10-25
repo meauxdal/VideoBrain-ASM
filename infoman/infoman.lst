@@ -1,0 +1,4318 @@
+; Information Manager VB-1200 prototype, September 25/26, 1978.
+; MAME unidasm F8 syntax. Address and raw bytes retained.
+; Static analysis; DB outside confirmed data ranges may be untraced code.
+; This is a listing, not an assembler source. See ../README.md.
+
+; vb1200a_1000-17ff_9_25_78_51
+; SHA1 39c2821f73c86c3e368fe5429628672cfe594306
+
+; Cartridge signature AA 55; color 02; title 'INFO MANAGER'.
+1000: AA 55 02 00 01 2B 1D 13 DB   H'AA',H'55',H'02',H'00',H'01',H'2B',H'1D',H'13'
+1008: 00 29 11 2B 11 1B 0B 09 DB   H'00',H'29',H'11',H'2B',H'11',H'1B',H'0B',H'09'
+1010: 00 00                   DB   H'00',H'00'
+
+; Cartridge entry: initialize video and workspace, then peripheral setup.
+L1012:
+1012: 20 44                   LI   H'44'
+1014: 2A 08 F7                DCI  H'08F7'
+1017: 17                      ST
+1018: 2A 0F EA                DCI  H'0FEA'
+101B: 17                      ST
+101C: 20 94                   LI   H'94'
+101E: 2A 0F B9                DCI  H'0FB9'
+1021: 17                      ST
+1022: 20 F0                   LI   H'F0'
+1024: 2A 0F C2                DCI  H'0FC2'
+1027: 17                      ST
+1028: 20 41                   LI   H'41'
+102A: 2A 08 28                DCI  H'0828'
+102D: 17                      ST
+102E: 77                      LIS  H'07'
+102F: 2A 0F CB                DCI  H'0FCB'
+1032: 17                      ST
+1033: 70                      CLR
+1034: B1                      OUTS 1
+1035: 2A 0F DE                DCI  H'0FDE'
+1038: 17                      ST
+1039: 2A 0F E3                DCI  H'0FE3'
+103C: 17                      ST
+103D: 2A 0C 26                DCI  H'0C26'
+1040: 17                      ST
+
+; Initialize FLD/SORT/TOT selections at 1B0C..1B0E to FF (no field selected).
+1041: 18                      COM
+1042: 2A 1B 0C                DCI  H'1B0C'
+1045: 17                      ST
+1046: 17                      ST
+1047: 17                      ST
+1048: 13                      SL   1
+1049: 2A 1B EC                DCI  H'1BEC'
+104C: 17                      ST
+104D: 2A 1B 03                DCI  H'1B03'
+1050: 73                      LIS  H'03'
+1051: 17                      ST
+1052: 70                      CLR
+1053: 18                      COM
+1054: 17                      ST
+1055: 73                      LIS  H'03'
+1056: 2A 1B CE                DCI  H'1BCE'
+1059: 17                      ST
+105A: 28 3A F5                PI   H'3AF5'
+105D: 71                      LIS  H'01'
+105E: 2A 1B 0B                DCI  H'1B0B'
+1061: 17                      ST
+1062: 2A 10 A1                DCI  H'10A1'
+1065: 28 33 DD                PI   H'33DD'
+
+; Menu prefix checks: EN -> ENTER, ED -> EDIT, R -> REVIEW; trailing text ignored.
+L1068:
+1068: 2A 0C 01                DCI  H'0C01'
+106B: 16                      LM
+106C: 25 0B                   CI   H'0B'
+106E: 94 10                   BNZ  H'107F'
+1070: 16                      LM
+1071: 25 2B                   CI   H'2B'
+1073: 94 04                   BNZ  H'1078'
+1075: 29 10 AD                JMP  H'10AD'
+L1078:
+1078: 25 1F                   CI   H'1F'
+107A: 94 11                   BNZ  H'108C'
+107C: 29 11 E1                JMP  H'11E1'
+L107F:
+107F: 25 09                   CI   H'09'
+1081: 94 0A                   BNZ  H'108C'
+1083: 70                      CLR
+1084: 18                      COM
+1085: 2A 0C 26                DCI  H'0C26'
+1088: 17                      ST
+1089: 29 11 9D                JMP  H'119D'
+L108C:
+108C: 2A 10 A7                DCI  H'10A7'
+108F: 28 33 DD                PI   H'33DD'
+1092: 90 D5                   BR   H'1068'
+
+; Bitmap data; followed by six-byte input descriptors at 10A1 and 10A7.
+1094: FF 9F 9F 9F 81 81 FF 99 DB   H'FF',H'9F',H'9F',H'9F',H'81',H'81',H'FF',H'99'
+109C: 99 99 81 81 FF 3F 51 61 DB   H'99',H'99',H'81',H'81',H'FF',H'3F',H'51',H'61'
+10A4: 0C 01 06 3F 6D 11 0C 01 DB   H'0C',H'01',H'06',H'3F',H'6D',H'11',H'0C',H'01'
+10AC: 06                      DB   H'06'
+
+; EN menu path: clear field count, then collect field definitions.
+L10AD:
+10AD: 71                      LIS  H'01'
+10AE: 2A 1B CE                DCI  H'1BCE'
+10B1: 17                      ST
+10B2: 28 3A F5                PI   H'3AF5'
+10B5: 2A 11 7D                DCI  H'117D'
+10B8: 28 33 DD                PI   H'33DD'
+10BB: 70                      CLR
+10BC: 2A 18 0C                DCI  H'180C'
+10BF: 17                      ST
+10C0: 57                      LR   R7,A
+L10C1:
+10C1: 70                      CLR
+10C2: E7                      XS   R7
+10C3: 94 22                   BNZ  H'10E6'
+10C5: 71                      LIS  H'01'
+10C6: 2A 1B 0B                DCI  H'1B0B'
+10C9: 17                      ST
+L10CA:
+10CA: 2A 18 0C                DCI  H'180C'
+10CD: 16                      LM
+10CE: 25 13                   CI   H'13'
+10D0: 92 15                   BNC  H'10E6'
+10D2: 2A 18 0C                DCI  H'180C'
+10D5: 16                      LM
+10D6: 53                      LR   R3,A
+10D7: 28 31 E4                PI   H'31E4'
+10DA: 70                      CLR
+10DB: E7                      XS   R7
+10DC: 91 09                   BM   H'10E6'
+10DE: 2A 18 0C                DCI  H'180C'
+10E1: 28 39 1E                PI   H'391E'
+10E4: 90 E5                   BR   H'10CA'
+L10E6:
+10E6: 2A 18 AD                DCI  H'18AD'
+10E9: 20 19                   LI   H'19'
+10EB: 17                      ST
+10EC: 06                      LR   QU,A
+10ED: 73                      LIS  H'03'
+10EE: 17                      ST
+10EF: 07                      LR   QL,A
+10F0: 71                      LIS  H'01'
+10F1: 53                      LR   R3,A
+L10F2:
+10F2: 43                      LR   A,R3
+10F3: 1F                      INC
+10F4: 2A 18 0C                DCI  H'180C'
+10F7: 8D                      CM
+10F8: 92 1C                   BNC  H'1115'
+10FA: 28 11 89                PI   H'1189'
+10FD: 43                      LR   A,R3
+10FE: 24 FF                   AI   H'FF'
+1100: 2A 18 AD                DCI  H'18AD'
+1103: 8E                      ADC
+1104: 8E                      ADC
+1105: 16                      LM
+1106: 06                      LR   QU,A
+1107: 16                      LM
+1108: C4                      AS   R4
+1109: 07                      LR   QL,A
+110A: 02                      LR   A,QU
+110B: 19                      LNK
+110C: 06                      LR   QU,A
+110D: 17                      ST
+110E: 03                      LR   A,QL
+110F: 17                      ST
+1110: 43                      LR   A,R3
+1111: 1F                      INC
+1112: 53                      LR   R3,A
+1113: 90 DE                   BR   H'10F2'
+L1115:
+1115: 2A 18 0C                DCI  H'180C'
+1118: 70                      CLR
+1119: 8C                      XM
+111A: 84 3B                   BZ   H'1156'
+111C: 28 11 89                PI   H'1189'
+111F: 0F                      LR   DC,Q
+1120: 8E                      ADC
+1121: 11                      LR   H,DC
+1122: 2A 1B 00                DCI  H'1B00'
+1125: 0E                      LR   Q,DC
+1126: 28 22 BF                PI   H'22BF'
+1129: 82 04                   BC   H'112E'
+112B: 70                      CLR
+112C: 90 2A                   BR   H'1157'
+L112E:
+112E: 70                      CLR
+112F: 06                      LR   QU,A
+1130: 07                      LR   QL,A
+1131: 28 22 BF                PI   H'22BF'
+1134: 2A 19 03                DCI  H'1903'
+1137: 11                      LR   H,DC
+1138: 28 22 BF                PI   H'22BF'
+113B: 2A 18 FD                DCI  H'18FD'
+113E: 02                      LR   A,QU
+113F: 17                      ST
+1140: 03                      LR   A,QL
+1141: 17                      ST
+1142: 71                      LIS  H'01'
+1143: 2A 1B 0B                DCI  H'1B0B'
+1146: 17                      ST
+1147: 2A 11 83                DCI  H'1183'
+114A: 28 33 DD                PI   H'33DD'
+114D: 2A 0C 23                DCI  H'0C23'
+1150: 75                      LIS  H'05'
+1151: 8D                      CM
+1152: 84 13                   BZ   H'1166'
+1154: 90 06                   BR   H'115B'
+L1156:
+1156: 73                      LIS  H'03'
+L1157:
+1157: 5A                      LR   HU,A
+1158: 28 3F 2A                PI   H'3F2A'
+L115B:
+115B: 72                      LIS  H'02'
+115C: 2A 1B 0B                DCI  H'1B0B'
+115F: 17                      ST
+1160: 28 31 C5                PI   H'31C5'
+1163: 29 10 C1                JMP  H'10C1'
+L1166:
+1166: 28 3B D1                PI   H'3BD1'
+1169: 71                      LIS  H'01'
+116A: 2A 1B 0B                DCI  H'1B0B'
+116D: 17                      ST
+L116E:
+116E: 28 33 20                PI   H'3320'
+1171: 70                      CLR
+1172: E7                      XS   R7
+1173: 91 06                   BM   H'117A'
+1175: 28 3B 8C                PI   H'3B8C'
+1178: 90 F5                   BR   H'116E'
+L117A:
+117A: 29 12 1D                JMP  H'121D'
+
+; Six-byte input descriptors: NAME and LENGTH.
+117D: 3F 71 04 18 02 0A 3F 7E DB   H'3F',H'71',H'04',H'18',H'02',H'0A',H'3F',H'7E'
+1185: 09 0C 23 01             DB   H'09',H'0C',H'23',H'01'
+
+; Field length lookup: code 11 uses stored length; other types use 8 bytes.
+L1189:
+1189: 08                      LR   K,P
+118A: 43                      LR   A,R3
+118B: 24 FF                   AI   H'FF'
+118D: 2A 18 E9                DCI  H'18E9'
+1190: 8E                      ADC
+1191: 16                      LM
+1192: 25 11                   CI   H'11'
+1194: 78                      LIS  H'08'
+1195: 94 05                   BNZ  H'119B'
+1197: 20 EB                   LI   H'EB'
+1199: 8E                      ADC
+119A: 16                      LM
+L119B:
+119B: 54                      LR   R4,A
+119C: 0C                      PK
+
+; R menu path: record processing through interpreter requests at 11DB/11DE.
+L119D:
+119D: 72                      LIS  H'02'
+119E: 2A 1B CE                DCI  H'1BCE'
+11A1: 17                      ST
+11A2: 28 3A F5                PI   H'3AF5'
+11A5: 28 3B AF                PI   H'3BAF'
+11A8: 28 3B 49                PI   H'3B49'
+L11AB:
+11AB: 28 12 28                PI   H'1228'
+11AE: 2A 11 DB                DCI  H'11DB'
+11B1: 28 16 41                PI   H'1641'
+11B4: 94 11                   BNZ  H'11C6'
+11B6: 2A 0C 00                DCI  H'0C00'
+11B9: 70                      CLR
+11BA: 17                      ST
+11BB: 73                      LIS  H'03'
+11BC: 2A 1B 0B                DCI  H'1B0B'
+11BF: 17                      ST
+11C0: 2A 11 DE                DCI  H'11DE'
+11C3: 28 16 41                PI   H'1641'
+L11C6:
+11C6: 70                      CLR
+11C7: E7                      XS   R7
+11C8: 81 E2                   BP   H'11AB'
+L11CA:
+11CA: 73                      LIS  H'03'
+11CB: 2A 1B CE                DCI  H'1BCE'
+11CE: 17                      ST
+11CF: 28 3A F5                PI   H'3AF5'
+11D2: 29 10 12                JMP  H'1012'
+
+; Six-byte input descriptor; two three-byte interpreter requests follow.
+11D5: 3F 70 01 0C 01 0F 01 05 DB   H'3F',H'70',H'01',H'0C',H'01',H'0F',H'01',H'05'
+11DD: 00 01 05 01             DB   H'00',H'01',H'05',H'01'
+
+; ED menu path: record processing through interpreter requests at 1222/1225.
+L11E1:
+11E1: 70                      CLR
+11E2: 2A 1B CE                DCI  H'1BCE'
+11E5: 17                      ST
+11E6: 28 3A F5                PI   H'3AF5'
+11E9: 28 3B AF                PI   H'3BAF'
+11EC: 28 3B D1                PI   H'3BD1'
+11EF: 28 3B 49                PI   H'3B49'
+L11F2:
+11F2: 28 12 28                PI   H'1228'
+11F5: 2A 12 22                DCI  H'1222'
+11F8: 28 16 41                PI   H'1641'
+11FB: 94 11                   BNZ  H'120D'
+11FD: 2A 0C 00                DCI  H'0C00'
+1200: 70                      CLR
+1201: 17                      ST
+1202: 72                      LIS  H'02'
+1203: 2A 1B 0B                DCI  H'1B0B'
+1206: 17                      ST
+1207: 2A 12 25                DCI  H'1225'
+120A: 28 16 41                PI   H'1641'
+L120D:
+120D: 70                      CLR
+120E: E7                      XS   R7
+120F: 81 E2                   BP   H'11F2'
+L1211:
+1211: 2A 1B 1B                DCI  H'1B1B'
+1214: 70                      CLR
+1215: 8C                      XM
+1216: 91 06                   BM   H'121D'
+1218: 28 3B 40                PI   H'3B40'
+121B: 90 F5                   BR   H'1211'
+L121D:
+121D: 28 3B E2                PI   H'3BE2'
+1220: 90 A9                   BR   H'11CA'
+
+; Three-byte interpreter requests.
+1222: 10 05 00 10 05 01       DB   H'10',H'05',H'00',H'10',H'05',H'01'
+L1228:
+1228: 08                      LR   K,P
+1229: 28 40 A9                PI   H'40A9'
+122C: 71                      LIS  H'01'
+122D: 2A 1B 0B                DCI  H'1B0B'
+1230: 17                      ST
+1231: 2A 11 D5                DCI  H'11D5'
+1234: 28 33 DD                PI   H'33DD'
+1237: 2A 0C 00                DCI  H'0C00'
+123A: 70                      CLR
+123B: 17                      ST
+123C: 29 15 D6                JMP  H'15D6'
+
+; TOTAL report: requires TOT field at 1B0E. SORT at 1B0D enables per-key counts/sums and grand total.
+L123F:
+123F: 73                      LIS  H'03'
+1240: 2A 1B 0B                DCI  H'1B0B'
+1243: 17                      ST
+1244: 2A 1B 0E                DCI  H'1B0E'
+1247: 70                      CLR
+1248: 8C                      XM
+1249: 81 04                   BP   H'124E'
+124B: 29 12 EE                JMP  H'12EE'
+L124E:
+124E: 2A 1B 0E                DCI  H'1B0E'
+1251: 16                      LM
+1252: 2A 18 0D                DCI  H'180D'
+1255: 13                      SL   1
+1256: 13                      SL   1
+1257: 8E                      ADC
+1258: 8E                      ADC
+1259: 11                      LR   H,DC
+125A: 2A 13 03                DCI  H'1303'
+125D: 28 33 F1                PI   H'33F1'
+1260: 70                      CLR
+1261: 2A 1B 0D                DCI  H'1B0D'
+1264: 8C                      XM
+1265: 91 70                   BM   H'12D6'
+1267: 2A 18 0D                DCI  H'180D'
+126A: 13                      SL   1
+126B: 13                      SL   1
+126C: 8E                      ADC
+126D: 8E                      ADC
+126E: 11                      LR   H,DC
+126F: 2A 13 07                DCI  H'1307'
+1272: 28 33 F1                PI   H'33F1'
+1275: 2A 1B 0E                DCI  H'1B0E'
+1278: 16                      LM
+1279: 2A 18 E9                DCI  H'18E9'
+127C: 8E                      ADC
+127D: 16                      LM
+127E: 2A 0C 24                DCI  H'0C24'
+1281: 17                      ST
+1282: 70                      CLR
+1283: 56                      LR   R6,A
+
+; Report groups in slot/first-encounter order; stop at empty key or ten slots. No key ordering pass.
+L1284:
+1284: 7A                      LIS  H'0A'
+1285: E6                      XS   R6
+1286: 84 42                   BZ   H'12C9'
+1288: 46                      LR   A,R6
+1289: 2A 1B 24                DCI  H'1B24'
+128C: 13                      SL   1
+128D: 13                      SL   1
+128E: 13                      SL   1
+128F: 8E                      ADC
+1290: 70                      CLR
+1291: 8C                      XM
+1292: 84 36                   BZ   H'12C9'
+1294: 20 FF                   LI   H'FF'
+1296: 8E                      ADC
+1297: 11                      LR   H,DC
+1298: 2A 13 0B                DCI  H'130B'
+129B: 28 33 F1                PI   H'33F1'
+129E: 46                      LR   A,R6
+129F: 2A 1B 74                DCI  H'1B74'
+12A2: 8E                      ADC
+12A3: 16                      LM
+12A4: 50                      LR   R0,A
+12A5: 2A 1B DC                DCI  H'1BDC'
+12A8: 28 38 39                PI   H'3839'
+12AB: 2A 12 F1                DCI  H'12F1'
+12AE: 28 33 DD                PI   H'33DD'
+12B1: 46                      LR   A,R6
+12B2: 13                      SL   1
+12B3: 13                      SL   1
+12B4: 13                      SL   1
+12B5: 2A 1B 7E                DCI  H'1B7E'
+12B8: 8E                      ADC
+12B9: 7F                      LIS  H'0F'
+12BA: 50                      LR   R0,A
+12BB: 28 3A 77                PI   H'3A77'
+12BE: 2A 12 F7                DCI  H'12F7'
+12C1: 28 33 DD                PI   H'33DD'
+12C4: 46                      LR   A,R6
+12C5: 1F                      INC
+12C6: 56                      LR   R6,A
+12C7: 90 BC                   BR   H'1284'
+L12C9:
+12C9: 2A 1B 1C                DCI  H'1B1C'
+12CC: 7F                      LIS  H'0F'
+12CD: 50                      LR   R0,A
+12CE: 28 3A 77                PI   H'3A77'
+12D1: 2A 12 FD                DCI  H'12FD'
+12D4: 90 16                   BR   H'12EB'
+L12D6:
+12D6: 16                      LM
+12D7: 2A 18 E9                DCI  H'18E9'
+12DA: 8E                      ADC
+12DB: 16                      LM
+12DC: 2A 0C 24                DCI  H'0C24'
+12DF: 17                      ST
+12E0: 2A 1B 1C                DCI  H'1B1C'
+12E3: 7F                      LIS  H'0F'
+12E4: 50                      LR   R0,A
+12E5: 28 3A 77                PI   H'3A77'
+12E8: 2A 12 F7                DCI  H'12F7'
+L12EB:
+12EB: 28 33 DD                PI   H'33DD'
+L12EE:
+12EE: 29 33 1D                JMP  H'331D'
+
+; Input/display descriptors; not F8 instructions.
+12F1: 3F D9 06 1B DC 03 3F DF DB   H'3F',H'D9',H'06',H'1B',H'DC',H'03',H'3F',H'DF'
+12F9: 11 1B DC 0F 3F E6 11 1B DB   H'11',H'1B',H'DC',H'0F',H'3F',H'E6',H'11',H'1B'
+1301: DC 0F 3F B9 12 08 3F C6 DB   H'DC',H'0F',H'3F',H'B9',H'12',H'08',H'3F',H'C6'
+1309: 12 08 3F D2 07 08       DB   H'12',H'08',H'3F',H'D2',H'07',H'08'
+
+; REVIEW copy/advance accounting: requires TOT; add numeric field to grand total, then optional SORT bucket.
+L130F:
+130F: 2A 1B 0E                DCI  H'1B0E'
+1312: 70                      CLR
+1313: 8C                      XM
+1314: 91 75                   BM   H'138A'
+1316: 2A 1B 0E                DCI  H'1B0E'
+1319: 16                      LM
+131A: 50                      LR   R0,A
+131B: 28 39 3A                PI   H'393A'
+131E: 2C                      XDC
+131F: 2A 1B 1C                DCI  H'1B1C'
+1322: 28 39 97                PI   H'3997'
+1325: 70                      CLR
+1326: 2A 1B 0D                DCI  H'1B0D'
+1329: 8C                      XM
+132A: 91 5F                   BM   H'138A'
+132C: 2A 1B 24                DCI  H'1B24'
+132F: 2C                      XDC
+1330: 2A 1B 0D                DCI  H'1B0D'
+1333: 16                      LM
+1334: 50                      LR   R0,A
+1335: 28 39 3A                PI   H'393A'
+
+; Search nine named SORT buckets by exact eight-byte key equality; field width is not consulted.
+1338: 79                      LIS  H'09'
+1339: 50                      LR   R0,A
+133A: 28 14 BA                PI   H'14BA'
+133D: 84 30                   BZ   H'136E'
+133F: 79                      LIS  H'09'
+1340: 50                      LR   R0,A
+1341: 2A 1B 24                DCI  H'1B24'
+
+; Find first unused key slot. If all nine are occupied, use slot 9 (OTHER).
+L1344:
+1344: 70                      CLR
+1345: 8C                      XM
+1346: 84 09                   BZ   H'1350'
+1348: 77                      LIS  H'07'
+1349: 8E                      ADC
+134A: 30                      DS   R0
+134B: 94 02                   BNZ  H'134E'
+134D: 16                      LM
+L134E:
+134E: 94 F5                   BNZ  H'1344'
+L1350:
+1350: 40                      LR   A,R0
+1351: 18                      COM
+1352: 24 0A                   AI   H'0A'
+1354: 51                      LR   R1,A
+1355: 20 FF                   LI   H'FF'
+1357: 8E                      ADC
+1358: 2C                      XDC
+1359: 79                      LIS  H'09'
+135A: E1                      XS   R1
+135B: 84 12                   BZ   H'136E'
+135D: 2A 1B 0D                DCI  H'1B0D'
+1360: 16                      LM
+1361: 50                      LR   R0,A
+1362: 28 39 3A                PI   H'393A'
+1365: 78                      LIS  H'08'
+1366: 50                      LR   R0,A
+L1367:
+1367: 16                      LM
+1368: 2C                      XDC
+1369: 17                      ST
+136A: 2C                      XDC
+136B: 30                      DS   R0
+136C: 94 FA                   BNZ  H'1367'
+
+; Accumulate group numeric sum at 1B7E+8*index and increment byte count at 1B74+index.
+L136E:
+136E: 2A 1B 0E                DCI  H'1B0E'
+1371: 16                      LM
+1372: 50                      LR   R0,A
+1373: 28 39 3A                PI   H'393A'
+1376: 2C                      XDC
+1377: 41                      LR   A,R1
+1378: 2A 1B 7E                DCI  H'1B7E'
+137B: 13                      SL   1
+137C: 13                      SL   1
+137D: 13                      SL   1
+137E: 8E                      ADC
+137F: 28 39 97                PI   H'3997'
+1382: 41                      LR   A,R1
+1383: 2A 1B 74                DCI  H'1B74'
+1386: 8E                      ADC
+1387: 28 39 1E                PI   H'391E'
+L138A:
+138A: 29 15 D6                JMP  H'15D6'
+
+; FLD setup: push slot 0 for the shared field-name resolver (1B0C).
+L138D:
+138D: 28 38 C6                PI   H'38C6'
+1390: 70                      CLR
+1391: 90 0B                   BR   H'139D'
+
+; SORT setup: push slot 1 for the shared field-name resolver (1B0D). REVIEW grammar requires SORT=fieldname.
+L1393:
+1393: 28 38 C6                PI   H'38C6'
+1396: 71                      LIS  H'01'
+1397: 90 05                   BR   H'139D'
+L1399:
+1399: 28 38 C6                PI   H'38C6'
+139C: 72                      LIS  H'02'
+L139D:
+139D: 17                      ST
+139E: 90 6A                   BR   H'1409'
+
+; Resolve an exact field name against eight-byte names at 180D; reject unknown names.
+L13A0:
+13A0: 2A 18 0C                DCI  H'180C'
+13A3: 16                      LM
+13A4: 50                      LR   R0,A
+13A5: 2A 18 0D                DCI  H'180D'
+13A8: 2C                      XDC
+13A9: 2A 0C 10                DCI  H'0C10'
+13AC: 28 14 BA                PI   H'14BA'
+13AF: 84 09                   BZ   H'13B9'
+L13B1:
+13B1: 71                      LIS  H'01'
+13B2: 57                      LR   R7,A
+13B3: 65                      LISU 5
+13B4: 68                      LISL 0
+13B5: 72                      LIS  H'02'
+13B6: 5C                      LR   S,A
+13B7: 90 51                   BR   H'1409'
+
+; Pop target slot; store zero-based field index in 1B0C + slot. FLD has no type restriction.
+L13B9:
+13B9: 28 38 DD                PI   H'38DD'
+13BC: 16                      LM
+13BD: 16                      LM
+13BE: 50                      LR   R0,A
+13BF: 2A 1B 0C                DCI  H'1B0C'
+13C2: 8E                      ADC
+13C3: 41                      LR   A,R1
+13C4: 17                      ST
+13C5: 2A 18 E9                DCI  H'18E9'
+13C8: 41                      LR   A,R1
+13C9: 8E                      ADC
+13CA: 40                      LR   A,R0
+
+; SORT slot 1 requires A/text (glyph 11); reject numeric keys and reset selection to FF.
+13CB: 25 01                   CI   H'01'
+13CD: 94 2A                   BNZ  H'13F8'
+13CF: 16                      LM
+13D0: 25 11                   CI   H'11'
+13D2: 84 0B                   BZ   H'13DE'
+L13D4:
+13D4: 2A 1B 0C                DCI  H'1B0C'
+13D7: 40                      LR   A,R0
+13D8: 8E                      ADC
+13D9: 20 FF                   LI   H'FF'
+13DB: 17                      ST
+13DC: 90 D4                   BR   H'13B1'
+
+; Reset 170-byte group workspace: ten 8-byte keys, ten byte counts, ten 8-byte sums; label final key OTHER.
+L13DE:
+13DE: 20 AA                   LI   H'AA'
+13E0: 50                      LR   R0,A
+13E1: 2A 1B 24                DCI  H'1B24'
+13E4: 28 39 86                PI   H'3986'
+13E7: 2A 1B 6C                DCI  H'1B6C'
+13EA: 20 13                   LI   H'13'
+13EC: 17                      ST
+13ED: 77                      LIS  H'07'
+13EE: 17                      ST
+13EF: 20 19                   LI   H'19'
+13F1: 17                      ST
+13F2: 7B                      LIS  H'0B'
+13F3: 17                      ST
+13F4: 79                      LIS  H'09'
+13F5: 17                      ST
+13F6: 90 12                   BR   H'1409'
+L13F8:
+13F8: 25 02                   CI   H'02'
+13FA: 94 0E                   BNZ  H'1409'
+13FC: 16                      LM
+13FD: 25 11                   CI   H'11'
+13FF: 84 D4                   BZ   H'13D4'
+1401: 78                      LIS  H'08'
+1402: 50                      LR   R0,A
+1403: 2A 1B 1C                DCI  H'1B1C'
+1406: 28 39 86                PI   H'3986'
+L1409:
+1409: 29 17 1E                JMP  H'171E'
+L140C:
+140C: 70                      CLR
+140D: 18                      COM
+140E: 57                      LR   R7,A
+140F: 90 F9                   BR   H'1409'
+L1411:
+1411: 70                      CLR
+1412: 18                      COM
+1413: 90 02                   BR   H'1416'
+L1415:
+1415: 70                      CLR
+L1416:
+1416: 2A 1B 1A                DCI  H'1B1A'
+1419: 17                      ST
+141A: 29 32 67                JMP  H'3267'
+L141D:
+141D: 90 14                   BR   H'1432'
+L141F:
+141F: 73                      LIS  H'03'
+1420: 90 0D                   BR   H'142E'
+
+; DESC: set processing mode 1B0F = 0; 3267 displays the database definition.
+L1422:
+1422: 70                      CLR
+1423: 90 0A                   BR   H'142E'
+L1425:
+1425: 7C                      LIS  H'0C'
+1426: 50                      LR   R0,A
+1427: 2A 1B 0F                DCI  H'1B0F'
+142A: 28 39 86                PI   H'3986'
+142D: 71                      LIS  H'01'
+L142E:
+142E: 2A 1B 0F                DCI  H'1B0F'
+L1431:
+1431: 17                      ST
+L1432:
+1432: 90 1E                   BR   H'1451'
+
+; ALL selection: no initial advance (1B10=0), unlimited count (1B11=7F).
+L1434:
+1434: 70                      CLR
+1435: 2A 1B 10                DCI  H'1B10'
+1438: 17                      ST
+1439: 20 7F                   LI   H'7F'
+143B: 90 F5                   BR   H'1431'
+L143D:
+143D: 2A 1B 10                DCI  H'1B10'
+1440: 70                      CLR
+1441: E6                      XS   R6
+1442: 94 03                   BNZ  H'1446'
+1444: 90 05                   BR   H'144A'
+L1446:
+1446: 25 01                   CI   H'01'
+1448: 94 04                   BNZ  H'144D'
+L144A:
+144A: 17                      ST
+144B: 90 04                   BR   H'1450'
+L144D:
+144D: 71                      LIS  H'01'
+144E: 17                      ST
+144F: 46                      LR   A,R6
+L1450:
+1450: 17                      ST
+L1451:
+1451: 70                      CLR
+1452: 57                      LR   R7,A
+1453: 29 17 1E                JMP  H'171E'
+
+; Bare PRINT/DELETE selection: 1B10=1, 1B11=1; handlers interpret these differently.
+L1456:
+1456: 2A 1B 10                DCI  H'1B10'
+1459: 71                      LIS  H'01'
+145A: 90 EF                   BR   H'144A'
+L145C:
+145C: 2A 18 0C                DCI  H'180C'
+145F: 16                      LM
+1460: 50                      LR   R0,A
+1461: 2A 18 0D                DCI  H'180D'
+1464: 2C                      XDC
+1465: 2A 0C 10                DCI  H'0C10'
+1468: 28 14 BA                PI   H'14BA'
+146B: 84 04                   BZ   H'1470'
+146D: 29 13 B1                JMP  H'13B1'
+L1470:
+1470: 2A 1B 10                DCI  H'1B10'
+1473: 17                      ST
+1474: 72                      LIS  H'02'
+1475: 2A 1B 0F                DCI  H'1B0F'
+L1478:
+1478: 17                      ST
+L1479:
+1479: 90 D7                   BR   H'1451'
+L147B:
+147B: 2A 0C 10                DCI  H'0C10'
+147E: 2C                      XDC
+L147F:
+147F: 2A 1B 12                DCI  H'1B12'
+1482: 16                      LM
+1483: 25 06                   CI   H'06'
+1485: 92 11                   BNC  H'1497'
+1487: 8E                      ADC
+1488: 2C                      XDC
+1489: 70                      CLR
+148A: 8C                      XM
+148B: 2C                      XDC
+148C: 84 0A                   BZ   H'1497'
+148E: 17                      ST
+148F: 2A 1B 12                DCI  H'1B12'
+1492: 28 39 1E                PI   H'391E'
+1495: 90 E9                   BR   H'147F'
+L1497:
+1497: 90 E1                   BR   H'1479'
+L1499:
+1499: 70                      CLR
+149A: 2A 1B 12                DCI  H'1B12'
+L149D:
+149D: 90 DA                   BR   H'1478'
+L149F:
+149F: 2A 1B 12                DCI  H'1B12'
+14A2: 16                      LM
+14A3: 25 06                   CI   H'06'
+14A5: 92 0B                   BNC  H'14B1'
+14A7: 8E                      ADC
+14A8: 20 3A                   LI   H'3A'
+14AA: 17                      ST
+14AB: 2A 1B 12                DCI  H'1B12'
+14AE: 28 39 1E                PI   H'391E'
+L14B1:
+14B1: 90 E5                   BR   H'1497'
+L14B3:
+14B3: 70                      CLR
+14B4: 18                      COM
+14B5: 2A 1B 11                DCI  H'1B11'
+14B8: 90 E4                   BR   H'149D'
+L14BA:
+14BA: 08                      LR   K,P
+14BB: 28 40 A9                PI   H'40A9'
+14BE: 0E                      LR   Q,DC
+14BF: 2C                      XDC
+14C0: 11                      LR   H,DC
+14C1: 70                      CLR
+14C2: 51                      LR   R1,A
+L14C3:
+14C3: 30                      DS   R0
+14C4: 92 26                   BNC  H'14EB'
+14C6: 78                      LIS  H'08'
+14C7: 52                      LR   R2,A
+14C8: 10                      LR   DC,H
+14C9: 2C                      XDC
+14CA: 0F                      LR   DC,Q
+L14CB:
+14CB: 16                      LM
+14CC: 2C                      XDC
+14CD: 8D                      CM
+14CE: 2C                      XDC
+14CF: 94 04                   BNZ  H'14D4'
+14D1: 32                      DS   R2
+14D2: 94 F8                   BNZ  H'14CB'
+L14D4:
+14D4: 70                      CLR
+14D5: E2                      XS   R2
+14D6: 94 08                   BNZ  H'14DF'
+14D8: 28 40 BC                PI   H'40BC'
+14DB: 70                      CLR
+14DC: FC                      NS   S
+14DD: 41                      LR   A,R1
+14DE: 0C                      PK
+L14DF:
+14DF: 41                      LR   A,R1
+14E0: 1F                      INC
+14E1: 51                      LR   R1,A
+14E2: 10                      LR   DC,H
+14E3: 78                      LIS  H'08'
+14E4: 8E                      ADC
+14E5: 11                      LR   H,DC
+14E6: 28 39 48                PI   H'3948'
+14E9: 90 D9                   BR   H'14C3'
+L14EB:
+14EB: 29 15 CB                JMP  H'15CB'
+
+; EDIT ADD: copy current buffer, enter/write additions without advancing source. EOF skips loop.
+L14EE:
+14EE: 2A 1B 1B                DCI  H'1B1B'
+14F1: 70                      CLR
+14F2: 8C                      XM
+14F3: 91 0E                   BM   H'1502'
+L14F5:
+14F5: 28 3B 8C                PI   H'3B8C'
+14F8: 71                      LIS  H'01'
+14F9: 2A 1B 0B                DCI  H'1B0B'
+14FC: 17                      ST
+14FD: 28 33 20                PI   H'3320'
+1500: 81 F4                   BP   H'14F5'
+L1502:
+1502: 90 AE                   BR   H'14B1'
+
+; EDIT DELETE: numeric count = 1B11 - 1B10 + 1; discard by reading without writing.
+L1504:
+1504: 33                      DS   R3
+1505: 2A 1B 0B                DCI  H'1B0B'
+1508: 17                      ST
+1509: 2A 1B 0F                DCI  H'1B0F'
+150C: 16                      LM
+150D: 25 01                   CI   H'01'
+150F: 94 30                   BNZ  H'1540'
+1511: 2A 1B 10                DCI  H'1B10'
+1514: 16                      LM
+1515: 18                      COM
+1516: 24 02                   AI   H'02'
+1518: 88                      AM
+1519: 2A 1B 10                DCI  H'1B10'
+151C: 17                      ST
+151D: 81 09                   BP   H'1527'
+151F: 2A 1B 1B                DCI  H'1B1B'
+1522: 70                      CLR
+1523: 18                      COM
+1524: 17                      ST
+1525: 90 18                   BR   H'153E'
+L1527:
+1527: 2A 1B 10                DCI  H'1B10'
+152A: 28 39 22                PI   H'3922'
+152D: 92 10                   BNC  H'153E'
+152F: 2A 1B 1B                DCI  H'1B1B'
+1532: 70                      CLR
+1533: 8C                      XM
+1534: 91 09                   BM   H'153E'
+1536: 28 33 20                PI   H'3320'
+1539: 28 3B 49                PI   H'3B49'
+153C: 90 EA                   BR   H'1527'
+L153E:
+153E: 90 26                   BR   H'1565'
+L1540:
+1540: 2A 1B 1B                DCI  H'1B1B'
+1543: 70                      CLR
+1544: 8C                      XM
+1545: 91 0B                   BM   H'1551'
+1547: 28 15 AC                PI   H'15AC'
+154A: 84 0D                   BZ   H'1558'
+154C: 28 3B 40                PI   H'3B40'
+154F: 90 F0                   BR   H'1540'
+L1551:
+1551: 71                      LIS  H'01'
+1552: 5A                      LR   HU,A
+1553: 28 3F 2A                PI   H'3F2A'
+1556: 90 0E                   BR   H'1565'
+L1558:
+1558: 28 33 20                PI   H'3320'
+155B: 28 3B 49                PI   H'3B49'
+155E: 2A 1B 11                DCI  H'1B11'
+1561: 70                      CLR
+1562: 8C                      XM
+1563: 94 DC                   BNZ  H'1540'
+L1565:
+1565: 90 9C                   BR   H'1502'
+
+; EDIT REPLACE: input mode 1 clears/re-enters current record; write deferred until copy/advance.
+L1567:
+1567: 71                      LIS  H'01'
+1568: 2A 1B 0B                DCI  H'1B0B'
+156B: 17                      ST
+156C: 28 33 20                PI   H'3320'
+L156F:
+156F: 90 F5                   BR   H'1565'
+
+; EDIT MERGE/M: copy current and remaining source records via 3B40; no output end marker yet.
+L1571:
+1571: 2A 1B 1B                DCI  H'1B1B'
+1574: 70                      CLR
+1575: 8C                      XM
+1576: 91 06                   BM   H'157D'
+1578: 28 3B 40                PI   H'3B40'
+157B: 90 F5                   BR   H'1571'
+
+; MERGE pause: set mode bit 0 and reinitialize Expander; display REWIND / KEY NEXT.
+L157D:
+157D: 2A 1B CE                DCI  H'1BCE'
+1580: 0E                      LR   Q,DC
+1581: 71                      LIS  H'01'
+1582: 8B                      OM
+1583: 0F                      LR   DC,Q
+1584: 17                      ST
+1585: 28 3A F5                PI   H'3AF5'
+1588: 72                      LIS  H'02'
+1589: 5A                      LR   HU,A
+158A: 28 3F 2A                PI   H'3F2A'
+
+; Wait for NEXT key code (43/44). Operator must prepare the next input; no automatic rewind here.
+L158D:
+158D: 28 37 E3                PI   H'37E3'
+1590: 84 FC                   BZ   H'158D'
+1592: 24 BD                   AI   H'BD'
+1594: 25 01                   CI   H'01'
+1596: 92 F6                   BNC  H'158D'
+
+; Resume mode, read replacement definition and first record, then return to command grammar. No schema comparison/header write.
+1598: 2A 1B CE                DCI  H'1BCE'
+159B: 0E                      LR   Q,DC
+159C: 20 FE                   LI   H'FE'
+159E: 8A                      NM
+159F: 0F                      LR   DC,Q
+15A0: 17                      ST
+15A1: 28 3A F5                PI   H'3AF5'
+15A4: 28 3B AF                PI   H'3BAF'
+15A7: 28 3B 49                PI   H'3B49'
+15AA: 90 C4                   BR   H'156F'
+L15AC:
+15AC: 08                      LR   K,P
+15AD: 28 40 A9                PI   H'40A9'
+15B0: 2A 1B 10                DCI  H'1B10'
+15B3: 16                      LM
+15B4: 50                      LR   R0,A
+15B5: 28 39 3A                PI   H'393A'
+15B8: 2C                      XDC
+15B9: 2A 1B 12                DCI  H'1B12'
+15BC: 16                      LM
+15BD: 50                      LR   R0,A
+L15BE:
+15BE: 30                      DS   R0
+15BF: 92 16                   BNC  H'15D6'
+15C1: 16                      LM
+15C2: 2C                      XDC
+15C3: 8D                      CM
+15C4: 2C                      XDC
+15C5: 84 0B                   BZ   H'15D1'
+15C7: 25 3A                   CI   H'3A'
+15C9: 84 07                   BZ   H'15D1'
+L15CB:
+15CB: 28 40 BC                PI   H'40BC'
+15CE: 70                      CLR
+15CF: 18                      COM
+15D0: 0C                      PK
+L15D1:
+15D1: 28 39 48                PI   H'3948'
+15D4: 90 E9                   BR   H'15BE'
+L15D6:
+15D6: 28 40 BC                PI   H'40BC'
+15D9: 70                      CLR
+15DA: FC                      NS   S
+15DB: 0C                      PK
+L15DC:
+15DC: 46                      LR   A,R6
+15DD: 50                      LR   R0,A
+15DE: 28 39 3A                PI   H'393A'
+15E1: 20 FF                   LI   H'FF'
+15E3: 90 25                   BR   H'1609'
+L15E5:
+15E5: 2A 0C 22                DCI  H'0C22'
+15E8: 16                      LM
+15E9: 53                      LR   R3,A
+15EA: 90 08                   BR   H'15F3'
+L15EC:
+15EC: 70                      CLR
+15ED: 53                      LR   R3,A
+15EE: 28 16 1A                PI   H'161A'
+15F1: 70                      CLR
+15F2: 53                      LR   R3,A
+L15F3:
+15F3: 28 16 1A                PI   H'161A'
+L15F6:
+15F6: 29 17 1E                JMP  H'171E'
+L15F9:
+15F9: 46                      LR   A,R6
+15FA: 50                      LR   R0,A
+15FB: 28 39 3A                PI   H'393A'
+15FE: 77                      LIS  H'07'
+15FF: 8E                      ADC
+1600: 0E                      LR   Q,DC
+1601: 2A 0C 22                DCI  H'0C22'
+1604: 16                      LM
+1605: 15                      SL   4
+L1606:
+1606: 0F                      LR   DC,Q
+1607: 88                      AM
+1608: 0F                      LR   DC,Q
+L1609:
+1609: 17                      ST
+160A: 90 EB                   BR   H'15F6'
+L160C:
+160C: 46                      LR   A,R6
+160D: 50                      LR   R0,A
+160E: 28 39 3A                PI   H'393A'
+1611: 77                      LIS  H'07'
+1612: 8E                      ADC
+1613: 0E                      LR   Q,DC
+1614: 2A 0C 22                DCI  H'0C22'
+1617: 16                      LM
+1618: 90 ED                   BR   H'1606'
+L161A:
+161A: 08                      LR   K,P
+161B: 28 40 A9                PI   H'40A9'
+161E: 46                      LR   A,R6
+161F: 50                      LR   R0,A
+1620: 28 39 3A                PI   H'393A'
+1623: 77                      LIS  H'07'
+1624: 50                      LR   R0,A
+1625: 8E                      ADC
+1626: 11                      LR   H,DC
+L1627:
+1627: 10                      LR   DC,H
+1628: 16                      LM
+1629: 14                      SR   4
+162A: 54                      LR   R4,A
+162B: 10                      LR   DC,H
+162C: 16                      LM
+162D: 15                      SL   4
+162E: C3                      AS   R3
+162F: 10                      LR   DC,H
+1630: 17                      ST
+1631: 44                      LR   A,R4
+1632: 53                      LR   R3,A
+1633: 28 39 48                PI   H'3948'
+1636: 10                      LR   DC,H
+1637: 20 FF                   LI   H'FF'
+1639: 8E                      ADC
+163A: 11                      LR   H,DC
+163B: 30                      DS   R0
+163C: 94 EA                   BNZ  H'1627'
+163E: 29 15 D6                JMP  H'15D6'
+
+; Interpret table entries; dispatch through 3000 and 16F9.
+L1641:
+1641: 08                      LR   K,P
+1642: 28 38 F4                PI   H'38F4'
+1645: 16                      LM
+1646: 51                      LR   R1,A
+1647: 16                      LM
+1648: 53                      LR   R3,A
+1649: 16                      LM
+164A: 65                      LISU 5
+164B: 68                      LISL 0
+164C: 5C                      LR   S,A
+164D: 28 17 41                PI   H'1741'
+L1650:
+1650: 71                      LIS  H'01'
+1651: F3                      NS   R3
+1652: 84 17                   BZ   H'166A'
+1654: 10                      LR   DC,H
+1655: 16                      LM
+1656: 54                      LR   R4,A
+1657: 21 80                   NI   H'80'
+1659: 94 04                   BNZ  H'165E'
+165B: 29 16 C3                JMP  H'16C3'
+L165E:
+165E: 28 38 C6                PI   H'38C6'
+1661: 41                      LR   A,R1
+1662: 17                      ST
+1663: 44                      LR   A,R4
+1664: 21 7F                   NI   H'7F'
+1666: 51                      LR   R1,A
+1667: 28 17 41                PI   H'1741'
+L166A:
+166A: 71                      LIS  H'01'
+166B: F3                      NS   R3
+166C: 94 2E                   BNZ  H'169B'
+166E: 72                      LIS  H'02'
+166F: F3                      NS   R3
+1670: 84 0F                   BZ   H'1680'
+1672: 29 16 FD                JMP  H'16FD'
+L1675:
+1675: 84 28                   BZ   H'169E'
+1677: 43                      LR   A,R3
+1678: 22 01                   OI   H'01'
+167A: 53                      LR   R3,A
+167B: 28 17 41                PI   H'1741'
+167E: 90 1C                   BR   H'169B'
+L1680:
+1680: 10                      LR   DC,H
+1681: 8D                      CM
+1682: 16                      LM
+1683: 21 80                   NI   H'80'
+1685: 84 05                   BZ   H'168B'
+1687: 41                      LR   A,R1
+1688: 52                      LR   R2,A
+1689: 90 26                   BR   H'16B0'
+L168B:
+168B: 20 80                   LI   H'80'
+168D: 8A                      NM
+168E: 94 0F                   BNZ  H'169E'
+1690: 41                      LR   A,R1
+1691: 1F                      INC
+1692: 51                      LR   R1,A
+1693: 10                      LR   DC,H
+1694: 73                      LIS  H'03'
+1695: 8E                      ADC
+1696: 11                      LR   H,DC
+1697: 43                      LR   A,R3
+1698: 22 01                   OI   H'01'
+169A: 53                      LR   R3,A
+L169B:
+169B: 29 16 50                JMP  H'1650'
+L169E:
+169E: 28 38 DD                PI   H'38DD'
+16A1: 84 0A                   BZ   H'16AC'
+16A3: 8D                      CM
+16A4: 16                      LM
+16A5: 51                      LR   R1,A
+16A6: 28 17 41                PI   H'1741'
+16A9: 29 16 50                JMP  H'1650'
+L16AC:
+16AC: 70                      CLR
+16AD: 06                      LR   QU,A
+16AE: 90 0D                   BR   H'16BC'
+L16B0:
+16B0: 73                      LIS  H'03'
+16B1: 5A                      LR   HU,A
+16B2: 28 3F 2A                PI   H'3F2A'
+L16B5:
+16B5: 28 38 DD                PI   H'38DD'
+16B8: 94 FC                   BNZ  H'16B5'
+16BA: 71                      LIS  H'01'
+16BB: 06                      LR   QU,A
+L16BC:
+16BC: 02                      LR   A,QU
+16BD: 24 00                   AI   H'00'
+16BF: 1E                      LR   J,W
+16C0: 29 33 CE                JMP  H'33CE'
+L16C3:
+16C3: 70                      CLR
+16C4: E4                      XS   R4
+16C5: 94 08                   BNZ  H'16CE'
+16C7: 43                      LR   A,R3
+16C8: 22 02                   OI   H'02'
+16CA: 21 FE                   NI   H'FE'
+16CC: 90 25                   BR   H'16F2'
+L16CE:
+16CE: 74                      LIS  H'04'
+16CF: F3                      NS   R3
+16D0: 84 13                   BZ   H'16E4'
+16D2: 2A 16 F9                DCI  H'16F9'
+16D5: 43                      LR   A,R3
+16D6: 14                      SR   4
+16D7: 8E                      ADC
+16D8: 16                      LM
+16D9: 04                      LR   KU,A
+16DA: 16                      LM
+16DB: 05                      LR   KL,A
+
+; Computed subroutine call through K; execution continues at 16DD.
+16DC: 0C                      PK
+L16DD:
+16DD: 43                      LR   A,R3
+16DE: 21 FB                   NI   H'FB'
+16E0: 53                      LR   R3,A
+16E1: 28 17 41                PI   H'1741'
+L16E4:
+16E4: 44                      LR   A,R4
+16E5: E5                      XS   R5
+16E6: 94 08                   BNZ  H'16EF'
+16E8: 43                      LR   A,R3
+16E9: 22 06                   OI   H'06'
+16EB: 21 FE                   NI   H'FE'
+16ED: 90 04                   BR   H'16F2'
+L16EF:
+16EF: 43                      LR   A,R3
+16F0: 21 FC                   NI   H'FC'
+L16F2:
+16F2: 53                      LR   R3,A
+16F3: 28 39 48                PI   H'3948'
+16F6: 29 16 6A                JMP  H'166A'
+
+; Big-endian parser callback addresses: 3036, 317C.
+16F9: 30 36 31 7C             DB   H'30',H'36',H'31',H'7C'
+
+; Dispatch nonzero operation through table 3000 (one-based index).
+L16FD:
+16FD: 65                      LISU 5
+16FE: 68                      LISL 0
+16FF: 71                      LIS  H'01'
+1700: FC                      NS   S
+1701: 84 32                   BZ   H'1734'
+1703: 10                      LR   DC,H
+1704: 8D                      CM
+1705: 16                      LM
+1706: 21 7F                   NI   H'7F'
+1708: 84 2B                   BZ   H'1734'
+170A: 2A 2F FE                DCI  H'2FFE'
+170D: 8E                      ADC
+170E: 8E                      ADC
+170F: 16                      LM
+1710: 04                      LR   KU,A
+1711: 16                      LM
+1712: 05                      LR   KL,A
+1713: 41                      LR   A,R1
+1714: 65                      LISU 5
+1715: 69                      LISL 1
+1716: 5D                      LR   I,A
+1717: 43                      LR   A,R3
+1718: 5D                      LR   I,A
+1719: 45                      LR   A,R5
+171A: 5D                      LR   I,A
+171B: 46                      LR   A,R6
+171C: 5D                      LR   I,A
+
+; Computed handler call; handlers rejoin at 171E.
+171D: 0C                      PK
+L171E:
+171E: 28 39 48                PI   H'3948'
+1721: 65                      LISU 5
+1722: 69                      LISL 1
+1723: 4D                      LR   A,I
+1724: 51                      LR   R1,A
+1725: 4D                      LR   A,I
+1726: 53                      LR   R3,A
+1727: 4D                      LR   A,I
+1728: 55                      LR   R5,A
+1729: 4C                      LR   A,S
+172A: 56                      LR   R6,A
+172B: 65                      LISU 5
+172C: 68                      LISL 0
+172D: 72                      LIS  H'02'
+172E: FC                      NS   S
+172F: 84 04                   BZ   H'1734'
+1731: 29 16 B0                JMP  H'16B0'
+L1734:
+1734: 28 17 41                PI   H'1741'
+1737: 72                      LIS  H'02'
+1738: 8E                      ADC
+1739: 16                      LM
+173A: 21 7F                   NI   H'7F'
+173C: 51                      LR   R1,A
+173D: 1E                      LR   J,W
+173E: 29 16 75                JMP  H'1675'
+
+; H = 1748 + 3 * R1: locate a three-byte interpreter entry.
+L1741:
+1741: 08                      LR   K,P
+1742: 2A 17 48                DCI  H'1748'
+1745: 41                      LR   A,R1
+1746: 8E                      ADC
+1747: 8E                      ADC
+1748: 8E                      ADC
+1749: 11                      LR   H,DC
+174A: 0C                      PK
+
+; REVIEW grammar starts at entry 01: FLD -> 08 ('=') -> 09 (field name) -> 07 (end). EDIT starts at 10, excluding FLD.
+174B: 27 04 08 29 05 0A 2B 06 DB   H'27',H'04',H'08',H'29',H'05',H'0A',H'2B',H'06'
+1753: 0C 31 02 0E 98 00 0E 1F DB   H'0C',H'31',H'02',H'0E',H'98',H'00',H'0E',H'1F'
+175B: 03 07 7F 80 80 2E 80 89 DB   H'03',H'07',H'7F',H'80',H'80',H'2E',H'80',H'89'
+
+; Entry 09: required field-name token 21, operation 08 (13A0), then end-of-command entry 07.
+1763: 21 88 87 2E 80 8B 21 88 DB   H'21',H'88',H'87',H'2E',H'80',H'8B',H'21',H'88'
+176B: 87 2E 80 8D 21 88 87 0F DB   H'87',H'2E',H'80',H'8D',H'21',H'88',H'87',H'0F'
+1773: 0A 07 00 07 87 1B 14 17 DB   H'0A',H'07',H'00',H'07',H'87',H'1B',H'14',H'17'
+177B: 0B 0C 16 1D 0D 16 19 0E DB   H'0B',H'0C',H'16',H'1D',H'0D',H'16',H'19',H'0E'
+1783: 16 1F 03 16 98 07 16 7F DB   H'16',H'1F',H'03',H'16',H'98',H'07',H'16',H'7F'
+178B: 80 80 9B 8B 96 11 14 99 DB   H'80',H'80',H'9B',H'8B',H'96',H'11',H'14',H'99'
+
+; Entry 19: DESC -> operation 0F. Entry 18 optionally consumes PRINT, allowing PRINT DESC / P DESC.
+1793: 17 0F 00 9B 80 80 21 12 DB   H'17',H'0F',H'00',H'9B',H'80',H'80',H'21',H'12'
+179B: 1F 15 10 00 03 11 00 00 DB   H'1F',H'15',H'10',H'00',H'03',H'11',H'00',H'00'
+17A3: 09 80 2E 95 A0 21 93 A1 DB   H'09',H'80',H'2E',H'95',H'A0',H'21',H'93',H'A1'
+17AB: 3A 16 23 00 00 A6 3A 16 DB   H'3A',H'16',H'23',H'00',H'00',H'A6',H'3A',H'16'
+17B3: 23 21 13 21 03 13 21 2C DB   H'23',H'21',H'13',H'21',H'03',H'13',H'21',H'2C'
+17BB: 00 28 00 00 80 15 81 80 DB   H'00',H'28',H'00',H'00',H'80',H'15',H'81',H'80'
+17C3: 30 00 29 1C 17 2C 03 18 DB   H'30',H'00',H'29',H'1C',H'17',H'2C',H'03',H'18'
+17CB: AE 09 00 2C 03 18 AE 03 DB   H'AE',H'09',H'00',H'2C',H'03',H'18',H'AE',H'03'
+17D3: 18 2E 00 00 80 09 00 30 DB   H'18',H'2E',H'00',H'00',H'80',H'09',H'00',H'30'
+17DB: A9 00 00 00 00 80 09 00 DB   H'A9',H'00',H'00',H'00',H'00',H'80',H'09',H'00'
+17E3: 33 A9 00 35 B6 00 80 12 DB   H'33',H'A9',H'00',H'35',H'B6',H'00',H'80',H'12'
+17EB: 19 38 00 19 80 03 1A B9 DB   H'19',H'38',H'00',H'19',H'80',H'03',H'1A',H'B9'
+17F3: 03 1B 80 F0 F0 BD BD BD DB   H'03',H'1B',H'80',H'F0',H'F0',H'BD',H'BD',H'BD'
+17FB: BD BD BD BD BD          DB   H'BD',H'BD',H'BD',H'BD',H'BD'
+; vb1200c_3000-37ff_9_25_78_51
+; SHA1 d98b94ae1cce2ce6e6ae933180a7bf001b73932f
+
+; Operation 01 -> L14B3.
+
+; 27 big-endian command-handler addresses, indexed from one.
+3000: 14 B3                   DB   H'14',H'B3'
+
+; Operation 02 -> L141F.
+3002: 14 1F                   DB   H'14',H'1F'
+
+; Operation 03 -> L140C.
+3004: 14 0C                   DB   H'14',H'0C'
+
+; Operation 04 -> L138D.
+3006: 13 8D                   DB   H'13',H'8D'
+
+; Operation 05 -> L1393.
+3008: 13 93                   DB   H'13',H'93'
+
+; Operation 06 -> L1399.
+300A: 13 99                   DB   H'13',H'99'
+
+; Operation 07 -> L1415.
+300C: 14 15                   DB   H'14',H'15'
+
+; Operation 08 -> L13A0.
+300E: 13 A0                   DB   H'13',H'A0'
+
+; Operation 09 -> L1456.
+3010: 14 56                   DB   H'14',H'56'
+
+; Operation 0A -> L1411.
+3012: 14 11                   DB   H'14',H'11'
+
+; Operation 0B -> L1504.
+3014: 15 04                   DB   H'15',H'04'
+
+; Operation 0C -> L14EE.
+3016: 14 EE                   DB   H'14',H'EE'
+
+; Operation 0D -> L1567.
+3018: 15 67                   DB   H'15',H'67'
+
+; Operation 0E -> L1571.
+301A: 15 71                   DB   H'15',H'71'
+
+; Operation 0F -> L1422.
+301C: 14 22                   DB   H'14',H'22'
+
+; Operation 10 -> L1434.
+301E: 14 34                   DB   H'14',H'34'
+
+; Operation 11 -> L143D.
+3020: 14 3D                   DB   H'14',H'3D'
+
+; Operation 12 -> L145C.
+3022: 14 5C                   DB   H'14',H'5C'
+
+; Operation 13 -> L147B.
+3024: 14 7B                   DB   H'14',H'7B'
+
+; Operation 14 -> L1425.
+3026: 14 25                   DB   H'14',H'25'
+
+; Operation 15 -> L1499.
+3028: 14 99                   DB   H'14',H'99'
+
+; Operation 16 -> L149F.
+302A: 14 9F                   DB   H'14',H'9F'
+
+; Operation 17 -> L15DC.
+302C: 15 DC                   DB   H'15',H'DC'
+
+; Operation 18 -> L15E5.
+302E: 15 E5                   DB   H'15',H'E5'
+
+; Operation 19 -> L15EC.
+3030: 15 EC                   DB   H'15',H'EC'
+
+; Operation 1A -> L15F9.
+3032: 15 F9                   DB   H'15',H'F9'
+
+; Operation 1B -> L160C.
+3034: 16 0C                   DB   H'16',H'0C'
+
+; Parse next token from input buffer; command keyword lookup at 3115.
+L3036:
+3036: 08                      LR   K,P
+3037: 28 40 A9                PI   H'40A9'
+303A: 7F                      LIS  H'0F'
+303B: 50                      LR   R0,A
+303C: 2A 0C 10                DCI  H'0C10'
+303F: 28 39 86                PI   H'3986'
+L3042:
+3042: 28 30 97                PI   H'3097'
+3045: 25 00                   CI   H'00'
+3047: 84 FA                   BZ   H'3042'
+3049: 70                      CLR
+304A: 55                      LR   R5,A
+304B: 56                      LR   R6,A
+304C: 28 30 C3                PI   H'30C3'
+304F: 25 01                   CI   H'01'
+3051: 94 1E                   BNZ  H'3070'
+L3053:
+3053: 28 30 B0                PI   H'30B0'
+3056: 28 30 C3                PI   H'30C3'
+3059: 25 01                   CI   H'01'
+305B: 84 F7                   BZ   H'3053'
+305D: 25 03                   CI   H'03'
+305F: 84 F3                   BZ   H'3053'
+3061: 2A 0C 00                DCI  H'0C00'
+3064: 28 39 22                PI   H'3922'
+3067: 29 30 E3                JMP  H'30E3'
+L306A:
+306A: 94 29                   BNZ  H'3094'
+306C: 20 21                   LI   H'21'
+306E: 90 24                   BR   H'3093'
+L3070:
+3070: 25 03                   CI   H'03'
+3072: 94 1F                   BNZ  H'3092'
+L3074:
+3074: 46                      LR   A,R6
+3075: 13                      SL   1
+3076: 13                      SL   1
+3077: C6                      AS   R6
+3078: 13                      SL   1
+3079: 56                      LR   R6,A
+307A: 28 38 B6                PI   H'38B6'
+307D: C6                      AS   R6
+307E: 56                      LR   R6,A
+307F: 28 30 B0                PI   H'30B0'
+3082: 28 30 C3                PI   H'30C3'
+3085: 25 03                   CI   H'03'
+3087: 84 EC                   BZ   H'3074'
+3089: 2A 0C 00                DCI  H'0C00'
+308C: 28 39 22                PI   H'3922'
+308F: 73                      LIS  H'03'
+3090: 90 02                   BR   H'3093'
+L3092:
+3092: 48                      LR   A,R8
+L3093:
+3093: 55                      LR   R5,A
+L3094:
+3094: 29 37 DD                JMP  H'37DD'
+L3097:
+3097: 08                      LR   K,P
+3098: 2A 0C 00                DCI  H'0C00'
+309B: 16                      LM
+309C: 25 0E                   CI   H'0E'
+309E: 82 05                   BC   H'30A4'
+30A0: 20 7F                   LI   H'7F'
+30A2: 58                      LR   R8,A
+30A3: 0C                      PK
+L30A4:
+30A4: 8E                      ADC
+30A5: 16                      LM
+30A6: 58                      LR   R8,A
+30A7: 2A 0C 00                DCI  H'0C00'
+30AA: 28 39 1E                PI   H'391E'
+30AD: 70                      CLR
+30AE: E8                      XS   R8
+30AF: 0C                      PK
+L30B0:
+30B0: 08                      LR   K,P
+30B1: 28 40 A9                PI   H'40A9'
+30B4: 2A 0C 10                DCI  H'0C10'
+30B7: 45                      LR   A,R5
+30B8: 8E                      ADC
+30B9: 1F                      INC
+30BA: 55                      LR   R5,A
+30BB: 48                      LR   A,R8
+30BC: 17                      ST
+30BD: 28 30 97                PI   H'3097'
+30C0: 29 15 D6                JMP  H'15D6'
+L30C3:
+30C3: 08                      LR   K,P
+30C4: 28 40 A9                PI   H'40A9'
+30C7: 71                      LIS  H'01'
+30C8: F8                      NS   R8
+30C9: 84 09                   BZ   H'30D3'
+30CB: 48                      LR   A,R8
+30CC: 25 33                   CI   H'33'
+30CE: 92 0D                   BNC  H'30DC'
+30D0: 71                      LIS  H'01'
+30D1: 90 0A                   BR   H'30DC'
+L30D3:
+30D3: 28 38 B6                PI   H'38B6'
+30D6: 91 04                   BM   H'30DB'
+30D8: 73                      LIS  H'03'
+30D9: 90 02                   BR   H'30DC'
+L30DB:
+30DB: 48                      LR   A,R8
+L30DC:
+30DC: 50                      LR   R0,A
+30DD: 28 40 BC                PI   H'40BC'
+30E0: 70                      CLR
+30E1: E0                      XS   R0
+30E2: 0C                      PK
+L30E3:
+30E3: 2A 0C 10                DCI  H'0C10'
+30E6: 0E                      LR   Q,DC
+30E7: 2C                      XDC
+30E8: 2A 31 15                DCI  H'3115'
+L30EB:
+30EB: 16                      LM
+30EC: 55                      LR   R5,A
+30ED: 25 7F                   CI   H'7F'
+30EF: 84 22                   BZ   H'3112'
+
+; Match the complete scanned word and dictionary terminator; no arbitrary keyword prefixes.
+L30F1:
+30F1: 28 39 48                PI   H'3948'
+30F4: 16                      LM
+30F5: 50                      LR   R0,A
+30F6: 2C                      XDC
+30F7: 25 00                   CI   H'00'
+30F9: 94 08                   BNZ  H'3102'
+30FB: 8D                      CM
+30FC: 94 0B                   BNZ  H'3108'
+30FE: 70                      CLR
+30FF: 18                      COM
+3100: 90 11                   BR   H'3112'
+L3102:
+3102: 8D                      CM
+3103: 94 04                   BNZ  H'3108'
+3105: 2C                      XDC
+3106: 90 EA                   BR   H'30F1'
+L3108:
+3108: 0F                      LR   DC,Q
+3109: 2C                      XDC
+L310A:
+310A: 70                      CLR
+310B: E0                      XS   R0
+310C: 84 DE                   BZ   H'30EB'
+310E: 16                      LM
+310F: 50                      LR   R0,A
+3110: 90 F9                   BR   H'310A'
+L3112:
+3112: 29 30 6A                JMP  H'306A'
+
+; Keyword 'P', interpreter index 11; 00 terminator.
+
+; Keyword records: operation byte, glyph string, 00; final 7F sentinel.
+3115: 11 25 00                DB   H'11',H'25',H'00'
+
+; Keyword 'PRINT', interpreter index 11; 00 terminator.
+3118: 11 25 09 01 2B 07 00    DB   H'11',H'25',H'09',H'01',H'2B',H'07',H'00'
+
+; Keyword 'T', interpreter index 31; 00 terminator.
+311F: 31 07 00                DB   H'31',H'07',H'00'
+
+; Keyword 'TOTAL', interpreter index 31; 00 terminator.
+3122: 31 07 13 07 11 27 00    DB   H'31',H'07',H'13',H'07',H'11',H'27',H'00'
+
+; Keyword 'E', interpreter index 1F; 00 terminator.
+3129: 1F 0B 00                DB   H'1F',H'0B',H'00'
+
+; Keyword 'EXIT', interpreter index 1F; 00 terminator.
+312C: 1F 0B 33 01 07 00       DB   H'1F',H'0B',H'33',H'01',H'07',H'00'
+
+; Keyword 'A', interpreter index 0B; 00 terminator.
+3132: 0B 11 00                DB   H'0B',H'11',H'00'
+
+; Keyword 'ADD', interpreter index 0B; 00 terminator.
+3135: 0B 11 1F 1F 00          DB   H'0B',H'11',H'1F',H'1F',H'00'
+
+; Keyword 'R', interpreter index 1D; 00 terminator.
+313A: 1D 09 00                DB   H'1D',H'09',H'00'
+
+; Keyword 'REPLACE', interpreter index 1D; 00 terminator.
+313D: 1D 09 0B 25 27 11 31 0B DB   H'1D',H'09',H'0B',H'25',H'27',H'11',H'31',H'0B'
+3145: 00                      DB   H'00'
+
+; Keyword 'D', interpreter index 1B; 00 terminator.
+3146: 1B 1F 00                DB   H'1B',H'1F',H'00'
+
+; Keyword 'DELETE', interpreter index 1B; 00 terminator.
+3149: 1B 1F 0B 27 0B 07 0B 00 DB   H'1B',H'1F',H'0B',H'27',H'0B',H'07',H'0B',H'00'
+
+; Keyword 'M', interpreter index 19; 00 terminator.
+3151: 19 29 00                DB   H'19',H'29',H'00'
+
+; Keyword 'MERGE', interpreter index 19; 00 terminator.
+3154: 19 29 0B 09 1B 0B 00    DB   H'19',H'29',H'0B',H'09',H'1B',H'0B',H'00'
+
+; Keyword 'DESC', interpreter index 17; 00 terminator.
+315B: 17 1F 0B 21 31 00       DB   H'17',H'1F',H'0B',H'21',H'31',H'00'
+
+; Keyword 'ALL', interpreter index 15; 00 terminator.
+3161: 15 11 27 27 00          DB   H'15',H'11',H'27',H'27',H'00'
+
+; Keyword 'FLD', interpreter index 27; 00 terminator.
+3166: 27 1D 27 1F 00          DB   H'27',H'1D',H'27',H'1F',H'00'
+
+; Keyword 'SORT', interpreter index 29; 00 terminator.
+316B: 29 21 13 09 07 00       DB   H'29',H'21',H'13',H'09',H'07',H'00'
+
+; Keyword 'TOT', interpreter index 2B; 00 terminator.
+3171: 2B 07 13 07 00          DB   H'2B',H'07',H'13',H'07',H'00'
+
+; Keyword 'PTR', interpreter index 0F; 00 terminator.
+3176: 0F 25 07 09 00          DB   H'0F',H'25',H'07',H'09',H'00'
+
+; Keyword table sentinel.
+317B: 7F                      DB   H'7F'
+
+; Parser callback for buffered numeric/field input.
+L317C:
+317C: 08                      LR   K,P
+317D: 28 40 A9                PI   H'40A9'
+3180: 46                      LR   A,R6
+3181: 2A 18 D5                DCI  H'18D5'
+3184: 8E                      ADC
+3185: 16                      LM
+3186: 2A 1B DB                DCI  H'1BDB'
+3189: 8D                      CM
+318A: 94 06                   BNZ  H'3191'
+318C: 20 7F                   LI   H'7F'
+318E: 55                      LR   R5,A
+318F: 90 32                   BR   H'31C2'
+L3191:
+3191: 2A 1B DB                DCI  H'1BDB'
+3194: 16                      LM
+3195: 2A 1B DC                DCI  H'1BDC'
+3198: 8E                      ADC
+3199: 70                      CLR
+319A: 8C                      XM
+319B: 58                      LR   R8,A
+319C: 94 04                   BNZ  H'31A1'
+319E: 79                      LIS  H'09'
+319F: 90 1B                   BR   H'31BB'
+L31A1:
+31A1: 28 30 C3                PI   H'30C3'
+31A4: 25 01                   CI   H'01'
+31A6: 94 05                   BNZ  H'31AC'
+31A8: 20 21                   LI   H'21'
+31AA: 90 10                   BR   H'31BB'
+L31AC:
+31AC: 25 03                   CI   H'03'
+31AE: 94 0B                   BNZ  H'31BA'
+31B0: 28 38 B6                PI   H'38B6'
+31B3: 2A 0C 22                DCI  H'0C22'
+31B6: 17                      ST
+31B7: 73                      LIS  H'03'
+31B8: 90 02                   BR   H'31BB'
+L31BA:
+31BA: 48                      LR   A,R8
+L31BB:
+31BB: 55                      LR   R5,A
+31BC: 2A 1B DB                DCI  H'1BDB'
+31BF: 28 39 1E                PI   H'391E'
+L31C2:
+31C2: 29 15 D6                JMP  H'15D6'
+
+; Database definition: DB, then every field's NAME/LENGTH/TYPE. Mode 3 makes DESC read-only; ignores FLD selection.
+L31C5:
+31C5: 08                      LR   K,P
+31C6: 28 38 F4                PI   H'38F4'
+31C9: 2A 11 7D                DCI  H'117D'
+31CC: 28 33 DD                PI   H'33DD'
+31CF: 70                      CLR
+31D0: 53                      LR   R3,A
+L31D1:
+31D1: 43                      LR   A,R3
+31D2: 2A 18 0C                DCI  H'180C'
+31D5: 8D                      CM
+31D6: 84 0B                   BZ   H'31E2'
+31D8: 43                      LR   A,R3
+31D9: 50                      LR   R0,A
+31DA: 28 31 E4                PI   H'31E4'
+31DD: 43                      LR   A,R3
+31DE: 1F                      INC
+31DF: 53                      LR   R3,A
+31E0: 90 F0                   BR   H'31D1'
+L31E2:
+31E2: 90 18                   BR   H'31FB'
+L31E4:
+31E4: 08                      LR   K,P
+31E5: 28 38 F4                PI   H'38F4'
+L31E8:
+31E8: 2A 18 0D                DCI  H'180D'
+31EB: 43                      LR   A,R3
+31EC: 13                      SL   1
+31ED: 13                      SL   1
+31EE: 8E                      ADC
+31EF: 8E                      ADC
+31F0: 11                      LR   H,DC
+31F1: 2A 32 59                DCI  H'3259'
+31F4: 28 33 F1                PI   H'33F1'
+31F7: 70                      CLR
+31F8: E7                      XS   R7
+31F9: 81 03                   BP   H'31FD'
+L31FB:
+31FB: 90 5A                   BR   H'3256'
+L31FD:
+31FD: 43                      LR   A,R3
+31FE: 2A 18 D5                DCI  H'18D5'
+3201: 8E                      ADC
+3202: 16                      LM
+3203: 50                      LR   R0,A
+3204: 2A 0C 18                DCI  H'0C18'
+3207: 28 38 39                PI   H'3839'
+320A: 2A 32 5D                DCI  H'325D'
+320D: 28 33 DD                PI   H'33DD'
+3210: 2A 0C 18                DCI  H'0C18'
+3213: 28 38 88                PI   H'3888'
+3216: 43                      LR   A,R3
+3217: 2A 18 D5                DCI  H'18D5'
+321A: 8E                      ADC
+321B: 70                      CLR
+321C: E1                      XS   R1
+321D: 17                      ST
+321E: 84 2F                   BZ   H'324E'
+3220: 25 7E                   CI   H'7E'
+3222: 92 2B                   BNC  H'324E'
+3224: 43                      LR   A,R3
+3225: 2A 18 E9                DCI  H'18E9'
+3228: 8E                      ADC
+3229: 11                      LR   H,DC
+322A: 2A 32 63                DCI  H'3263'
+322D: 28 33 F1                PI   H'33F1'
+3230: 43                      LR   A,R3
+3231: 2A 18 E9                DCI  H'18E9'
+3234: 8E                      ADC
+3235: 16                      LM
+3236: 25 11                   CI   H'11'
+3238: 84 13                   BZ   H'324C'
+323A: 25 01                   CI   H'01'
+323C: 84 05                   BZ   H'3242'
+323E: 25 29                   CI   H'29'
+3240: 94 0D                   BNZ  H'324E'
+L3242:
+3242: 43                      LR   A,R3
+3243: 2A 18 D5                DCI  H'18D5'
+3246: 8E                      ADC
+3247: 16                      LM
+3248: 25 0F                   CI   H'0F'
+324A: 92 03                   BNC  H'324E'
+L324C:
+324C: 90 09                   BR   H'3256'
+L324E:
+324E: 73                      LIS  H'03'
+324F: 5A                      LR   HU,A
+3250: 28 3F 2A                PI   H'3F2A'
+3253: 29 31 E8                JMP  H'31E8'
+L3256:
+3256: 29 33 CE                JMP  H'33CE'
+
+; Descriptors at 3259/325D/3263: NAME (8 chars), LENGTH (3), TYPE (1).
+3259: 3F 87 06 08 3F 8D 08 0C DB   H'3F',H'87',H'06',H'08',H'3F',H'8D',H'08',H'0C'
+3261: 18 03 3F F3 06 01       DB   H'18',H'03',H'3F',H'F3',H'06',H'01'
+L3267:
+3267: 2A 1B 0F                DCI  H'1B0F'
+326A: 70                      CLR
+326B: 8C                      XM
+326C: 94 0C                   BNZ  H'3279'
+326E: 73                      LIS  H'03'
+326F: 2A 1B 0B                DCI  H'1B0B'
+3272: 17                      ST
+3273: 28 31 C5                PI   H'31C5'
+3276: 29 33 1D                JMP  H'331D'
+L3279:
+3279: 25 01                   CI   H'01'
+327B: 94 61                   BNZ  H'32DD'
+L327D:
+327D: 2A 1B 1B                DCI  H'1B1B'
+3280: 70                      CLR
+3281: 8C                      XM
+3282: 91 21                   BM   H'32A4'
+3284: 2A 1B 10                DCI  H'1B10'
+3287: 70                      CLR
+3288: 8C                      XM
+3289: 84 1A                   BZ   H'32A4'
+328B: 28 3B 40                PI   H'3B40'
+328E: 2A 1B 11                DCI  H'1B11'
+3291: 16                      LM
+3292: 25 7F                   CI   H'7F'
+3294: 84 07                   BZ   H'329C'
+3296: 2A 1B 11                DCI  H'1B11'
+3299: 28 39 22                PI   H'3922'
+L329C:
+329C: 2A 1B 10                DCI  H'1B10'
+329F: 28 39 22                PI   H'3922'
+32A2: 90 DA                   BR   H'327D'
+L32A4:
+32A4: 2A 1B 11                DCI  H'1B11'
+32A7: 70                      CLR
+32A8: 8C                      XM
+32A9: 91 20                   BM   H'32CA'
+32AB: 84 1E                   BZ   H'32CA'
+32AD: 2A 1B 1B                DCI  H'1B1B'
+32B0: 70                      CLR
+32B1: 8C                      XM
+32B2: 91 17                   BM   H'32CA'
+32B4: 28 33 20                PI   H'3320'
+32B7: 28 3B 40                PI   H'3B40'
+32BA: 2A 1B 11                DCI  H'1B11'
+32BD: 16                      LM
+32BE: 25 7F                   CI   H'7F'
+32C0: 84 07                   BZ   H'32C8'
+32C2: 2A 1B 11                DCI  H'1B11'
+32C5: 28 39 22                PI   H'3922'
+L32C8:
+32C8: 90 DB                   BR   H'32A4'
+L32CA:
+32CA: 70                      CLR
+32CB: 2A 1B 1B                DCI  H'1B1B'
+32CE: 8C                      XM
+32CF: 91 06                   BM   H'32D6'
+32D1: 28 33 20                PI   H'3320'
+32D4: 90 06                   BR   H'32DB'
+L32D6:
+32D6: 71                      LIS  H'01'
+32D7: 5A                      LR   HU,A
+32D8: 28 3F 2A                PI   H'3F2A'
+L32DB:
+32DB: 90 41                   BR   H'331D'
+L32DD:
+32DD: 25 02                   CI   H'02'
+32DF: 94 3A                   BNZ  H'331A'
+32E1: 2A 1B 1B                DCI  H'1B1B'
+32E4: 70                      CLR
+32E5: 8C                      XM
+32E6: 91 0B                   BM   H'32F2'
+32E8: 2A 1B 11                DCI  H'1B11'
+32EB: 70                      CLR
+32EC: 8C                      XM
+32ED: 91 04                   BM   H'32F2'
+32EF: 28 3B 40                PI   H'3B40'
+L32F2:
+32F2: 2A 1B 1B                DCI  H'1B1B'
+32F5: 70                      CLR
+32F6: 8C                      XM
+32F7: 91 0B                   BM   H'3303'
+32F9: 28 15 AC                PI   H'15AC'
+32FC: 84 06                   BZ   H'3303'
+L32FE:
+32FE: 28 3B 40                PI   H'3B40'
+3301: 90 F0                   BR   H'32F2'
+L3303:
+3303: 91 06                   BM   H'330A'
+3305: 28 33 20                PI   H'3320'
+3308: 90 08                   BR   H'3311'
+L330A:
+330A: 71                      LIS  H'01'
+330B: 5A                      LR   HU,A
+330C: 28 3F 2A                PI   H'3F2A'
+330F: 90 08                   BR   H'3318'
+L3311:
+3311: 2A 1B 11                DCI  H'1B11'
+3314: 70                      CLR
+3315: 8C                      XM
+3316: 94 E7                   BNZ  H'32FE'
+L3318:
+3318: 90 04                   BR   H'331D'
+L331A:
+331A: 29 12 3F                JMP  H'123F'
+L331D:
+331D: 29 14 1D                JMP  H'141D'
+L3320:
+3320: 08                      LR   K,P
+3321: 28 38 F4                PI   H'38F4'
+3324: 70                      CLR
+3325: 56                      LR   R6,A
+L3326:
+3326: 46                      LR   A,R6
+3327: 1F                      INC
+3328: 2A 18 0C                DCI  H'180C'
+332B: 8D                      CM
+332C: 82 04                   BC   H'3331'
+332E: 29 33 DA                JMP  H'33DA'
+
+; FLD display gate: negative 1B0C shows all fields; otherwise process only matching zero-based R6. Stored record is unchanged.
+L3331:
+3331: 70                      CLR
+3332: 2A 1B 0C                DCI  H'1B0C'
+3335: 8C                      XM
+3336: 91 09                   BM   H'3340'
+3338: 18                      COM
+3339: 1F                      INC
+333A: C6                      AS   R6
+333B: 84 04                   BZ   H'3340'
+333D: 29 33 D4                JMP  H'33D4'
+L3340:
+3340: 2A 0C 18                DCI  H'0C18'
+3343: 2C                      XDC
+3344: 2A 18 0D                DCI  H'180D'
+3347: 46                      LR   A,R6
+3348: 13                      SL   1
+3349: 13                      SL   1
+334A: 8E                      ADC
+334B: 8E                      ADC
+334C: 70                      CLR
+334D: 54                      LR   R4,A
+L334E:
+334E: 78                      LIS  H'08'
+334F: E4                      XS   R4
+3350: 84 0D                   BZ   H'335E'
+3352: 70                      CLR
+3353: 8C                      XM
+3354: 84 09                   BZ   H'335E'
+3356: 2C                      XDC
+3357: 17                      ST
+3358: 2C                      XDC
+3359: 44                      LR   A,R4
+335A: 1F                      INC
+335B: 54                      LR   R4,A
+335C: 90 F1                   BR   H'334E'
+L335E:
+335E: 2C                      XDC
+335F: 20 2A                   LI   H'2A'
+3361: 17                      ST
+3362: 70                      CLR
+3363: 17                      ST
+3364: 72                      LIS  H'02'
+3365: C4                      AS   R4
+3366: 54                      LR   R4,A
+3367: 2A 0C 10                DCI  H'0C10'
+336A: 7C                      LIS  H'0C'
+336B: 17                      ST
+336C: 20 18                   LI   H'18'
+336E: 17                      ST
+336F: 44                      LR   A,R4
+3370: 17                      ST
+3371: 46                      LR   A,R6
+3372: 2A 18 E9                DCI  H'18E9'
+3375: 8E                      ADC
+3376: 16                      LM
+3377: 25 11                   CI   H'11'
+3379: 94 1F                   BNZ  H'3399'
+337B: 2A 18 AD                DCI  H'18AD'
+337E: 46                      LR   A,R6
+337F: 8E                      ADC
+3380: 8E                      ADC
+3381: 16                      LM
+3382: 2C                      XDC
+3383: 2A 0C 13                DCI  H'0C13'
+3386: 17                      ST
+3387: 2C                      XDC
+3388: 16                      LM
+3389: 2C                      XDC
+338A: 17                      ST
+338B: 2C                      XDC
+338C: 2A 18 D5                DCI  H'18D5'
+338F: 46                      LR   A,R6
+3390: 8E                      ADC
+3391: 16                      LM
+3392: 2C                      XDC
+3393: 17                      ST
+3394: 28 34 0C                PI   H'340C'
+3397: 90 2E                   BR   H'33C6'
+L3399:
+3399: 2A 0C 24                DCI  H'0C24'
+339C: 17                      ST
+339D: 46                      LR   A,R6
+339E: 2A 18 D5                DCI  H'18D5'
+33A1: 8E                      ADC
+33A2: 16                      LM
+33A3: 51                      LR   R1,A
+33A4: 46                      LR   A,R6
+33A5: 50                      LR   R0,A
+33A6: 28 39 3A                PI   H'393A'
+33A9: 41                      LR   A,R1
+33AA: 50                      LR   R0,A
+33AB: 28 3A 77                PI   H'3A77'
+33AE: 2A 0C 13                DCI  H'0C13'
+33B1: 20 1B                   LI   H'1B'
+33B3: 17                      ST
+33B4: 20 DC                   LI   H'DC'
+33B6: 17                      ST
+33B7: 2C                      XDC
+33B8: 46                      LR   A,R6
+33B9: 2A 18 D5                DCI  H'18D5'
+33BC: 8E                      ADC
+33BD: 16                      LM
+33BE: 2C                      XDC
+33BF: 17                      ST
+33C0: 28 34 0C                PI   H'340C'
+33C3: 28 3A 29                PI   H'3A29'
+L33C6:
+33C6: 70                      CLR
+33C7: E7                      XS   R7
+33C8: 81 0B                   BP   H'33D4'
+33CA: 70                      CLR
+33CB: E6                      XS   R6
+33CC: 94 07                   BNZ  H'33D4'
+L33CE:
+33CE: 28 39 08                PI   H'3908'
+33D1: 70                      CLR
+33D2: E7                      XS   R7
+33D3: 0C                      PK
+L33D4:
+33D4: 46                      LR   A,R6
+33D5: 1F                      INC
+33D6: 56                      LR   R6,A
+33D7: 29 33 26                JMP  H'3326'
+L33DA:
+33DA: 29 34 E7                JMP  H'34E7'
+
+; Copy six-byte input descriptor to 0C10, then enter input routine.
+L33DD:
+33DD: 08                      LR   K,P
+33DE: 28 38 F4                PI   H'38F4'
+33E1: 2C                      XDC
+33E2: 2A 0C 10                DCI  H'0C10'
+33E5: 2C                      XDC
+33E6: 76                      LIS  H'06'
+33E7: 50                      LR   R0,A
+L33E8:
+33E8: 16                      LM
+33E9: 2C                      XDC
+33EA: 17                      ST
+33EB: 2C                      XDC
+33EC: 30                      DS   R0
+33ED: 94 FA                   BNZ  H'33E8'
+33EF: 90 20                   BR   H'3410'
+
+; Build input descriptor using H as buffer pointer.
+L33F1:
+33F1: 08                      LR   K,P
+33F2: 28 38 F4                PI   H'38F4'
+33F5: 2C                      XDC
+33F6: 2A 0C 10                DCI  H'0C10'
+33F9: 73                      LIS  H'03'
+33FA: 50                      LR   R0,A
+L33FB:
+33FB: 2C                      XDC
+33FC: 16                      LM
+33FD: 2C                      XDC
+33FE: 17                      ST
+33FF: 30                      DS   R0
+3400: 94 FA                   BNZ  H'33FB'
+3402: 4A                      LR   A,HU
+3403: 17                      ST
+3404: 4B                      LR   A,HL
+3405: 17                      ST
+3406: 2C                      XDC
+3407: 16                      LM
+3408: 2C                      XDC
+3409: 17                      ST
+340A: 90 05                   BR   H'3410'
+L340C:
+340C: 08                      LR   K,P
+340D: 28 38 F4                PI   H'38F4'
+L3410:
+3410: 70                      CLR
+3411: 57                      LR   R7,A
+3412: 71                      LIS  H'01'
+3413: 2A 1B 0B                DCI  H'1B0B'
+3416: 8C                      XM
+3417: 94 13                   BNZ  H'342B'
+3419: 28 41 C8                PI   H'41C8'
+341C: 2A 0C 13                DCI  H'0C13'
+341F: 16                      LM
+3420: 5A                      LR   HU,A
+3421: 16                      LM
+3422: 5B                      LR   HL,A
+3423: 16                      LM
+3424: 50                      LR   R0,A
+3425: 70                      CLR
+3426: 10                      LR   DC,H
+L3427:
+3427: 17                      ST
+3428: 30                      DS   R0
+3429: 94 FD                   BNZ  H'3427'
+L342B:
+342B: 70                      CLR
+342C: 64                      LISU 4
+342D: 68                      LISL 0
+342E: 5D                      LR   I,A
+342F: 5D                      LR   I,A
+3430: 5D                      LR   I,A
+3431: 5D                      LR   I,A
+3432: 5D                      LR   I,A
+3433: 20 70                   LI   H'70'
+3435: 6A                      LISL 2
+3436: 5C                      LR   S,A
+3437: 28 35 56                PI   H'3556'
+343A: 64                      LISU 4
+343B: 6A                      LISL 2
+343C: 4C                      LR   A,S
+343D: 2A 0F DF                DCI  H'0FDF'
+3440: 17                      ST
+3441: 28 45 B0                PI   H'45B0'
+
+; Mode 3 bypasses keyboard editing through 3544, including DESC in EDIT.
+3444: 73                      LIS  H'03'
+3445: 2A 1B 0B                DCI  H'1B0B'
+3448: 8D                      CM
+3449: 94 04                   BNZ  H'344E'
+344B: 29 35 44                JMP  H'3544'
+L344E:
+344E: 2A 08 77                DCI  H'0877'
+3451: 77                      LIS  H'07'
+3452: 17                      ST
+L3453:
+3453: 28 37 E3                PI   H'37E3'
+3456: 84 FC                   BZ   H'3453'
+3458: 25 3A                   CI   H'3A'
+345A: 92 12                   BNC  H'346D'
+345C: 28 37 BD                PI   H'37BD'
+345F: 2A 0C 13                DCI  H'0C13'
+3462: 28 39 34                PI   H'3934'
+3465: 64                      LISU 4
+3466: 69                      LISL 1
+3467: 4C                      LR   A,S
+3468: 8E                      ADC
+3469: 48                      LR   A,R8
+346A: 17                      ST
+346B: 90 1C                   BR   H'3488'
+L346D:
+346D: 25 3E                   CI   H'3E'
+346F: 92 14                   BNC  H'3484'
+3471: 70                      CLR
+3472: 58                      LR   R8,A
+3473: 28 37 BD                PI   H'37BD'
+3476: 2A 0C 13                DCI  H'0C13'
+3479: 28 39 34                PI   H'3934'
+347C: 64                      LISU 4
+347D: 69                      LISL 1
+347E: 4C                      LR   A,S
+347F: 8E                      ADC
+3480: 48                      LR   A,R8
+3481: 17                      ST
+3482: 90 24                   BR   H'34A7'
+L3484:
+3484: 25 40                   CI   H'40'
+3486: 92 22                   BNC  H'34A9'
+L3488:
+3488: 64                      LISU 4
+3489: 68                      LISL 0
+348A: 4C                      LR   A,S
+348B: 18                      COM
+348C: 6C                      LISL 4
+348D: CC                      AS   S
+348E: 24 FF                   AI   H'FF'
+3490: 92 08                   BNC  H'3499'
+3492: 71                      LIS  H'01'
+3493: 50                      LR   R0,A
+3494: 28 36 E4                PI   H'36E4'
+3497: 90 0F                   BR   H'34A7'
+L3499:
+3499: 2A 0C 15                DCI  H'0C15'
+349C: 16                      LM
+349D: 24 FF                   AI   H'FF'
+349F: 64                      LISU 4
+34A0: 69                      LISL 1
+34A1: EC                      XS   S
+34A2: 84 04                   BZ   H'34A7'
+34A4: 28 35 56                PI   H'3556'
+L34A7:
+34A7: 90 28                   BR   H'34D0'
+L34A9:
+34A9: 25 42                   CI   H'42'
+34AB: 92 06                   BNC  H'34B2'
+34AD: 70                      CLR
+34AE: 18                      COM
+34AF: 57                      LR   R7,A
+34B0: 90 38                   BR   H'34E9'
+L34B2:
+34B2: 25 44                   CI   H'44'
+34B4: 92 37                   BNC  H'34EC'
+34B6: 70                      CLR
+34B7: 18                      COM
+34B8: 64                      LISU 4
+34B9: 6A                      LISL 2
+34BA: CC                      AS   S
+34BB: 6C                      LISL 4
+34BC: CC                      AS   S
+34BD: 2A 0F DF                DCI  H'0FDF'
+34C0: 11                      LR   H,DC
+34C1: 8C                      XM
+34C2: 14                      SR   4
+34C3: 84 0E                   BZ   H'34D2'
+34C5: 10                      LR   DC,H
+34C6: 16                      LM
+34C7: 21 0F                   NI   H'0F'
+34C9: 18                      COM
+34CA: 24 11                   AI   H'11'
+34CC: 50                      LR   R0,A
+34CD: 28 36 E4                PI   H'36E4'
+L34D0:
+34D0: 90 0E                   BR   H'34DF'
+L34D2:
+34D2: 64                      LISU 4
+34D3: 6B                      LISL 3
+34D4: 4D                      LR   A,I
+34D5: CD                      AS   I
+34D6: 2A 0C 15                DCI  H'0C15'
+34D9: 8C                      XM
+34DA: 84 06                   BZ   H'34E1'
+34DC: 28 35 56                PI   H'3556'
+L34DF:
+34DF: 90 3F                   BR   H'351F'
+L34E1:
+34E1: 2A 08 77                DCI  H'0877'
+34E4: 20 87                   LI   H'87'
+34E6: 17                      ST
+L34E7:
+34E7: 70                      CLR
+34E8: 57                      LR   R7,A
+L34E9:
+34E9: 29 33 CE                JMP  H'33CE'
+L34EC:
+34EC: 25 46                   CI   H'46'
+34EE: 92 32                   BNC  H'3521'
+34F0: 64                      LISU 4
+34F1: 6A                      LISL 2
+34F2: 4C                      LR   A,S
+34F3: 2A 0F DF                DCI  H'0FDF'
+34F6: 11                      LR   H,DC
+34F7: 8C                      XM
+34F8: 14                      SR   4
+34F9: 84 18                   BZ   H'3512'
+34FB: 10                      LR   DC,H
+34FC: 16                      LM
+34FD: 21 0F                   NI   H'0F'
+34FF: 24 10                   AI   H'10'
+3501: 50                      LR   R0,A
+3502: 68                      LISL 0
+3503: 18                      COM
+3504: 1F                      INC
+3505: CC                      AS   S
+3506: 40                      LR   A,R0
+3507: 82 02                   BC   H'350A'
+3509: 4C                      LR   A,S
+L350A:
+350A: 18                      COM
+350B: 1F                      INC
+350C: 50                      LR   R0,A
+350D: 28 36 E4                PI   H'36E4'
+3510: 90 0E                   BR   H'351F'
+L3512:
+3512: 6B                      LISL 3
+3513: EE                      XS   D
+3514: 84 06                   BZ   H'351B'
+3516: 28 36 41                PI   H'3641'
+3519: 90 05                   BR   H'351F'
+L351B:
+351B: 68                      LISL 0
+351C: 70                      CLR
+351D: 5D                      LR   I,A
+351E: 5C                      LR   S,A
+L351F:
+351F: 90 15                   BR   H'3535'
+L3521:
+3521: 64                      LISU 4
+3522: 68                      LISL 0
+3523: 70                      CLR
+3524: ED                      XS   I
+3525: 84 09                   BZ   H'352F'
+3527: 20 FF                   LI   H'FF'
+3529: 50                      LR   R0,A
+352A: 28 36 E4                PI   H'36E4'
+352D: 90 07                   BR   H'3535'
+L352F:
+352F: EC                      XS   S
+3530: 84 04                   BZ   H'3535'
+3532: 28 36 41                PI   H'3641'
+L3535:
+3535: 64                      LISU 4
+3536: 68                      LISL 0
+3537: 4C                      LR   A,S
+3538: 6A                      LISL 2
+3539: CC                      AS   S
+353A: 2A 0F DF                DCI  H'0FDF'
+353D: 17                      ST
+353E: 28 45 B0                PI   H'45B0'
+3541: 29 34 53                JMP  H'3453'
+L3544:
+3544: 64                      LISU 4
+3545: 6B                      LISL 3
+3546: 4D                      LR   A,I
+3547: CD                      AS   I
+3548: 2A 0C 15                DCI  H'0C15'
+354B: 8C                      XM
+354C: 84 06                   BZ   H'3553'
+354E: 28 35 56                PI   H'3556'
+3551: 90 F2                   BR   H'3544'
+L3553:
+3553: 29 34 E7                JMP  H'34E7'
+L3556:
+3556: 08                      LR   K,P
+3557: 28 40 A9                PI   H'40A9'
+355A: 64                      LISU 4
+355B: 6A                      LISL 2
+355C: 4C                      LR   A,S
+355D: 18                      COM
+355E: 24 11                   AI   H'11'
+3560: 81 02                   BP   H'3563'
+3562: 70                      CLR
+L3563:
+3563: 2A 0C 16                DCI  H'0C16'
+3566: 17                      ST
+3567: 4C                      LR   A,S
+3568: 25 70                   CI   H'70'
+356A: 94 45                   BNZ  H'35B0'
+356C: 2A 0C 12                DCI  H'0C12'
+356F: 16                      LM
+3570: 14                      SR   4
+3571: 1F                      INC
+3572: 50                      LR   R0,A
+3573: 28 36 C6                PI   H'36C6'
+3576: 2A 0C 12                DCI  H'0C12'
+3579: 16                      LM
+357A: 14                      SR   4
+357B: 15                      SL   4
+357C: 18                      COM
+357D: 24 61                   AI   H'61'
+357F: 2A 0F DF                DCI  H'0FDF'
+3582: 17                      ST
+3583: 2A 0C 10                DCI  H'0C10'
+3586: 16                      LM
+3587: 5A                      LR   HU,A
+3588: 16                      LM
+3589: 5B                      LR   HL,A
+358A: 16                      LM
+358B: 50                      LR   R0,A
+358C: 10                      LR   DC,H
+358D: 28 36 F2                PI   H'36F2'
+3590: 64                      LISU 4
+3591: 6A                      LISL 2
+3592: 2A 0F DF                DCI  H'0FDF'
+3595: 16                      LM
+3596: 5C                      LR   S,A
+3597: 2A 0C 12                DCI  H'0C12'
+359A: 16                      LM
+359B: 21 0F                   NI   H'0F'
+359D: 18                      COM
+359E: 24 11                   AI   H'11'
+35A0: 50                      LR   R0,A
+35A1: 2A 0C 15                DCI  H'0C15'
+35A4: 18                      COM
+35A5: 1F                      INC
+35A6: 88                      AM
+35A7: 40                      LR   A,R0
+35A8: 82 05                   BC   H'35AE'
+35AA: 2A 0C 15                DCI  H'0C15'
+35AD: 16                      LM
+L35AE:
+35AE: 90 1F                   BR   H'35CE'
+L35B0:
+35B0: 71                      LIS  H'01'
+35B1: 50                      LR   R0,A
+35B2: 28 36 C6                PI   H'36C6'
+35B5: 2A 0C 16                DCI  H'0C16'
+35B8: 16                      LM
+35B9: 64                      LISU 4
+35BA: 6A                      LISL 2
+35BB: CC                      AS   S
+35BC: 24 F0                   AI   H'F0'
+35BE: 5C                      LR   S,A
+35BF: 6B                      LISL 3
+35C0: 4D                      LR   A,I
+35C1: CD                      AS   I
+35C2: 18                      COM
+35C3: 1F                      INC
+35C4: 2A 0C 15                DCI  H'0C15'
+35C7: 88                      AM
+35C8: 25 10                   CI   H'10'
+35CA: 82 03                   BC   H'35CE'
+35CC: 20 10                   LI   H'10'
+L35CE:
+35CE: 2A 0C 17                DCI  H'0C17'
+35D1: 17                      ST
+35D2: 2A 0C 17                DCI  H'0C17'
+35D5: 16                      LM
+35D6: 50                      LR   R0,A
+35D7: 2A 0C 13                DCI  H'0C13'
+35DA: 28 39 34                PI   H'3934'
+35DD: 64                      LISU 4
+35DE: 6B                      LISL 3
+35DF: 4D                      LR   A,I
+35E0: CC                      AS   S
+35E1: 8E                      ADC
+35E2: 28 36 F2                PI   H'36F2'
+35E5: 2A 0C 16                DCI  H'0C16'
+35E8: 16                      LM
+35E9: 18                      COM
+35EA: 1F                      INC
+35EB: 88                      AM
+35EC: 64                      LISU 4
+35ED: 6C                      LISL 4
+35EE: CC                      AS   S
+35EF: 5C                      LR   S,A
+35F0: 6A                      LISL 2
+35F1: CC                      AS   S
+35F2: 18                      COM
+35F3: 24 71                   AI   H'71'
+35F5: 50                      LR   R0,A
+35F6: 70                      CLR
+35F7: 58                      LR   R8,A
+L35F8:
+35F8: 30                      DS   R0
+35F9: 92 06                   BNC  H'3600'
+35FB: 28 37 BD                PI   H'37BD'
+35FE: 90 F9                   BR   H'35F8'
+L3600:
+3600: 2A 0C 16                DCI  H'0C16'
+3603: 16                      LM
+3604: 64                      LISU 4
+3605: 6B                      LISL 3
+3606: CC                      AS   S
+3607: 5E                      LR   D,A
+3608: 4C                      LR   A,S
+3609: 18                      COM
+360A: 24 61                   AI   H'61'
+360C: 81 02                   BP   H'360F'
+360E: 70                      CLR
+L360F:
+360F: 68                      LISL 0
+3610: 5C                      LR   S,A
+3611: 6B                      LISL 3
+3612: CC                      AS   S
+3613: 69                      LISL 1
+3614: 5C                      LR   S,A
+3615: 73                      LIS  H'03'
+3616: 2A 1B 0B                DCI  H'1B0B'
+3619: 8C                      XM
+361A: 94 0D                   BNZ  H'3628'
+361C: 70                      CLR
+361D: 2A 1B 1A                DCI  H'1B1A'
+3620: 8C                      XM
+3621: 84 06                   BZ   H'3628'
+3623: 28 37 16                PI   H'3716'
+3626: 90 17                   BR   H'363E'
+L3628:
+3628: 73                      LIS  H'03'
+3629: 2A 1B 0B                DCI  H'1B0B'
+362C: 8C                      XM
+362D: 94 10                   BNZ  H'363E'
+362F: 62                      LISU 2
+3630: 6C                      LISL 4
+3631: 20 1E                   LI   H'1E'
+3633: 5C                      LR   S,A
+3634: 28 37 E3                PI   H'37E3'
+3637: 84 06                   BZ   H'363E'
+L3639:
+3639: 28 37 E3                PI   H'37E3'
+363C: 84 FC                   BZ   H'3639'
+L363E:
+363E: 29 15 D6                JMP  H'15D6'
+L3641:
+3641: 08                      LR   K,P
+3642: 28 40 A9                PI   H'40A9'
+3645: 64                      LISU 4
+3646: 6B                      LISL 3
+3647: 4C                      LR   A,S
+3648: 25 10                   CI   H'10'
+364A: 82 03                   BC   H'364E'
+364C: 20 10                   LI   H'10'
+L364E:
+364E: 2A 0C 16                DCI  H'0C16'
+3651: 17                      ST
+3652: 6A                      LISL 2
+3653: 4C                      LR   A,S
+3654: 6C                      LISL 4
+3655: CC                      AS   S
+3656: 24 A0                   AI   H'A0'
+3658: 81 02                   BP   H'365B'
+365A: 70                      CLR
+L365B:
+365B: 17                      ST
+365C: 75                      LIS  H'05'
+365D: 52                      LR   R2,A
+L365E:
+365E: 42                      LR   A,R2
+365F: 1F                      INC
+3660: 15                      SL   4
+3661: 2A 0F DF                DCI  H'0FDF'
+3664: 17                      ST
+3665: 2A 0F 3F                DCI  H'0F3F'
+3668: 42                      LR   A,R2
+3669: 15                      SL   4
+366A: 8E                      ADC
+366B: 20 10                   LI   H'10'
+366D: 50                      LR   R0,A
+366E: 28 36 F2                PI   H'36F2'
+3671: 32                      DS   R2
+3672: 81 EB                   BP   H'365E'
+3674: 2A 0F DF                DCI  H'0FDF'
+3677: 70                      CLR
+3678: 17                      ST
+3679: 2A 0C 16                DCI  H'0C16'
+367C: 16                      LM
+367D: 25 0F                   CI   H'0F'
+367F: 92 0E                   BNC  H'368E'
+3681: 2A 0C 10                DCI  H'0C10'
+3684: 16                      LM
+3685: 5A                      LR   HU,A
+3686: 16                      LM
+3687: 5B                      LR   HL,A
+3688: 16                      LM
+3689: 50                      LR   R0,A
+368A: 10                      LR   DC,H
+368B: 28 36 F2                PI   H'36F2'
+L368E:
+368E: 2A 0C 13                DCI  H'0C13'
+3691: 16                      LM
+3692: 5A                      LR   HU,A
+3693: 16                      LM
+3694: 5B                      LR   HL,A
+3695: 2A 0C 16                DCI  H'0C16'
+3698: 16                      LM
+3699: 50                      LR   R0,A
+369A: 18                      COM
+369B: 1F                      INC
+369C: 64                      LISU 4
+369D: 6B                      LISL 3
+369E: CC                      AS   S
+369F: 10                      LR   DC,H
+36A0: 8E                      ADC
+36A1: 28 36 F2                PI   H'36F2'
+36A4: 2A 0C 16                DCI  H'0C16'
+36A7: 16                      LM
+36A8: 18                      COM
+36A9: 24 11                   AI   H'11'
+36AB: 64                      LISU 4
+36AC: 6A                      LISL 2
+36AD: 5C                      LR   S,A
+36AE: 16                      LM
+36AF: 18                      COM
+36B0: 1F                      INC
+36B1: 2A 0C 16                DCI  H'0C16'
+36B4: 88                      AM
+36B5: 6C                      LISL 4
+36B6: CC                      AS   S
+36B7: 5E                      LR   D,A
+36B8: 2A 0C 16                DCI  H'0C16'
+36BB: 16                      LM
+36BC: 18                      COM
+36BD: 1F                      INC
+36BE: CC                      AS   S
+36BF: 5C                      LR   S,A
+36C0: 69                      LISL 1
+36C1: 5E                      LR   D,A
+36C2: 70                      CLR
+36C3: 5C                      LR   S,A
+36C4: 90 1C                   BR   H'36E1'
+L36C6:
+36C6: 08                      LR   K,P
+36C7: 28 40 A9                PI   H'40A9'
+36CA: 70                      CLR
+36CB: 2A 0F DF                DCI  H'0FDF'
+36CE: 17                      ST
+36CF: 40                      LR   A,R0
+36D0: 52                      LR   R2,A
+36D1: 25 06                   CI   H'06'
+36D3: 92 0D                   BNC  H'36E1'
+36D5: 15                      SL   4
+36D6: 2A 0F 3F                DCI  H'0F3F'
+36D9: 8E                      ADC
+36DA: 18                      COM
+36DB: 24 71                   AI   H'71'
+36DD: 50                      LR   R0,A
+36DE: 28 36 F2                PI   H'36F2'
+L36E1:
+36E1: 29 15 D6                JMP  H'15D6'
+L36E4:
+36E4: 08                      LR   K,P
+36E5: 28 40 A9                PI   H'40A9'
+36E8: 64                      LISU 4
+36E9: 68                      LISL 0
+36EA: 4C                      LR   A,S
+36EB: C0                      AS   R0
+36EC: 5D                      LR   I,A
+36ED: 4C                      LR   A,S
+36EE: C0                      AS   R0
+36EF: 5C                      LR   S,A
+36F0: 90 F0                   BR   H'36E1'
+L36F2:
+36F2: 08                      LR   K,P
+36F3: 28 40 A9                PI   H'40A9'
+L36F6:
+36F6: 70                      CLR
+36F7: 8C                      XM
+36F8: 0E                      LR   Q,DC
+36F9: 91 07                   BM   H'3701'
+36FB: 58                      LR   R8,A
+36FC: 28 37 BD                PI   H'37BD'
+36FF: 90 0F                   BR   H'370F'
+L3701:
+3701: 18                      COM
+3702: 51                      LR   R1,A
+3703: 70                      CLR
+3704: 58                      LR   R8,A
+L3705:
+3705: 28 37 BD                PI   H'37BD'
+3708: 30                      DS   R0
+3709: 31                      DS   R1
+370A: 81 FA                   BP   H'3705'
+370C: 71                      LIS  H'01'
+370D: C0                      AS   R0
+370E: 50                      LR   R0,A
+L370F:
+370F: 0F                      LR   DC,Q
+3710: 30                      DS   R0
+3711: 94 E4                   BNZ  H'36F6'
+3713: 29 15 D6                JMP  H'15D6'
+L3716:
+3716: 08                      LR   K,P
+3717: 28 40 A9                PI   H'40A9'
+371A: 28 3B 26                PI   H'3B26'
+371D: 74                      LIS  H'04'
+371E: 50                      LR   R0,A
+371F: 28 3D EC                PI   H'3DEC'
+3722: 91 5C                   BM   H'377F'
+3724: 72                      LIS  H'02'
+3725: 50                      LR   R0,A
+3726: 28 3D EC                PI   H'3DEC'
+3729: 91 55                   BM   H'377F'
+372B: 72                      LIS  H'02'
+372C: 50                      LR   R0,A
+372D: 28 3D EC                PI   H'3DEC'
+3730: 91 4E                   BM   H'377F'
+L3732:
+3732: 70                      CLR
+3733: 50                      LR   R0,A
+3734: 28 3E 2D                PI   H'3E2D'
+3737: 75                      LIS  H'05'
+3738: 51                      LR   R1,A
+L3739:
+3739: 20 20                   LI   H'20'
+373B: 50                      LR   R0,A
+373C: 28 3E 2D                PI   H'3E2D'
+373F: 31                      DS   R1
+3740: 94 F8                   BNZ  H'3739'
+3742: 2A 0C 28                DCI  H'0C28'
+3745: 16                      LM
+3746: 15                      SL   4
+3747: 18                      COM
+3748: 24 71                   AI   H'71'
+374A: 2A 0F 3F                DCI  H'0F3F'
+374D: 8E                      ADC
+374E: 11                      LR   H,DC
+374F: 20 10                   LI   H'10'
+3751: 51                      LR   R1,A
+L3752:
+3752: 10                      LR   DC,H
+3753: 16                      LM
+3754: 11                      LR   H,DC
+3755: 2A 37 82                DCI  H'3782'
+3758: 8E                      ADC
+3759: 16                      LM
+375A: 50                      LR   R0,A
+375B: 28 3E 2D                PI   H'3E2D'
+375E: 91 20                   BM   H'377F'
+3760: 31                      DS   R1
+3761: 94 F0                   BNZ  H'3752'
+3763: 7D                      LIS  H'0D'
+3764: 50                      LR   R0,A
+3765: 28 3E 2D                PI   H'3E2D'
+3768: 91 16                   BM   H'377F'
+376A: 7A                      LIS  H'0A'
+376B: 50                      LR   R0,A
+376C: 28 3E 2D                PI   H'3E2D'
+376F: 91 0F                   BM   H'377F'
+3771: 2A 0C 28                DCI  H'0C28'
+3774: 28 39 22                PI   H'3922'
+3777: 94 BA                   BNZ  H'3732'
+3779: 20 60                   LI   H'60'
+377B: B1                      OUTS 1
+377C: 28 3E 64                PI   H'3E64'
+L377F:
+377F: 29 3B 19                JMP  H'3B19'
+
+; BIOS glyph -> printer/ASCII lookup, indexed at 3755.
+3782: 20 49 27 55 21 59 2F 54 DB   H'20',H'49',H'27',H'55',H'21',H'59',H'2F',H'54'
+378A: 2A 52 39 45 38 57 37 51 DB   H'2A',H'52',H'39',H'45',H'38',H'57',H'37',H'51'
+3792: 25 41 2E 4F 23 4B 29 4A DB   H'25',H'41',H'2E',H'4F',H'23',H'4B',H'29',H'4A'
+379A: 28 48 2F 47 5F 46 36 44 DB   H'28',H'48',H'2F',H'47',H'5F',H'46',H'36',H'44'
+37A2: 35 53 34 5A 31 50 23 4C DB   H'35',H'53',H'34',H'5A',H'31',H'50',H'23',H'4C'
+37AA: 24 4D 3A 4E 2C 42 3D 56 DB   H'24',H'4D',H'3A',H'4E',H'2C',H'42',H'3D',H'56'
+37B2: 2B 43 33 58 32 3F 30 3B DB   H'2B',H'43',H'33',H'58',H'32',H'3F',H'30',H'3B'
+37BA: 5C 27 2A                DB   H'5C',H'27',H'2A'
+L37BD:
+37BD: 08                      LR   K,P
+37BE: 28 40 A9                PI   H'40A9'
+37C1: 28 40 D9                PI   H'40D9'
+37C4: 2A 0F DF                DCI  H'0FDF'
+37C7: 16                      LM
+37C8: 2A 0F 3F                DCI  H'0F3F'
+37CB: 8E                      ADC
+37CC: 48                      LR   A,R8
+37CD: 17                      ST
+37CE: 2A 0F DF                DCI  H'0FDF'
+37D1: 16                      LM
+37D2: 1F                      INC
+37D3: 25 6F                   CI   H'6F'
+37D5: 82 03                   BC   H'37D9'
+37D7: 20 6F                   LI   H'6F'
+L37D9:
+37D9: 2A 0F DF                DCI  H'0FDF'
+37DC: 17                      ST
+L37DD:
+37DD: 28 39 48                PI   H'3948'
+37E0: 29 15 D6                JMP  H'15D6'
+L37E3:
+37E3: 08                      LR   K,P
+37E4: 28 40 A9                PI   H'40A9'
+L37E7:
+37E7: 28 43 61                PI   H'4361'
+37EA: 84 06                   BZ   H'37F1'
+37EC: 28 41 C8                PI   H'41C8'
+37EF: 90 F7                   BR   H'37E7'
+L37F1:
+37F1: 70                      CLR
+37F2: E8                      XS   R8
+37F3: 2A 0F E3                DCI  H'0FE3'
+37F6: 0E                      LR   Q,DC
+37F7: 94 04                   BNZ  H'37FC'
+37F9: 17                      ST
+37FA: 90 30                   BR   H'382B'
+L37FC:
+37FC: 8D                      CM
+37FD: 94 05                   BNZ  H'3803'
+37FF: 70                      CLR
+; vb-1200_3800-3fff_9_26_78
+; SHA1 3a38a889b552acaa1a284e2ca7447f142b494737
+
+3800: 58                      LR   R8,A
+3801: 90 29                   BR   H'382B'
+L3803:
+3803: 0F                      LR   DC,Q
+3804: 17                      ST
+3805: 2A 0F E2                DCI  H'0FE2'
+3808: 0E                      LR   Q,DC
+3809: 25 1E                   CI   H'1E'
+380B: 94 16                   BNZ  H'3822'
+380D: 71                      LIS  H'01'
+380E: 8C                      XM
+380F: 0F                      LR   DC,Q
+3810: 17                      ST
+3811: 2A 0F B9                DCI  H'0FB9'
+3814: 0E                      LR   Q,DC
+3815: 16                      LM
+3816: 25 94                   CI   H'94'
+3818: 20 9A                   LI   H'9A'
+381A: 84 03                   BZ   H'381E'
+381C: 20 94                   LI   H'94'
+L381E:
+381E: 0F                      LR   DC,Q
+381F: 17                      ST
+3820: 90 0A                   BR   H'382B'
+L3822:
+3822: 13                      SL   1
+3823: 58                      LR   R8,A
+3824: 70                      CLR
+3825: 8C                      XM
+3826: 94 02                   BNZ  H'3829'
+3828: 38                      DS   R8
+L3829:
+3829: 90 08                   BR   H'3832'
+L382B:
+382B: 28 41 C8                PI   H'41C8'
+382E: 6C                      LISL 4
+382F: 3C                      DS   S
+3830: 94 B6                   BNZ  H'37E7'
+L3832:
+3832: 63                      LISU 3
+3833: 28 40 BC                PI   H'40BC'
+3836: 70                      CLR
+3837: E8                      XS   R8
+3838: 0C                      PK
+
+; Convert unsigned byte R0 to three decimal glyphs at DC.
+L3839:
+3839: 08                      LR   K,P
+383A: 28 40 A9                PI   H'40A9'
+383D: 0E                      LR   Q,DC
+383E: 28 41 C8                PI   H'41C8'
+3841: 70                      CLR
+3842: 51                      LR   R1,A
+3843: 40                      LR   A,R0
+3844: 25 63                   CI   H'63'
+3846: 82 07                   BC   H'384E'
+3848: 71                      LIS  H'01'
+3849: 51                      LR   R1,A
+384A: 20 9C                   LI   H'9C'
+384C: C0                      AS   R0
+384D: 50                      LR   R0,A
+L384E:
+384E: 25 63                   CI   H'63'
+3850: 82 07                   BC   H'3858'
+3852: 72                      LIS  H'02'
+3853: 51                      LR   R1,A
+3854: 20 9C                   LI   H'9C'
+3856: C0                      AS   R0
+3857: 50                      LR   R0,A
+L3858:
+3858: 41                      LR   A,R1
+3859: 58                      LR   R8,A
+385A: 28 38 AD                PI   H'38AD'
+385D: 0F                      LR   DC,Q
+385E: 17                      ST
+385F: 0E                      LR   Q,DC
+3860: 70                      CLR
+3861: 51                      LR   R1,A
+L3862:
+3862: 41                      LR   A,R1
+3863: 1F                      INC
+3864: 51                      LR   R1,A
+3865: 20 F6                   LI   H'F6'
+3867: C0                      AS   R0
+3868: 50                      LR   R0,A
+3869: 81 F8                   BP   H'3862'
+386B: 24 0A                   AI   H'0A'
+386D: 50                      LR   R0,A
+386E: 70                      CLR
+386F: E1                      XS   R1
+3870: 84 09                   BZ   H'387A'
+3872: 31                      DS   R1
+3873: 41                      LR   A,R1
+3874: 58                      LR   R8,A
+3875: 28 38 AD                PI   H'38AD'
+3878: 90 02                   BR   H'387B'
+L387A:
+387A: 70                      CLR
+L387B:
+387B: 0F                      LR   DC,Q
+387C: 17                      ST
+387D: 0E                      LR   Q,DC
+387E: 40                      LR   A,R0
+387F: 58                      LR   R8,A
+3880: 28 38 AD                PI   H'38AD'
+3883: 0F                      LR   DC,Q
+3884: 17                      ST
+3885: 29 15 D6                JMP  H'15D6'
+
+; Convert three decimal glyphs at DC to binary value.
+L3888:
+3888: 08                      LR   K,P
+3889: 28 40 A9                PI   H'40A9'
+388C: 0E                      LR   Q,DC
+388D: 28 41 C8                PI   H'41C8'
+3890: 73                      LIS  H'03'
+3891: 52                      LR   R2,A
+3892: 70                      CLR
+3893: 51                      LR   R1,A
+L3894:
+3894: 0F                      LR   DC,Q
+3895: 16                      LM
+3896: 0E                      LR   Q,DC
+3897: 58                      LR   R8,A
+3898: 28 38 B6                PI   H'38B6'
+389B: 91 0B                   BM   H'38A7'
+389D: 41                      LR   A,R1
+389E: 13                      SL   1
+389F: 13                      SL   1
+38A0: C1                      AS   R1
+38A1: 13                      SL   1
+38A2: C0                      AS   R0
+38A3: 51                      LR   R1,A
+38A4: 32                      DS   R2
+38A5: 94 EE                   BNZ  H'3894'
+L38A7:
+38A7: 28 40 BC                PI   H'40BC'
+38AA: 70                      CLR
+38AB: E1                      XS   R1
+38AC: 0C                      PK
+
+; Decimal digit -> BIOS glyph, using reverse table ending at 2467.
+L38AD:
+38AD: 08                      LR   K,P
+38AE: 2A 24 68                DCI  H'2468'
+38B1: 48                      LR   A,R8
+38B2: 18                      COM
+38B3: 8E                      ADC
+38B4: 16                      LM
+38B5: 0C                      PK
+L38B6:
+38B6: 08                      LR   K,P
+38B7: 79                      LIS  H'09'
+38B8: 50                      LR   R0,A
+38B9: 48                      LR   A,R8
+38BA: 2A 24 5E                DCI  H'245E'
+L38BD:
+38BD: 8D                      CM
+38BE: 84 04                   BZ   H'38C3'
+38C0: 30                      DS   R0
+38C1: 81 FB                   BP   H'38BD'
+L38C3:
+38C3: 70                      CLR
+38C4: E0                      XS   R0
+38C5: 0C                      PK
+L38C6:
+38C6: 08                      LR   K,P
+38C7: 2A 1B 03                DCI  H'1B03'
+38CA: 0E                      LR   Q,DC
+38CB: 70                      CLR
+38CC: 8C                      XM
+38CD: 1E                      LR   J,W
+38CE: 94 02                   BNZ  H'38D1'
+38D0: 0C                      PK
+L38D1:
+38D1: 24 FF                   AI   H'FF'
+38D3: 0F                      LR   DC,Q
+38D4: 17                      ST
+38D5: 0E                      LR   Q,DC
+38D6: 16                      LM
+38D7: 1F                      INC
+L38D8:
+38D8: 0F                      LR   DC,Q
+38D9: 17                      ST
+38DA: 8E                      ADC
+38DB: 1D                      LR   W,J
+38DC: 0C                      PK
+L38DD:
+38DD: 08                      LR   K,P
+38DE: 2A 1B 03                DCI  H'1B03'
+38E1: 0E                      LR   Q,DC
+38E2: 16                      LM
+38E3: 25 03                   CI   H'03'
+38E5: 1E                      LR   J,W
+38E6: 94 02                   BNZ  H'38E9'
+38E8: 0C                      PK
+L38E9:
+38E9: 0F                      LR   DC,Q
+38EA: 16                      LM
+38EB: 1F                      INC
+38EC: 0F                      LR   DC,Q
+38ED: 17                      ST
+38EE: 0E                      LR   Q,DC
+38EF: 70                      CLR
+38F0: 18                      COM
+38F1: 88                      AM
+38F2: 90 E5                   BR   H'38D8'
+L38F4:
+38F4: 1A                      DI
+38F5: 2C                      XDC
+38F6: 2A 1B EC                DCI  H'1BEC'
+38F9: 16                      LM
+38FA: 1F                      INC
+38FB: 1F                      INC
+38FC: 2A 1B EC                DCI  H'1BEC'
+38FF: 17                      ST
+3900: 8E                      ADC
+3901: 00                      LR   A,KU
+3902: 17                      ST
+3903: 01                      LR   A,KL
+L3904:
+3904: 17                      ST
+3905: 2C                      XDC
+3906: 1D                      LR   W,J
+3907: 1C                      POP
+L3908:
+3908: 1A                      DI
+3909: 2C                      XDC
+390A: 2A 1B EC                DCI  H'1BEC'
+390D: 16                      LM
+390E: 8E                      ADC
+390F: 16                      LM
+3910: 04                      LR   KU,A
+3911: 16                      LM
+3912: 05                      LR   KL,A
+3913: 2A 1B EC                DCI  H'1BEC'
+3916: 16                      LM
+3917: 24 FE                   AI   H'FE'
+3919: 2A 1B EC                DCI  H'1BEC'
+391C: 90 E7                   BR   H'3904'
+
+; Increment byte at DC.
+L391E:
+391E: 1A                      DI
+391F: 71                      LIS  H'01'
+3920: 90 04                   BR   H'3925'
+
+; Decrement byte at DC.
+L3922:
+3922: 1A                      DI
+3923: 70                      CLR
+3924: 18                      COM
+L3925:
+3925: 88                      AM
+3926: 50                      LR   R0,A
+3927: 49                      LR   A,J
+3928: 1E                      LR   J,W
+3929: 21 F0                   NI   H'F0'
+392B: E9                      XS   J
+392C: 59                      LR   J,A
+392D: 70                      CLR
+392E: 18                      COM
+392F: 8E                      ADC
+3930: 40                      LR   A,R0
+3931: 17                      ST
+3932: 1D                      LR   W,J
+3933: 1C                      POP
+
+; Load pointer from memory at DC.
+L3934:
+3934: 1A                      DI
+3935: 90 0B                   BR   H'3941'
+L3937:
+3937: 1A                      DI
+3938: 90 05                   BR   H'393E'
+L393A:
+393A: 1A                      DI
+393B: 2A 18 AD                DCI  H'18AD'
+L393E:
+393E: 40                      LR   A,R0
+393F: 8E                      ADC
+3940: 8E                      ADC
+L3941:
+3941: 16                      LM
+3942: 06                      LR   QU,A
+3943: 16                      LM
+3944: 07                      LR   QL,A
+3945: 0F                      LR   DC,Q
+3946: 1E                      LR   J,W
+3947: 1C                      POP
+L3948:
+3948: 08                      LR   K,P
+3949: 64                      LISU 4
+394A: 6E                      LISL 6
+394B: 4A                      LR   A,HU
+394C: 5D                      LR   I,A
+394D: 4B                      LR   A,HL
+394E: 5C                      LR   S,A
+394F: 11                      LR   H,DC
+3950: 2A 1B CF                DCI  H'1BCF'
+3953: 4A                      LR   A,HU
+3954: 17                      ST
+3955: 4B                      LR   A,HL
+3956: 17                      ST
+3957: 2C                      XDC
+3958: 11                      LR   H,DC
+3959: 2C                      XDC
+395A: 4A                      LR   A,HU
+395B: 17                      ST
+395C: 4B                      LR   A,HL
+395D: 17                      ST
+395E: 20 90                   LI   H'90'
+3960: 2A 08 FB                DCI  H'08FB'
+3963: 8D                      CM
+3964: 92 0A                   BNC  H'396F'
+3966: 28 40 A9                PI   H'40A9'
+3969: 28 41 C8                PI   H'41C8'
+396C: 28 40 BC                PI   H'40BC'
+L396F:
+396F: 2A 1B CF                DCI  H'1BCF'
+3972: 16                      LM
+3973: 5A                      LR   HU,A
+3974: 16                      LM
+3975: 5B                      LR   HL,A
+3976: 2C                      XDC
+3977: 10                      LR   DC,H
+3978: 2C                      XDC
+3979: 16                      LM
+397A: 5A                      LR   HU,A
+397B: 16                      LM
+397C: 5B                      LR   HL,A
+397D: 10                      LR   DC,H
+397E: 2C                      XDC
+397F: 64                      LISU 4
+3980: 6E                      LISL 6
+3981: 4D                      LR   A,I
+3982: 5A                      LR   HU,A
+3983: 4C                      LR   A,S
+3984: 5B                      LR   HL,A
+3985: 0C                      PK
+
+; Clear R0 bytes starting at DC.
+L3986:
+3986: 08                      LR   K,P
+3987: 28 40 A9                PI   H'40A9'
+L398A:
+398A: 30                      DS   R0
+398B: 92 08                   BNC  H'3994'
+398D: 70                      CLR
+398E: 17                      ST
+398F: 28 39 48                PI   H'3948'
+3992: 90 F7                   BR   H'398A'
+L3994:
+3994: 29 15 D6                JMP  H'15D6'
+L3997:
+3997: 08                      LR   K,P
+3998: 28 40 A9                PI   H'40A9'
+399B: 0E                      LR   Q,DC
+399C: 2C                      XDC
+399D: 11                      LR   H,DC
+399E: 0F                      LR   DC,Q
+399F: 63                      LISU 3
+39A0: 68                      LISL 0
+L39A1:
+39A1: 16                      LM
+39A2: 5D                      LR   I,A
+39A3: 8F FD                   BR7  H'39A1'
+39A5: 16                      LM
+39A6: 5D                      LR   I,A
+39A7: 10                      LR   DC,H
+39A8: 64                      LISU 4
+L39A9:
+39A9: 16                      LM
+39AA: 5D                      LR   I,A
+39AB: 8F FD                   BR7  H'39A9'
+39AD: 16                      LM
+39AE: 5D                      LR   I,A
+39AF: 28 41 C8                PI   H'41C8'
+39B2: 28 39 C1                PI   H'39C1'
+39B5: 0F                      LR   DC,Q
+39B6: 63                      LISU 3
+39B7: 68                      LISL 0
+L39B8:
+39B8: 4D                      LR   A,I
+39B9: 17                      ST
+39BA: 8F FD                   BR7  H'39B8'
+39BC: 4D                      LR   A,I
+39BD: 17                      ST
+39BE: 29 15 D6                JMP  H'15D6'
+L39C1:
+39C1: 08                      LR   K,P
+39C2: 68                      LISL 0
+39C3: 63                      LISU 3
+39C4: 4C                      LR   A,S
+39C5: 64                      LISU 4
+39C6: EC                      XS   S
+39C7: 94 25                   BNZ  H'39ED'
+L39C9:
+39C9: 71                      LIS  H'01'
+39CA: 56                      LR   R6,A
+39CB: 77                      LIS  H'07'
+39CC: 55                      LR   R5,A
+39CD: 18                      COM
+39CE: 1E                      LR   J,W
+39CF: 6F                      LISL 7
+L39D0:
+39D0: 4C                      LR   A,S
+39D1: 24 66                   AI   H'66'
+39D3: 1D                      LR   W,J
+39D4: 92 05                   BNC  H'39DA'
+39D6: D6                      ASD  R6
+39D7: 1E                      LR   J,W
+39D8: 24 66                   AI   H'66'
+L39DA:
+39DA: 63                      LISU 3
+39DB: DC                      ASD  S
+39DC: 5E                      LR   D,A
+39DD: 64                      LISU 4
+39DE: 92 02                   BNC  H'39E1'
+39E0: 1E                      LR   J,W
+L39E1:
+39E1: 35                      DS   R5
+39E2: 94 ED                   BNZ  H'39D0'
+39E4: 0C                      PK
+
+; Unreferenced entry: select alternate eight-byte arithmetic path at 39CA.
+L39E5:
+39E5: 08                      LR   K,P
+39E6: 68                      LISL 0
+39E7: 63                      LISU 3
+39E8: 4C                      LR   A,S
+39E9: 64                      LISU 4
+39EA: EC                      XS   S
+39EB: 94 DD                   BNZ  H'39C9'
+L39ED:
+39ED: 77                      LIS  H'07'
+39EE: 55                      LR   R5,A
+39EF: 20 66                   LI   H'66'
+39F1: 57                      LR   R7,A
+39F2: 71                      LIS  H'01'
+39F3: 6F                      LISL 7
+L39F4:
+39F4: 56                      LR   R6,A
+39F5: 4C                      LR   A,S
+39F6: 18                      COM
+39F7: 63                      LISU 3
+39F8: DC                      ASD  S
+39F9: 1E                      LR   J,W
+39FA: C6                      AS   R6
+39FB: D7                      ASD  R7
+39FC: 92 02                   BNC  H'39FF'
+39FE: 1E                      LR   J,W
+L39FF:
+39FF: 5E                      LR   D,A
+3A00: 64                      LISU 4
+3A01: 72                      LIS  H'02'
+3A02: F9                      NS   J
+3A03: 12                      SR   1
+3A04: 35                      DS   R5
+3A05: 94 EE                   BNZ  H'39F4'
+3A07: 63                      LISU 3
+3A08: 70                      CLR
+3A09: 58                      LR   R8,A
+3A0A: E9                      XS   J
+3A0B: 70                      CLR
+3A0C: 94 18                   BNZ  H'3A25'
+3A0E: 77                      LIS  H'07'
+3A0F: 55                      LR   R5,A
+3A10: 71                      LIS  H'01'
+3A11: 6F                      LISL 7
+L3A12:
+3A12: 56                      LR   R6,A
+3A13: 4C                      LR   A,S
+3A14: 18                      COM
+3A15: D8                      ASD  R8
+3A16: 1E                      LR   J,W
+3A17: C6                      AS   R6
+3A18: D7                      ASD  R7
+3A19: 92 02                   BNC  H'3A1C'
+3A1B: 1E                      LR   J,W
+L3A1C:
+3A1C: 5E                      LR   D,A
+3A1D: 72                      LIS  H'02'
+3A1E: F9                      NS   J
+3A1F: 12                      SR   1
+3A20: 35                      DS   R5
+3A21: 94 F0                   BNZ  H'3A12'
+3A23: 70                      CLR
+3A24: 18                      COM
+L3A25:
+3A25: 68                      LISL 0
+3A26: EC                      XS   S
+3A27: 5C                      LR   S,A
+3A28: 0C                      PK
+L3A29:
+3A29: 08                      LR   K,P
+3A2A: 28 40 A9                PI   H'40A9'
+3A2D: 70                      CLR
+3A2E: 2A 1B DB                DCI  H'1BDB'
+3A31: 17                      ST
+3A32: 46                      LR   A,R6
+3A33: 50                      LR   R0,A
+3A34: 28 39 3A                PI   H'393A'
+3A37: 78                      LIS  H'08'
+3A38: 50                      LR   R0,A
+3A39: 28 39 86                PI   H'3986'
+3A3C: 6C                      LISL 4
+L3A3D:
+3A3D: 65                      LISU 5
+3A3E: 4C                      LR   A,S
+3A3F: 63                      LISU 3
+3A40: 5E                      LR   D,A
+3A41: 8F FB                   BR7  H'3A3D'
+3A43: 2A 1B 03                DCI  H'1B03'
+3A46: 16                      LM
+3A47: 5C                      LR   S,A
+3A48: 2A 1B 03                DCI  H'1B03'
+3A4B: 73                      LIS  H'03'
+3A4C: 17                      ST
+3A4D: 46                      LR   A,R6
+3A4E: 2A 18 E9                DCI  H'18E9'
+3A51: 8E                      ADC
+3A52: 16                      LM
+
+; Numeric conversion: type I (glyph 01) uses request 30; M uses request 33 with fractional grammar.
+3A53: 25 01                   CI   H'01'
+3A55: 2A 3A 71                DCI  H'3A71'
+3A58: 84 04                   BZ   H'3A5D'
+3A5A: 2A 3A 74                DCI  H'3A74'
+L3A5D:
+3A5D: 28 16 41                PI   H'1641'
+3A60: 63                      LISU 3
+3A61: 6F                      LISL 7
+3A62: 4C                      LR   A,S
+3A63: 2A 1B 03                DCI  H'1B03'
+3A66: 17                      ST
+3A67: 6C                      LISL 4
+L3A68:
+3A68: 63                      LISU 3
+3A69: 4C                      LR   A,S
+3A6A: 65                      LISU 5
+3A6B: 5E                      LR   D,A
+3A6C: 8F FB                   BR7  H'3A68'
+3A6E: 29 15 D6                JMP  H'15D6'
+
+; Three-byte interpreter requests for field input.
+3A71: 30 25 01 33 25 01       DB   H'30',H'25',H'01',H'33',H'25',H'01'
+L3A77:
+3A77: 08                      LR   K,P
+3A78: 28 40 A9                PI   H'40A9'
+3A7B: 0E                      LR   Q,DC
+3A7C: 77                      LIS  H'07'
+3A7D: 51                      LR   R1,A
+3A7E: 40                      LR   A,R0
+3A7F: 24 FF                   AI   H'FF'
+3A81: 52                      LR   R2,A
+3A82: 24 FE                   AI   H'FE'
+3A84: 54                      LR   R4,A
+L3A85:
+3A85: 70                      CLR
+3A86: E2                      XS   R2
+3A87: 84 40                   BZ   H'3AC8'
+3A89: 41                      LR   A,R1
+3A8A: 0F                      LR   DC,Q
+3A8B: 8E                      ADC
+3A8C: 16                      LM
+3A8D: 53                      LR   R3,A
+3A8E: 21 0F                   NI   H'0F'
+3A90: 58                      LR   R8,A
+3A91: 28 38 AD                PI   H'38AD'
+3A94: 58                      LR   R8,A
+3A95: 42                      LR   A,R2
+3A96: 2A 1B DC                DCI  H'1BDC'
+3A99: 8E                      ADC
+3A9A: 48                      LR   A,R8
+3A9B: 17                      ST
+3A9C: 32                      DS   R2
+3A9D: 84 2A                   BZ   H'3AC8'
+3A9F: 43                      LR   A,R3
+3AA0: 14                      SR   4
+3AA1: 58                      LR   R8,A
+3AA2: 28 38 AD                PI   H'38AD'
+3AA5: 58                      LR   R8,A
+3AA6: 42                      LR   A,R2
+3AA7: 2A 1B DC                DCI  H'1BDC'
+3AAA: 8E                      ADC
+3AAB: 48                      LR   A,R8
+3AAC: 17                      ST
+3AAD: 32                      DS   R2
+3AAE: 84 19                   BZ   H'3AC8'
+3AB0: 42                      LR   A,R2
+3AB1: E4                      XS   R4
+3AB2: 94 12                   BNZ  H'3AC5'
+
+; Only M (glyph 29) inserts a decimal point before the final two digits. I displays whole numbers.
+3AB4: 2A 0C 24                DCI  H'0C24'
+3AB7: 16                      LM
+3AB8: 25 29                   CI   H'29'
+3ABA: 94 0A                   BNZ  H'3AC5'
+3ABC: 42                      LR   A,R2
+3ABD: 2A 1B DC                DCI  H'1BDC'
+3AC0: 8E                      ADC
+3AC1: 20 12                   LI   H'12'
+3AC3: 17                      ST
+3AC4: 32                      DS   R2
+L3AC5:
+3AC5: 31                      DS   R1
+3AC6: 90 BE                   BR   H'3A85'
+L3AC8:
+3AC8: 0F                      LR   DC,Q
+3AC9: 70                      CLR
+3ACA: 8C                      XM
+3ACB: 94 04                   BNZ  H'3AD0'
+3ACD: 70                      CLR
+3ACE: 90 03                   BR   H'3AD2'
+L3AD0:
+3AD0: 20 1C                   LI   H'1C'
+L3AD2:
+3AD2: 2A 1B DC                DCI  H'1BDC'
+3AD5: 17                      ST
+3AD6: 71                      LIS  H'01'
+3AD7: 52                      LR   R2,A
+L3AD8:
+3AD8: 40                      LR   A,R0
+3AD9: 24 FF                   AI   H'FF'
+3ADB: E2                      XS   R2
+3ADC: 84 15                   BZ   H'3AF2'
+3ADE: 42                      LR   A,R2
+3ADF: 2A 1B DC                DCI  H'1BDC'
+3AE2: 8E                      ADC
+3AE3: 16                      LM
+3AE4: 25 36                   CI   H'36'
+3AE6: 94 0B                   BNZ  H'3AF2'
+3AE8: 20 FF                   LI   H'FF'
+3AEA: 8E                      ADC
+3AEB: 70                      CLR
+3AEC: 17                      ST
+3AED: 71                      LIS  H'01'
+3AEE: C2                      AS   R2
+3AEF: 52                      LR   R2,A
+3AF0: 90 E7                   BR   H'3AD8'
+L3AF2:
+3AF2: 29 15 D6                JMP  H'15D6'
+
+; Initialize Expander link; send 05, 00 and mode byte from 1BCE.
+L3AF5:
+3AF5: 08                      LR   K,P
+3AF6: 28 40 A9                PI   H'40A9'
+3AF9: 28 3B 26                PI   H'3B26'
+3AFC: 75                      LIS  H'05'
+3AFD: 50                      LR   R0,A
+3AFE: 28 3D EC                PI   H'3DEC'
+3B01: 91 22                   BM   H'3B24'
+3B03: 70                      CLR
+3B04: 50                      LR   R0,A
+3B05: 28 3D EC                PI   H'3DEC'
+3B08: 91 1B                   BM   H'3B24'
+3B0A: 2A 1B CE                DCI  H'1BCE'
+3B0D: 16                      LM
+3B0E: 50                      LR   R0,A
+3B0F: 28 3D EC                PI   H'3DEC'
+3B12: 91 11                   BM   H'3B24'
+3B14: 28 3E 64                PI   H'3E64'
+3B17: 91 0C                   BM   H'3B24'
+L3B19:
+3B19: 70                      CLR
+3B1A: BE                      OUTS H'0E'
+3B1B: 2A 0C 25                DCI  H'0C25'
+3B1E: 70                      CLR
+3B1F: 18                      COM
+3B20: 17                      ST
+3B21: 29 3E 76                JMP  H'3E76'
+L3B24:
+3B24: 90 5A                   BR   H'3B7F'
+L3B26:
+3B26: 08                      LR   K,P
+3B27: 71                      LIS  H'01'
+3B28: BE                      OUTS H'0E'
+3B29: 70                      CLR
+3B2A: 2A 0C 25                DCI  H'0C25'
+3B2D: 17                      ST
+3B2E: 63                      LISU 3
+3B2F: 6B                      LISL 3
+3B30: 20 10                   LI   H'10'
+3B32: 5C                      LR   S,A
+3B33: 2A 1B D9                DCI  H'1BD9'
+3B36: 20 3E                   LI   H'3E'
+3B38: 17                      ST
+3B39: 20 E6                   LI   H'E6'
+3B3B: 17                      ST
+3B3C: 20 40                   LI   H'40'
+3B3E: B1                      OUTS 1
+3B3F: 0C                      PK
+
+; Copy/advance: commit current record via 3B8C, then read next source record.
+L3B40:
+3B40: 08                      LR   K,P
+3B41: 28 40 A9                PI   H'40A9'
+3B44: 28 3B 8C                PI   H'3B8C'
+3B47: 90 05                   BR   H'3B4D'
+
+; Read next source record without committing current buffer; used to omit deleted records.
+L3B49:
+3B49: 08                      LR   K,P
+3B4A: 28 40 A9                PI   H'40A9'
+L3B4D:
+3B4D: 2A 0C 27                DCI  H'0C27'
+3B50: 70                      CLR
+3B51: 8C                      XM
+3B52: 84 09                   BZ   H'3B5C'
+3B54: 2A 19 01                DCI  H'1901'
+3B57: 28 3C 36                PI   H'3C36'
+3B5A: 90 F2                   BR   H'3B4D'
+L3B5C:
+3B5C: 2A 18 FD                DCI  H'18FD'
+3B5F: 16                      LM
+3B60: 2C                      XDC
+3B61: 2A 0C 29                DCI  H'0C29'
+3B64: 17                      ST
+3B65: 2C                      XDC
+3B66: 16                      LM
+3B67: 2C                      XDC
+3B68: 17                      ST
+3B69: 73                      LIS  H'03'
+3B6A: 2A 0C 27                DCI  H'0C27'
+3B6D: 17                      ST
+L3B6E:
+3B6E: 2A 19 01                DCI  H'1901'
+3B71: 28 3C 36                PI   H'3C36'
+3B74: 84 14                   BZ   H'3B89'
+3B76: 91 12                   BM   H'3B89'
+3B78: 2A 0C 27                DCI  H'0C27'
+3B7B: 70                      CLR
+3B7C: 8C                      XM
+3B7D: 94 F0                   BNZ  H'3B6E'
+L3B7F:
+3B7F: 74                      LIS  H'04'
+3B80: 5A                      LR   HU,A
+3B81: 28 3F 2A                PI   H'3F2A'
+L3B84:
+3B84: 28 41 C8                PI   H'41C8'
+3B87: 90 FC                   BR   H'3B84'
+L3B89:
+3B89: 29 15 D6                JMP  H'15D6'
+
+; Write current record in EDIT/ENTER; REVIEW suppresses tape writes via 0C26.
+L3B8C:
+3B8C: 08                      LR   K,P
+3B8D: 28 40 A9                PI   H'40A9'
+3B90: 2A 0C 26                DCI  H'0C26'
+3B93: 70                      CLR
+3B94: 8C                      XM
+3B95: 84 04                   BZ   H'3B9A'
+3B97: 29 13 0F                JMP  H'130F'
+L3B9A:
+3B9A: 2A 18 FD                DCI  H'18FD'
+3B9D: 16                      LM
+3B9E: 2C                      XDC
+3B9F: 2A 19 01                DCI  H'1901'
+3BA2: 17                      ST
+3BA3: 2C                      XDC
+3BA4: 16                      LM
+3BA5: 2C                      XDC
+3BA6: 17                      ST
+L3BA7:
+3BA7: 2A 19 01                DCI  H'1901'
+L3BAA:
+3BAA: 28 3B EE                PI   H'3BEE'
+3BAD: 90 DB                   BR   H'3B89'
+
+; Load 253-byte definition payload at 1802..18FE, including record length; 1800/1801 hold block length. No schema comparison.
+L3BAF:
+3BAF: 08                      LR   K,P
+3BB0: 28 40 A9                PI   H'40A9'
+3BB3: 2A 0C 29                DCI  H'0C29'
+3BB6: 70                      CLR
+3BB7: 17                      ST
+3BB8: 20 FD                   LI   H'FD'
+3BBA: 17                      ST
+3BBB: 73                      LIS  H'03'
+3BBC: 2A 0C 27                DCI  H'0C27'
+3BBF: 17                      ST
+L3BC0:
+3BC0: 2A 18 00                DCI  H'1800'
+3BC3: 28 3C 36                PI   H'3C36'
+3BC6: 84 C2                   BZ   H'3B89'
+3BC8: 2A 0C 27                DCI  H'0C27'
+3BCB: 70                      CLR
+3BCC: 8C                      XM
+3BCD: 94 F2                   BNZ  H'3BC0'
+3BCF: 90 AF                   BR   H'3B7F'
+
+; Write database definition. EDIT calls this once before its first record; MERGE does not call it.
+L3BD1:
+3BD1: 08                      LR   K,P
+3BD2: 28 40 A9                PI   H'40A9'
+3BD5: 2A 18 00                DCI  H'1800'
+3BD8: 70                      CLR
+3BD9: 17                      ST
+3BDA: 20 FD                   LI   H'FD'
+3BDC: 17                      ST
+3BDD: 2A 18 00                DCI  H'1800'
+3BE0: 90 C9                   BR   H'3BAA'
+
+; Write zero-length output end marker; EDIT uses this on EXIT after copying remaining input.
+L3BE2:
+3BE2: 08                      LR   K,P
+3BE3: 28 40 A9                PI   H'40A9'
+3BE6: 70                      CLR
+3BE7: 2A 19 01                DCI  H'1901'
+3BEA: 17                      ST
+3BEB: 17                      ST
+3BEC: 90 BA                   BR   H'3BA7'
+L3BEE:
+3BEE: 08                      LR   K,P
+3BEF: 28 40 A9                PI   H'40A9'
+3BF2: 11                      LR   H,DC
+3BF3: 28 3D 25                PI   H'3D25'
+3BF6: 45                      LR   A,R5
+3BF7: 17                      ST
+3BF8: 46                      LR   A,R6
+3BF9: 17                      ST
+3BFA: 64                      LISU 4
+3BFB: 6E                      LISL 6
+3BFC: 73                      LIS  H'03'
+3BFD: 5D                      LR   I,A
+L3BFE:
+3BFE: 72                      LIS  H'02'
+3BFF: 5C                      LR   S,A
+3C00: 2A 3C 32                DCI  H'3C32'
+3C03: 28 3D DA                PI   H'3DDA'
+3C06: 28 3D 79                PI   H'3D79'
+3C09: 82 25                   BC   H'3C2F'
+3C0B: 28 3D 5F                PI   H'3D5F'
+3C0E: 16                      LM
+3C0F: 50                      LR   R0,A
+3C10: 74                      LIS  H'04'
+3C11: 88                      AM
+3C12: 51                      LR   R1,A
+3C13: 40                      LR   A,R0
+3C14: 19                      LNK
+3C15: 50                      LR   R0,A
+3C16: 10                      LR   DC,H
+3C17: 28 3D 6D                PI   H'3D6D'
+3C1A: 28 3D 79                PI   H'3D79'
+3C1D: 82 11                   BC   H'3C2F'
+3C1F: 28 3D B9                PI   H'3DB9'
+3C22: 28 3D 5F                PI   H'3D5F'
+3C25: 64                      LISU 4
+3C26: 6E                      LISL 6
+3C27: 3D                      DS   I
+3C28: 94 D5                   BNZ  H'3BFE'
+L3C2A:
+3C2A: 1E                      LR   J,W
+3C2B: 28 40 BC                PI   H'40BC'
+3C2E: 0C                      PK
+L3C2F:
+3C2F: 29 3B 7F                JMP  H'3B7F'
+
+; Four-byte peripheral transfer descriptor.
+3C32: 02 01 01 28             DB   H'02',H'01',H'01',H'28'
+L3C36:
+3C36: 08                      LR   K,P
+3C37: 28 40 A9                PI   H'40A9'
+3C3A: 11                      LR   H,DC
+3C3B: 64                      LISU 4
+3C3C: 6F                      LISL 7
+3C3D: 72                      LIS  H'02'
+3C3E: 5C                      LR   S,A
+3C3F: 2A 3C 9B                DCI  H'3C9B'
+3C42: 28 3D DA                PI   H'3DDA'
+3C45: 28 3D 79                PI   H'3D79'
+3C48: 82 40                   BC   H'3C89'
+3C4A: 64                      LISU 4
+3C4B: 6F                      LISL 7
+3C4C: 71                      LIS  H'01'
+3C4D: 5C                      LR   S,A
+3C4E: 2A 0C 29                DCI  H'0C29'
+3C51: 16                      LM
+3C52: 50                      LR   R0,A
+3C53: 73                      LIS  H'03'
+3C54: 88                      AM
+3C55: 51                      LR   R1,A
+3C56: 40                      LR   A,R0
+3C57: 19                      LNK
+3C58: 50                      LR   R0,A
+3C59: 28 3D 5F                PI   H'3D5F'
+3C5C: 28 3D 66                PI   H'3D66'
+3C5F: 28 3D 79                PI   H'3D79'
+3C62: 82 19                   BC   H'3C7C'
+3C64: 28 3D B9                PI   H'3DB9'
+3C67: 70                      CLR
+3C68: E5                      XS   R5
+3C69: 94 1F                   BNZ  H'3C89'
+3C6B: 28 3D 5F                PI   H'3D5F'
+3C6E: 28 3D 25                PI   H'3D25'
+3C71: 16                      LM
+3C72: E5                      XS   R5
+3C73: 94 15                   BNZ  H'3C89'
+3C75: 16                      LM
+3C76: E6                      XS   R6
+3C77: 94 11                   BNZ  H'3C89'
+3C79: 70                      CLR
+3C7A: 90 0F                   BR   H'3C8A'
+L3C7C:
+3C7C: 2A 19 01                DCI  H'1901'
+3C7F: 70                      CLR
+3C80: 8B                      OM
+3C81: 8B                      OM
+3C82: 8B                      OM
+3C83: 8B                      OM
+3C84: 94 04                   BNZ  H'3C89'
+3C86: 18                      COM
+3C87: 90 02                   BR   H'3C8A'
+L3C89:
+3C89: 71                      LIS  H'01'
+L3C8A:
+3C8A: 2A 1B 1B                DCI  H'1B1B'
+3C8D: 17                      ST
+3C8E: 2A 0C 27                DCI  H'0C27'
+3C91: 28 39 22                PI   H'3922'
+3C94: 2A 1B 1B                DCI  H'1B1B'
+3C97: 70                      CLR
+3C98: 8C                      XM
+3C99: 90 90                   BR   H'3C2A'
+
+; Four-byte peripheral transfer descriptor.
+3C9B: 01 01 01 01             DB   H'01',H'01',H'01',H'01'
+
+; Unreferenced entry: port status and register/flag restoration.
+L3C9F:
+3C9F: 56                      LR   R6,A
+3CA0: 49                      LR   A,J
+3CA1: 54                      LR   R4,A
+3CA2: 1E                      LR   J,W
+3CA3: 70                      CLR
+3CA4: B1                      OUTS 1
+3CA5: A1                      INS  1
+3CA6: 25 20                   CI   H'20'
+3CA8: 84 02                   BZ   H'3CAB'
+3CAA: 35                      DS   R5
+L3CAB:
+3CAB: 1D                      LR   W,J
+3CAC: 44                      LR   A,R4
+3CAD: 59                      LR   J,A
+3CAE: 71                      LIS  H'01'
+3CAF: 50                      LR   R0,A
+3CB0: 51                      LR   R1,A
+3CB1: 1A                      DI
+3CB2: 1E                      LR   J,W
+3CB3: 46                      LR   A,R6
+3CB4: 1C                      POP
+
+; Interrupt-driven byte transfer through host port 1.
+L3CB5:
+3CB5: 56                      LR   R6,A
+3CB6: 0A                      LR   A,IS
+3CB7: 64                      LISU 4
+3CB8: 68                      LISL 0
+3CB9: 5D                      LR   I,A
+3CBA: 49                      LR   A,J
+3CBB: 5D                      LR   I,A
+3CBC: 1E                      LR   J,W
+3CBD: 4A                      LR   A,HU
+3CBE: 5D                      LR   I,A
+3CBF: 4B                      LR   A,HL
+3CC0: 5D                      LR   I,A
+3CC1: 11                      LR   H,DC
+3CC2: 4A                      LR   A,HU
+3CC3: 5D                      LR   I,A
+3CC4: 4B                      LR   A,HL
+3CC5: 5D                      LR   I,A
+3CC6: 70                      CLR
+3CC7: 52                      LR   R2,A
+3CC8: B1                      OUTS 1
+3CC9: 2B                      NOP
+3CCA: 2B                      NOP
+3CCB: 2B                      NOP
+3CCC: A1                      INS  1
+3CCD: 21 20                   NI   H'20'
+3CCF: 84 07                   BZ   H'3CD7'
+3CD1: 35                      DS   R5
+L3CD2:
+3CD2: 70                      CLR
+3CD3: 50                      LR   R0,A
+3CD4: 51                      LR   R1,A
+3CD5: 90 3C                   BR   H'3D12'
+L3CD7:
+3CD7: 6F                      LISL 7
+3CD8: 71                      LIS  H'01'
+3CD9: EC                      XS   S
+3CDA: 84 1B                   BZ   H'3CF6'
+3CDC: 33                      DS   R3
+3CDD: 81 0D                   BP   H'3CEB'
+3CDF: 31                      DS   R1
+3CE0: 82 04                   BC   H'3CE5'
+3CE2: 30                      DS   R0
+3CE3: 92 EE                   BNC  H'3CD2'
+L3CE5:
+3CE5: 0F                      LR   DC,Q
+3CE6: 16                      LM
+3CE7: 54                      LR   R4,A
+3CE8: 0E                      LR   Q,DC
+3CE9: 77                      LIS  H'07'
+3CEA: 53                      LR   R3,A
+L3CEB:
+3CEB: 44                      LR   A,R4
+3CEC: 12                      SR   1
+3CED: 12                      SR   1
+3CEE: 21 20                   NI   H'20'
+3CF0: B1                      OUTS 1
+3CF1: 44                      LR   A,R4
+3CF2: 13                      SL   1
+3CF3: 54                      LR   R4,A
+3CF4: 90 1D                   BR   H'3D12'
+L3CF6:
+3CF6: 44                      LR   A,R4
+3CF7: 13                      SL   1
+3CF8: 54                      LR   R4,A
+3CF9: A1                      INS  1
+3CFA: 14                      SR   4
+3CFB: 12                      SR   1
+3CFC: 12                      SR   1
+3CFD: 21 01                   NI   H'01'
+3CFF: C4                      AS   R4
+3D00: 54                      LR   R4,A
+3D01: 33                      DS   R3
+3D02: 94 0F                   BNZ  H'3D12'
+3D04: 0F                      LR   DC,Q
+3D05: 44                      LR   A,R4
+3D06: 17                      ST
+3D07: 70                      CLR
+3D08: 54                      LR   R4,A
+3D09: 0E                      LR   Q,DC
+3D0A: 31                      DS   R1
+3D0B: 82 04                   BC   H'3D10'
+3D0D: 30                      DS   R0
+3D0E: 92 C3                   BNC  H'3CD2'
+L3D10:
+3D10: 78                      LIS  H'08'
+3D11: 53                      LR   R3,A
+L3D12:
+3D12: 64                      LISU 4
+3D13: 6D                      LISL 5
+3D14: 4E                      LR   A,D
+3D15: 5B                      LR   HL,A
+3D16: 4E                      LR   A,D
+3D17: 5A                      LR   HU,A
+3D18: 10                      LR   DC,H
+3D19: 4E                      LR   A,D
+3D1A: 5B                      LR   HL,A
+3D1B: 4E                      LR   A,D
+3D1C: 5A                      LR   HU,A
+3D1D: 1D                      LR   W,J
+3D1E: 4E                      LR   A,D
+3D1F: 59                      LR   J,A
+3D20: 4C                      LR   A,S
+3D21: 0B                      LR   IS,A
+3D22: 46                      LR   A,R6
+3D23: 1B                      EI
+3D24: 1C                      POP
+
+; Compute two-byte checksum over a length-prefixed block.
+L3D25:
+3D25: 08                      LR   K,P
+3D26: 28 40 A9                PI   H'40A9'
+3D29: 70                      CLR
+3D2A: 55                      LR   R5,A
+3D2B: 56                      LR   R6,A
+3D2C: 0E                      LR   Q,DC
+3D2D: 16                      LM
+3D2E: 50                      LR   R0,A
+3D2F: 72                      LIS  H'02'
+3D30: 88                      AM
+3D31: 51                      LR   R1,A
+3D32: 40                      LR   A,R0
+3D33: 19                      LNK
+3D34: 50                      LR   R0,A
+L3D35:
+3D35: 28 39 48                PI   H'3948'
+3D38: 0F                      LR   DC,Q
+3D39: 31                      DS   R1
+3D3A: 82 04                   BC   H'3D3F'
+3D3C: 30                      DS   R0
+3D3D: 92 09                   BNC  H'3D47'
+L3D3F:
+3D3F: 16                      LM
+3D40: 0E                      LR   Q,DC
+3D41: 54                      LR   R4,A
+3D42: 28 3D 4A                PI   H'3D4A'
+3D45: 90 EF                   BR   H'3D35'
+L3D47:
+3D47: 29 15 D6                JMP  H'15D6'
+L3D4A:
+3D4A: 44                      LR   A,R4
+3D4B: E6                      XS   R6
+3D4C: 57                      LR   R7,A
+3D4D: 14                      SR   4
+3D4E: E7                      XS   R7
+3D4F: 57                      LR   R7,A
+3D50: 15                      SL   4
+3D51: E5                      XS   R5
+3D52: 56                      LR   R6,A
+3D53: 47                      LR   A,R7
+3D54: 12                      SR   1
+3D55: 12                      SR   1
+3D56: 12                      SR   1
+3D57: E6                      XS   R6
+3D58: 56                      LR   R6,A
+3D59: 47                      LR   A,R7
+3D5A: 15                      SL   4
+3D5B: 13                      SL   1
+3D5C: E7                      XS   R7
+3D5D: 55                      LR   R5,A
+3D5E: 1C                      POP
+L3D5F:
+3D5F: 08                      LR   K,P
+3D60: 47                      LR   A,R7
+3D61: 5A                      LR   HU,A
+3D62: 48                      LR   A,R8
+3D63: 5B                      LR   HL,A
+3D64: 10                      LR   DC,H
+3D65: 0C                      PK
+L3D66:
+3D66: 08                      LR   K,P
+3D67: 28 3D 6D                PI   H'3D6D'
+3D6A: 78                      LIS  H'08'
+3D6B: 53                      LR   R3,A
+3D6C: 0C                      PK
+L3D6D:
+3D6D: 0E                      LR   Q,DC
+3D6E: 20 3C                   LI   H'3C'
+3D70: BC                      OUTS H'0C'
+3D71: 20 B5                   LI   H'B5'
+3D73: BD                      OUTS H'0D'
+3D74: 70                      CLR
+3D75: 53                      LR   R3,A
+3D76: 71                      LIS  H'01'
+3D77: BE                      OUTS H'0E'
+3D78: 1C                      POP
+L3D79:
+3D79: 08                      LR   K,P
+3D7A: 1B                      EI
+3D7B: 1E                      LR   J,W
+3D7C: 28 40 A9                PI   H'40A9'
+3D7F: 63                      LISU 3
+3D80: 6A                      LISL 2
+3D81: 70                      CLR
+3D82: 5C                      LR   S,A
+L3D83:
+3D83: 77                      LIS  H'07'
+3D84: 52                      LR   R2,A
+L3D85:
+3D85: 28 41 C8                PI   H'41C8'
+3D88: 32                      DS   R2
+3D89: 91 0A                   BM   H'3D94'
+3D8B: 94 F9                   BNZ  H'3D85'
+3D8D: 63                      LISU 3
+3D8E: 6A                      LISL 2
+3D8F: 3C                      DS   S
+3D90: 94 F2                   BNZ  H'3D83'
+3D92: 90 18                   BR   H'3DAB'
+L3D94:
+3D94: 7F                      LIS  H'0F'
+3D95: 52                      LR   R2,A
+L3D96:
+3D96: 70                      CLR
+3D97: C5                      AS   R5
+3D98: 94 12                   BNZ  H'3DAB'
+3D9A: C0                      AS   R0
+3D9B: C3                      AS   R3
+3D9C: 94 04                   BNZ  H'3DA1'
+3D9E: C1                      AS   R1
+3D9F: 84 13                   BZ   H'3DB3'
+L3DA1:
+3DA1: 28 41 C8                PI   H'41C8'
+3DA4: 32                      DS   R2
+3DA5: 84 10                   BZ   H'3DB6'
+3DA7: 91 EC                   BM   H'3D94'
+3DA9: 81 EC                   BP   H'3D96'
+L3DAB:
+3DAB: 1A                      DI
+3DAC: 20 60                   LI   H'60'
+3DAE: B1                      OUTS 1
+3DAF: 70                      CLR
+L3DB0:
+3DB0: 1F                      INC
+3DB1: 92 FE                   BNC  H'3DB0'
+L3DB3:
+3DB3: 29 3D D4                JMP  H'3DD4'
+L3DB6:
+3DB6: 18                      COM
+3DB7: 90 FB                   BR   H'3DB3'
+L3DB9:
+3DB9: 08                      LR   K,P
+3DBA: 28 40 A9                PI   H'40A9'
+3DBD: 20 3C                   LI   H'3C'
+3DBF: BC                      OUTS H'0C'
+3DC0: 20 9F                   LI   H'9F'
+3DC2: BD                      OUTS H'0D'
+3DC3: 7A                      LIS  H'0A'
+3DC4: 50                      LR   R0,A
+3DC5: 51                      LR   R1,A
+3DC6: 1B                      EI
+3DC7: 1E                      LR   J,W
+3DC8: 71                      LIS  H'01'
+3DC9: BE                      OUTS H'0E'
+L3DCA:
+3DCA: 28 41 C8                PI   H'41C8'
+3DCD: 30                      DS   R0
+3DCE: 94 FB                   BNZ  H'3DCA'
+3DD0: 31                      DS   R1
+3DD1: 94 F8                   BNZ  H'3DCA'
+3DD3: 12                      SR   1
+L3DD4:
+3DD4: 1A                      DI
+3DD5: 70                      CLR
+3DD6: BE                      OUTS H'0E'
+3DD7: 29 3C 2A                JMP  H'3C2A'
+L3DDA:
+3DDA: 08                      LR   K,P
+3DDB: 4A                      LR   A,HU
+3DDC: 57                      LR   R7,A
+3DDD: 4B                      LR   A,HL
+3DDE: 58                      LR   R8,A
+3DDF: 70                      CLR
+3DE0: 55                      LR   R5,A
+3DE1: 50                      LR   R0,A
+3DE2: 74                      LIS  H'04'
+3DE3: 51                      LR   R1,A
+3DE4: 28 3D 6D                PI   H'3D6D'
+3DE7: 20 40                   LI   H'40'
+3DE9: B1                      OUTS 1
+3DEA: 1B                      EI
+3DEB: 0C                      PK
+
+; Send eight bits, MSB first, via timed callback 3E17.
+L3DEC:
+3DEC: 08                      LR   K,P
+3DED: 28 40 A9                PI   H'40A9'
+3DF0: 20 3E                   LI   H'3E'
+3DF2: 06                      LR   QU,A
+3DF3: 20 17                   LI   H'17'
+3DF5: 07                      LR   QL,A
+3DF6: 78                      LIS  H'08'
+3DF7: 63                      LISU 3
+3DF8: 6F                      LISL 7
+3DF9: 5C                      LR   S,A
+L3DFA:
+3DFA: 40                      LR   A,R0
+3DFB: 12                      SR   1
+3DFC: 12                      SR   1
+3DFD: 12                      SR   1
+3DFE: 14                      SR   4
+3DFF: 52                      LR   R2,A
+3E00: 40                      LR   A,R0
+3E01: 13                      SL   1
+3E02: 50                      LR   R0,A
+3E03: 28 3E 13                PI   H'3E13'
+3E06: 81 04                   BP   H'3E0B'
+3E08: 29 15 CB                JMP  H'15CB'
+L3E0B:
+3E0B: 63                      LISU 3
+3E0C: 6F                      LISL 7
+3E0D: 3C                      DS   S
+3E0E: 94 EB                   BNZ  H'3DFA'
+3E10: 29 15 D6                JMP  H'15D6'
+L3E13:
+3E13: 08                      LR   K,P
+3E14: 29 3E 76                JMP  H'3E76'
+
+; Output bit on port 1 bit 5; check peripheral response.
+L3E17:
+3E17: 71                      LIS  H'01'
+3E18: 2A 1B 1B                DCI  H'1B1B'
+3E1B: 8C                      XM
+3E1C: 84 08                   BZ   H'3E25'
+3E1E: 70                      CLR
+3E1F: B1                      OUTS 1
+3E20: A1                      INS  1
+3E21: 21 20                   NI   H'20'
+3E23: 84 04                   BZ   H'3E28'
+L3E25:
+3E25: 70                      CLR
+3E26: 18                      COM
+3E27: 0C                      PK
+L3E28:
+3E28: 42                      LR   A,R2
+3E29: 15                      SL   4
+3E2A: 13                      SL   1
+3E2B: B1                      OUTS 1
+3E2C: 0C                      PK
+
+; Serial byte output with framing through callback 3E17.
+L3E2D:
+3E2D: 08                      LR   K,P
+3E2E: 28 40 A9                PI   H'40A9'
+3E31: 20 3E                   LI   H'3E'
+3E33: 06                      LR   QU,A
+3E34: 20 17                   LI   H'17'
+3E36: 07                      LR   QL,A
+3E37: 70                      CLR
+3E38: 52                      LR   R2,A
+3E39: 28 3E 13                PI   H'3E13'
+3E3C: 91 21                   BM   H'3E5E'
+3E3E: 78                      LIS  H'08'
+3E3F: 63                      LISU 3
+3E40: 6F                      LISL 7
+3E41: 5C                      LR   S,A
+L3E42:
+3E42: 71                      LIS  H'01'
+3E43: F0                      NS   R0
+3E44: 52                      LR   R2,A
+3E45: 40                      LR   A,R0
+3E46: 12                      SR   1
+3E47: 50                      LR   R0,A
+3E48: 28 3E 13                PI   H'3E13'
+3E4B: 91 12                   BM   H'3E5E'
+3E4D: 63                      LISU 3
+3E4E: 6F                      LISL 7
+3E4F: 3C                      DS   S
+3E50: 94 F1                   BNZ  H'3E42'
+3E52: 71                      LIS  H'01'
+3E53: 52                      LR   R2,A
+3E54: 28 3E 13                PI   H'3E13'
+3E57: 91 06                   BM   H'3E5E'
+3E59: 28 3E 13                PI   H'3E13'
+3E5C: 81 04                   BP   H'3E61'
+L3E5E:
+3E5E: 29 15 CB                JMP  H'15CB'
+L3E61:
+3E61: 29 15 D6                JMP  H'15D6'
+
+; Sample peripheral status through timed callback 3E6E.
+L3E64:
+3E64: 08                      LR   K,P
+3E65: 20 3E                   LI   H'3E'
+3E67: 06                      LR   QU,A
+3E68: 20 6E                   LI   H'6E'
+3E6A: 07                      LR   QL,A
+3E6B: 29 3E 76                JMP  H'3E76'
+L3E6E:
+3E6E: 70                      CLR
+3E6F: B1                      OUTS 1
+3E70: A1                      INS  1
+3E71: 25 20                   CI   H'20'
+3E73: 70                      CLR
+3E74: FC                      NS   S
+3E75: 0C                      PK
+L3E76:
+3E76: 20 3E                   LI   H'3E'
+3E78: BC                      OUTS H'0C'
+3E79: 20 B5                   LI   H'B5'
+3E7B: BD                      OUTS H'0D'
+3E7C: 63                      LISU 3
+3E7D: 6C                      LISL 4
+3E7E: 4A                      LR   A,HU
+3E7F: 5D                      LR   I,A
+3E80: 4B                      LR   A,HL
+3E81: 5D                      LR   I,A
+3E82: 28 40 A9                PI   H'40A9'
+3E85: 63                      LISU 3
+3E86: 6E                      LISL 6
+3E87: 7A                      LIS  H'0A'
+3E88: 5C                      LR   S,A
+3E89: 2A 1B D3                DCI  H'1BD3'
+3E8C: 16                      LM
+3E8D: 5A                      LR   HU,A
+3E8E: 16                      LM
+3E8F: 5B                      LR   HL,A
+3E90: 2C                      XDC
+3E91: 10                      LR   DC,H
+3E92: 2C                      XDC
+3E93: 16                      LM
+3E94: 5A                      LR   HU,A
+3E95: 16                      LM
+3E96: 5B                      LR   HL,A
+3E97: 72                      LIS  H'02'
+3E98: 8E                      ADC
+3E99: 16                      LM
+3E9A: 04                      LR   KU,A
+3E9B: 16                      LM
+3E9C: 05                      LR   KL,A
+3E9D: 09                      LR   P,K
+3E9E: 2A 1B D7                DCI  H'1BD7'
+3EA1: 16                      LM
+3EA2: 04                      LR   KU,A
+3EA3: 16                      LM
+3EA4: 05                      LR   KL,A
+3EA5: 10                      LR   DC,H
+3EA6: 2C                      XDC
+3EA7: 1D                      LR   W,J
+3EA8: 63                      LISU 3
+3EA9: 6B                      LISL 3
+3EAA: 4E                      LR   A,D
+3EAB: 59                      LR   J,A
+3EAC: 4E                      LR   A,D
+3EAD: 5B                      LR   HL,A
+3EAE: 4E                      LR   A,D
+3EAF: 5A                      LR   HU,A
+3EB0: 4E                      LR   A,D
+3EB1: 0B                      LR   IS,A
+3EB2: 48                      LR   A,R8
+3EB3: 1B                      EI
+3EB4: 1C                      POP
+
+; Save context and install interrupt transfer state.
+L3EB5:
+3EB5: 58                      LR   R8,A
+3EB6: 0A                      LR   A,IS
+3EB7: 63                      LISU 3
+3EB8: 68                      LISL 0
+3EB9: 5D                      LR   I,A
+3EBA: 4A                      LR   A,HU
+3EBB: 5D                      LR   I,A
+3EBC: 4B                      LR   A,HL
+3EBD: 5D                      LR   I,A
+3EBE: 49                      LR   A,J
+3EBF: 5D                      LR   I,A
+3EC0: 11                      LR   H,DC
+3EC1: 2A 1B D3                DCI  H'1BD3'
+3EC4: 4A                      LR   A,HU
+3EC5: 17                      ST
+3EC6: 4B                      LR   A,HL
+3EC7: 17                      ST
+3EC8: 2C                      XDC
+3EC9: 11                      LR   H,DC
+3ECA: 2C                      XDC
+3ECB: 4A                      LR   A,HU
+3ECC: 17                      ST
+3ECD: 4B                      LR   A,HL
+3ECE: 17                      ST
+3ECF: 00                      LR   A,KU
+3ED0: 17                      ST
+3ED1: 01                      LR   A,KL
+3ED2: 17                      ST
+3ED3: 08                      LR   K,P
+3ED4: 00                      LR   A,KU
+3ED5: 17                      ST
+3ED6: 01                      LR   A,KL
+3ED7: 17                      ST
+3ED8: 1E                      LR   J,W
+3ED9: 63                      LISU 3
+3EDA: 6E                      LISL 6
+3EDB: 7A                      LIS  H'0A'
+3EDC: 5C                      LR   S,A
+3EDD: 6C                      LISL 4
+3EDE: 4D                      LR   A,I
+3EDF: 5A                      LR   HU,A
+3EE0: 4D                      LR   A,I
+3EE1: 5B                      LR   HL,A
+3EE2: 28 40 BC                PI   H'40BC'
+3EE5: 0D                      LR   P0,Q
+
+; Expander interrupt service continuation.
+L3EE6:
+3EE6: 2A 0F E5                DCI  H'0FE5'
+3EE9: 20 E0                   LI   H'E0'
+3EEB: 17                      ST
+3EEC: 2A 1B 1B                DCI  H'1B1B'
+3EEF: 20 FE                   LI   H'FE'
+3EF1: 8A                      NM
+3EF2: 2A 1B 1B                DCI  H'1B1B'
+3EF5: 17                      ST
+L3EF6:
+3EF6: 28 45 01                PI   H'4501'
+3EF9: 28 42 4D                PI   H'424D'
+3EFC: 63                      LISU 3
+3EFD: 6E                      LISL 6
+3EFE: 3C                      DS   S
+3EFF: 82 0C                   BC   H'3F0C'
+3F01: 28 3F 1F                PI   H'3F1F'
+3F04: 71                      LIS  H'01'
+3F05: 2A 1B 1B                DCI  H'1B1B'
+3F08: 17                      ST
+3F09: 28 3E B5                PI   H'3EB5'
+L3F0C:
+3F0C: 2A 0C 25                DCI  H'0C25'
+3F0F: 70                      CLR
+3F10: 8C                      XM
+3F11: 84 E4                   BZ   H'3EF6'
+3F13: 2A 0F E5                DCI  H'0FE5'
+3F16: 20 F5                   LI   H'F5'
+3F18: 17                      ST
+3F19: 28 40 BC                PI   H'40BC'
+3F1C: 29 15 D6                JMP  H'15D6'
+L3F1F:
+3F1F: 1A                      DI
+3F20: 70                      CLR
+3F21: BE                      OUTS H'0E'
+3F22: 20 60                   LI   H'60'
+3F24: B1                      OUTS 1
+3F25: 70                      CLR
+L3F26:
+3F26: 1F                      INC
+3F27: 94 FE                   BNZ  H'3F26'
+3F29: 1C                      POP
+
+; Display message selected by HU through pointer table 3F47.
+L3F2A:
+3F2A: 08                      LR   K,P
+3F2B: 28 40 A9                PI   H'40A9'
+3F2E: 71                      LIS  H'01'
+3F2F: 50                      LR   R0,A
+3F30: 28 36 C6                PI   H'36C6'
+3F33: 20 60                   LI   H'60'
+3F35: 2A 0F DF                DCI  H'0FDF'
+3F38: 17                      ST
+3F39: 2A 3F 47                DCI  H'3F47'
+3F3C: 4A                      LR   A,HU
+3F3D: 50                      LR   R0,A
+3F3E: 28 39 37                PI   H'3937'
+3F41: 20 10                   LI   H'10'
+3F43: 50                      LR   R0,A
+3F44: 29 36 F6                JMP  H'36F6'
+
+; Five big-endian message pointers; glyph strings follow.
+3F47: 3F 75 3F 95 3F A1 3F 6D DB   H'3F',H'75',H'3F',H'95',H'3F',H'A1',H'3F',H'6D'
+3F4F: 3F B1                   DB   H'3F',H'B1'
+
+; Glyph text: 'PROGRAM'.
+
+; Menu and prompt text in BIOS glyph encoding; F0 padding at 3FF9.
+3F51: 25 09 13 1B 09 11 29 E7 DB   H'25',H'09',H'13',H'1B',H'09',H'11',H'29',H'E7'
+
+; Glyph text: 'ENTER'.
+3F59: 0B 2B 07 0B 09 F5       DB   H'0B',H'2B',H'07',H'0B',H'09',H'F5'
+
+; Glyph text: 'REVIEW'.
+3F5F: 09 0B 2F 01 0B 0D F6    DB   H'09',H'0B',H'2F',H'01',H'0B',H'0D',H'F6'
+
+; Glyph text: 'EDIT'.
+3F66: 0B 1F 01 07 E4 2A F1 35 DB   H'0B',H'1F',H'01',H'07',H'E4',H'2A',H'F1',H'35'
+3F6E: F1 2A 1A 1F 2D 2A 00    DB   H'F1',H'2A',H'1A',H'1F',H'2D',H'2A',H'00'
+
+; Glyph text: 'TOO LONG'.
+3F75: 07 13 13 00 27 13 2B 1B DB   H'07',H'13',H'13',H'00',H'27',H'13',H'2B',H'1B'
+3F7D: F8                      DB   H'F8'
+
+; Glyph text: 'OK'.
+3F7E: 13 15                   DB   H'13',H'15'
+
+; Glyph text: '(Y/N)?'.
+3F80: 18 05 1A 2B 16 35 00    DB   H'18',H'05',H'1A',H'2B',H'16',H'35',H'00'
+
+; Glyph text: 'NAME:'.
+3F87: 2B 11 29 0B 2A 00       DB   H'2B',H'11',H'29',H'0B',H'2A',H'00'
+
+; Glyph text: 'LENGTH:'.
+3F8D: 27 0B 2B 1B 07 19 2A 00 DB   H'27',H'0B',H'2B',H'1B',H'07',H'19',H'2A',H'00'
+
+; Glyph text: 'END OF TAPE'.
+3F95: 0B 2B 1F 00 13 1D 00 07 DB   H'0B',H'2B',H'1F',H'00',H'13',H'1D',H'00',H'07'
+3F9D: 11 25 0B FB             DB   H'11',H'25',H'0B',H'FB'
+
+; Glyph text: 'REWIND'.
+3FA1: 09 0B 0D 01 2B 1F 2C 00 DB   H'09',H'0B',H'0D',H'01',H'2B',H'1F',H'2C',H'00'
+
+; Glyph text: 'KEY NEXT'.
+3FA9: 15 0B 05 00 2B 0B 33 07 DB   H'15',H'0B',H'05',H'00',H'2B',H'0B',H'33',H'07'
+
+; Glyph text: 'I/O ERR'.
+3FB1: 01 1A 13 00 0B 09 09 F7 DB   H'01',H'1A',H'13',H'00',H'0B',H'09',H'09',H'F7'
+
+; Glyph text: 'TOTAL FIELD:'.
+3FB9: 07 13 07 11 27 00 1D 01 DB   H'07',H'13',H'07',H'11',H'27',H'00',H'1D',H'01'
+3FC1: 0B 27 1F 2A FA          DB   H'0B',H'27',H'1F',H'2A',H'FA'
+
+; Glyph text: 'SORT FIELD:'.
+3FC6: 21 13 09 07 00 1D 01 0B DB   H'21',H'13',H'09',H'07',H'00',H'1D',H'01',H'0B'
+3FCE: 27 1F 2A F9             DB   H'27',H'1F',H'2A',H'F9'
+
+; Glyph text: 'VALUE:'.
+3FD2: 2F 11 27 03 0B 2A 00    DB   H'2F',H'11',H'27',H'03',H'0B',H'2A',H'00'
+
+; Glyph text: 'COUNT='.
+3FD9: 31 13 03 2B 07 2E       DB   H'31',H'13',H'03',H'2B',H'07',H'2E'
+
+; Glyph text: 'TOTAL='.
+3FDF: 07 13 07 11 27 2E F5    DB   H'07',H'13',H'07',H'11',H'27',H'2E',H'F5'
+
+; Glyph text: 'GRAND TOTAL='.
+3FE6: 1B 09 11 2B 1F 00 07 13 DB   H'1B',H'09',H'11',H'2B',H'1F',H'00',H'07',H'13'
+3FEE: 07 11 27 2E FB          DB   H'07',H'11',H'27',H'2E',H'FB'
+
+; Glyph text: 'TYPE:'.
+3FF3: 07 05 25 0B 2A 00 F0 F0 DB   H'07',H'05',H'25',H'0B',H'2A',H'00',H'F0',H'F0'
+3FFB: F0 F0 F0 F0 F0          DB   H'F0',H'F0',H'F0',H'F0',H'F0'
