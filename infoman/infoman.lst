@@ -650,10 +650,14 @@ L140C:
 140D: 18                      COM
 140E: 57                      LR   R7,A
 140F: 90 F9                   BR   H'1409'
+
+; PTR suffix: set printer flag 1B1A=FF, then process current output command.
 L1411:
 1411: 70                      CLR
 1412: 18                      COM
 1413: 90 02                   BR   H'1416'
+
+; Output without PTR: clear printer flag 1B1A. This is also EDIT's output continuation.
 L1415:
 1415: 70                      CLR
 L1416:
@@ -1287,6 +1291,8 @@ L1741:
 ; Entry 09: required field-name token 21, operation 08 (13A0), then end-of-command entry 07.
 1763: 21 88 87 2E 80 8B 21 88 DB   H'21',H'88',H'87',H'2E',H'80',H'8B',H'21',H'88'
 176B: 87 2E 80 8D 21 88 87 0F DB   H'87',H'2E',H'80',H'8D',H'21',H'88',H'87',H'0F'
+
+; Entries 0E/0F at 1772/1775: REVIEW output accepts trailing PTR (op 0A), otherwise op 07 clears it; then require end.
 1773: 0A 07 00 07 87 1B 14 17 DB   H'0A',H'07',H'00',H'07',H'87',H'1B',H'14',H'17'
 177B: 0B 0C 16 1D 0D 16 19 0E DB   H'0B',H'0C',H'16',H'1D',H'0D',H'16',H'19',H'0E'
 1783: 16 1F 03 16 98 07 16 7F DB   H'16',H'1F',H'03',H'16',H'98',H'07',H'16',H'7F'
@@ -2424,6 +2430,8 @@ L360F:
 3612: CC                      AS   S
 3613: 69                      LISL 1
 3614: 5C                      LR   S,A
+
+; After screen formatting, mode 3 plus nonzero PTR flag invokes printer output; otherwise normal display pacing.
 3615: 73                      LIS  H'03'
 3616: 2A 1B 0B                DCI  H'1B0B'
 3619: 8C                      XM
@@ -2607,6 +2615,8 @@ L370F:
 3710: 30                      DS   R0
 3711: 94 E4                   BNZ  H'36F6'
 3713: 29 15 D6                JMP  H'15D6'
+
+; Printer dump: send Expander command bytes 04 02 02 (300-baud selector, host-to-printer route).
 L3716:
 3716: 08                      LR   K,P
 3717: 28 40 A9                PI   H'40A9'
@@ -2623,6 +2633,8 @@ L3716:
 372C: 50                      LR   R0,A
 372D: 28 3D EC                PI   H'3DEC'
 3730: 91 4E                   BM   H'377F'
+
+; Each buffered line: NUL, five ASCII spaces, sixteen converted screen glyphs, then CR/LF.
 L3732:
 3732: 70                      CLR
 3733: 50                      LR   R0,A
@@ -2645,6 +2657,8 @@ L3739:
 374E: 11                      LR   H,DC
 374F: 20 10                   LI   H'10'
 3751: 51                      LR   R1,A
+
+; Read sixteen glyphs from the screen buffer; convert to ASCII with table 3782 before serial transmission.
 L3752:
 3752: 10                      LR   DC,H
 3753: 16                      LM
@@ -2657,6 +2671,8 @@ L3752:
 375E: 91 20                   BM   H'377F'
 3760: 31                      DS   R1
 3761: 94 F0                   BNZ  H'3752'
+
+; Terminate printer line with CR (0D) and LF (0A); repeat for buffered line count 0C28.
 3763: 7D                      LIS  H'0D'
 3764: 50                      LR   R0,A
 3765: 28 3E 2D                PI   H'3E2D'
