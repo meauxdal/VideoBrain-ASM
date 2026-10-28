@@ -1,0 +1,2863 @@
+       processor f8
+;  VideoBrain "Tennis" (Patent Source Code)
+;  ----------------------------------------
+;
+;  F8 CPU Source Code Retyped: Adam Trionfo
+;     Special Thanks to Fredric Blaholtz and Sean Riddle for help
+;     with proofreading, and general F8 and DASM assembler help
+;     and tips.                              
+;
+;     - Versions 1.0:     July 9, 2012
+;          - First Release of fully re-typed and proofread sourcecode,
+;            with full distribution
+;          - The output of version 1.0's binary matches exactly
+;            with version .14.     
+;     - Version .01-.14:  June 16-July 6 , 2012
+;          - Retyped source code and proofread, limited distribution
+;                                             
+;
+;  Patent U.S. 4232374, Pages 13-53
+;  "Segment Ordering for Television Receiver Control Unit"
+;
+;  Patent Assignee: UMtech, Inc.
+;        Inventors: David H. Chung, Palo Alto, Calif.
+;                   John V. Cosley, Cupertino, Calif.
+;
+;       The coupler of the invention has been programmed, utilizing
+;  the register implementation described [in the patent] to display
+;  "Tennis" video game which is externally controlled by a user.
+;  The following pages is program listing of the assembled language
+;  for such game.  The microprocessor utilized is the previously
+;  mentioned F8 microprocessor available from Mostek Corporation
+;  and the Fairchild Camera and Instrument Corporation.    It was
+;  programmed in accordance with the F-8 User's Guide and Guide to
+;  Programming available in 1976 from Fairchild; and the 1975 F-8
+;  Preliminary Data Book available from Mostek.  The memory
+;  allocations (in hexadecimal) for the following are:
+;
+;       Cartridge "Tennis" Program      F800-FFAF
+;       Display Composer                0800-08FF
+;       Cartridge Segment Information   1200-1F9A
+;  
+;       Also, the designation UM1 is used to refer to the display
+;  composer; and the designation UM 2 is used to refer collectively
+;  to the system controller, the timer and the timing and
+;  sync generator.
+;
+;  Special Notes about the Re-Typing of "Tennis" Assembly Code
+;  -------------------------------------------------------
+;
+;  1) "Tennis" Source Code Version Tree:
+;
+;     There are four different distinct version trees for this
+;     assembly code.  They are as follows: 
+;
+;        0.Xx - Source code in unifinished state; typing is not yet
+;               complete.  Some preiminary versions were shared with
+;               the "Channel_f_and_VideoBrain" YahooGroup.
+;
+;        1.x  - Source code is as close to original as possible, but
+;               includes minimal additional comments and filler bytes.
+;
+;        2.x -  Source code is as close to original as possible, but
+;               with MANY additional comments throughout, but no
+;               other changes.
+;
+;        3.x -  Source code is BASED on original code, but "fixes"
+;               and additions have been added.
+;
+;          Any user is free to user and modify the re-typed "Tennis"
+;     "Tennis" sourse code, but please try to stay true to this
+;     version tree for future users of this code.  
+;
+;  2) The original F8 assembler used to create the source in
+;     the "Tennis" patent was not available.  This source code
+;     has been created and assembled in the Windows XP environment
+;     using the command line version of with DASM 2.20.11
+;     for win32-x86.
+;  
+;  3) The purpose of this assembly source code for "Tennis" is to
+;     match the binary output of the assembly listing in the patent.
+;     Therefore, since the same F8 assembler used in 1977 is not
+;     known or available, the source had to be changed, but the
+;     spirit of the original assembly code has been kept as closely
+;     as possible.  Although the source code itself looks different,
+;     it creates a binary file that matches the "Tennis" patent's
+;     assembly listing's binary output.  
+;
+;  4) Some lines in the assembly listing for the "Tennis" patent
+;     are missing.  These have been marked with a comment that says:
+;     "?? Missing line in assembly listing ($XXXX)," where XXXX is
+;     the address of the missing line number.
+;          A suggestion as to why some bytes are missing from the
+;     assembly listing has been made.  On June 21, 2012, Sean
+;     Riddle posted this to the "channel_f_and_videobrain" Yahoo
+;     Group, "It looks like [the assembly lissing] was printed to a
+;     serial printer and some bytes got lost. Probably a bit got
+;     missed and so there were framing or parity errors and no
+;     characters were printed until it got synchronized again."
+;          An educated guess can be made to replace the data that is 
+;     in some of the missing bytes, but in this version of the
+;     assembly source code, the address of the missing bytes holds
+;     different data depending on the address area in memory.  It
+;     is setup like this:
+;
+;                 Area Type        ROM Address    ROM Address Contains
+;            -------------------   -----------    --------------------
+;        1.  "Data" Area           $1200-$12DC    $00 ("Empty Byte")
+;        2.  "ROM Objects" Area    $12DD-$1714    $00 ("Empty Byte")
+;        3.  "Main Program" Area   $1800-$1F9A    "NOP" Op Code
+;   
+;          Substituting either an "empty byte" or NOP allows the
+;     final binary to run, although the missing data and/or opcodes
+;     means that it won't run properly.
+;     
+;  5) In some cases a solution to a question about the source code
+;     could not be reached.  In this case, a comment with '??' on
+;     the line(s) in question is marked.  Lines such as this
+;     typically do create the originally intended binary output but
+;     often use a method that might not be preferred.  In some 
+;     cases, the lines do NOT match the binary output.  In ALL
+;     cases the '??' is meant to make the user of the re-typed
+;     assembly code aware that something about those original
+;     lines probably has not been carried through in the re-typed
+;     "Tennis" source code. 
+;      
+;  6) Some usage of the DASM assembler "DC" (Declare Data)
+;     directive will not work as listed in the original patent.
+;     Some other method had to be used to setup multiple bytes of
+;     data that didn't vary too much from the original source code.  
+;          In other assemblers besides DASM, the assembly directive
+;     "DS" usually means "Define Storage," but in DASM it means
+;     "Define Space."  "DS" is the F8 op code "Decrement Scratchpad
+;     Content," and therefore cannot be used as an assembler
+;     directive.  However, Sean Riddle discovered that RES is a
+;     synonym that can be used under DASM when using the "processor
+;     f8" directive.  Here is an example of how it is used in this
+;     source code:   
+;
+;       DC        4,$FF         ; Define 4 bytes of $FF in original
+;                               ; source, but doesn't work properly
+;                               ; with DASM
+;           Use this instead:
+;
+;       RES.B     4,$FF         ; Define 4 bytes of $FF in DASM
+; 
+;          RES.B can also be used with labels, just as is done in
+;     the original source code.  For example:
+;
+;     NH      EQU      60       ; NET HEIGHT (2 OBJECTS)
+;
+;       DC        NH,$C0        ; NH = 60, Define 60 bytes of $C0
+;                               ; Doesn't work properly with DASM
+;
+;           Use this instead:
+;
+;       RES.B     NH,$C0        ; NH = 60, Define 60 bytes of $C0
+;
+;  
+;  Labels Required for Assembly with DASM
+;  -------------------------------------- 
+;  These labels used in "Tennis" are not assigned in the patent's 
+;  assembly listing .  This may be because the lines that they were
+;  created on are missing.  These ARE required for proper assembly.
+; 
+HBY5    EQU      $0008
+MAXS    EQU      $0015
+CRB     EQU      $00B6
+YVLA    EQU      $0850
+BGRN    EQU      $08F5
+
+;*************************
+;*PROGRAM                *
+;*************************
+;*
+;* 
+;*
+;*******************************************
+;*                                         *
+;*   DECLARATIONS                          *
+;*                                         *
+;*******************************************
+;       *
+HU      EQU      $A
+HL      EQU      $B
+S       EQU      $C
+;       *
+;       *UM1 REGISTERS*
+;       ***************
+COM     EQU      $8F7    
+ZOOM    EQU      $8F6
+YOFF    EQU      $8F4
+XOFF    EQU      $8F3
+FMOD    EQU      $8F2
+TXT     EQU      $8F1
+YINT    EQU      $8F0
+;       *
+XFRZ    EQU      $8F8
+YFRZ    EQU      $8F9
+ODD     EQU      $8FA
+YCUR    EQU      $8FB
+;       *
+RPL     EQU      $800
+RPH     EQU      $810
+DELX    EQU      $820
+DELY    EQU      $830
+XV      EQU      $840
+YVLB    EQU      $860
+YXA     EQU      $870
+YXB     EQU      $880
+;       *
+;       *UM1 REGISTER BITS*
+;       *******************
+SELA    EQU      $40
+INT     EQU      $08
+ENB     EQU      $04
+FRZ     EQU      $02
+RED     EQU      $80     ; FOR OBJECTS ONLY!
+GRN     EQU      $40    
+BLU     EQU      $20
+COPY    EQU      $80
+HI      EQU      $40
+LO      EQU      $00
+RB      EQU      $01     ; FOR BACKGROUND ONLY!
+GB      EQU      $02
+BB      EQU      $04
+HIB     EQU      $10
+LOB     EQU      $00
+;       *
+;       *SYSTEM I/O CONSTANTS*
+;       **********************
+OPSU    EQU      $06     ; PSU INT CNTRL PORT
+IVU     EQU      $0C     ; SMI INT VECTOR UP
+IVL     EQU      $0D     ; SMI INT VECTOR LO
+OSMI    EQU      $0E     ; SMI OUTPUT PORT
+ESMI    EQU      $01     ; ENABLE SMI EXTERNAL INT
+EJOY    EQU      $80     ; ENABLE JOYSTICK INPUT
+;       *
+;       ********************
+SUB     EQU      39      ; SCREEN UPPER BOUNDARY
+CH2     EQU      90      ; COURT HEIGHT / 2
+CH      EQU      CH2+CH2 ; COURT HEIGHT
+CW2     EQU      88      ; COURT WIDTH / 2
+CW      EQU      CW2+CW2 ; COURT WIDTH
+CUB     EQU      54      ; COURT UPPER BOUNDARY
+CBB     EQU      CUB+CH  ; COURT BOTTOM
+CLB     EQU      6       ; COURT LEFT BOUNDARY
+;       *
+BW2     EQU      2       ; BALL WIDTH / 2
+BW      EQU      BW2+BW2 ; BALL WIDTH
+BH2     EQU      3       ; BALL HEIGHT / 2
+BH      EQU      BH2+BH2 ; BALL HEIGHT
+;       *
+NW2     EQU      1       ; NET WIDTH / 2
+NX      EQU      CLB+CW2 ; NET X-POSITION
+NH      EQU      60      ; NET HEIGHT (2 OBJECTS)
+;       *
+PW2     EQU      4       ; PADDLE WIDTH / 2
+PH2     EQU      16      ; PADDLE HEIGHT / 2
+PH      EQU      PH2+PH2 ; PADDLE HEIGHT
+LPX     EQU      NX-60   ; LEFT PADDLE X-POSITION
+RPX     EQU      NX+60   ; RIGHT PADDLE X-POSITION
+;       *
+CBH     EQU      4       ; COURT BOUNDARY HEIGHT
+;       *                                                                                                            
+SCH     EQU      7       ; SCORE HEIGHT
+LSX     EQU      NX-8-16 ; LEFT SCORE X-VAL
+RSX     EQU      NX+8    ; RIGHT SCORE X-VAL
+SY      EQU      CUB+4   ; SCORE Y-VAL
+;       *
+BBH2    EQU      16      ; BALLBOY HEIGHT / 2
+BBH     EQU      BBH2+BBH2  ; BALLYBOY HEIGHT
+BBW2    EQU      8       ; BALLBOY WIDTH / 2
+;       *
+CRW     EQU      40      ; CROWD WIDTH
+CRH     EQU      12      ; CROWD HEIGHT
+LCRX    EQU      CLB+CW2-7-CRW  ; LEFT CROWD X
+RCRX    EQU      CLB+CW2+8      ; RIGHT CROWD X
+;       *
+VX0     EQU      $0180   ; BALL VELOCITY
+VY40    EQU      $0256
+VY20    EQU      $0103
+BBVX    EQU      $01     ; BALLBOY VELOCITY
+BBVY    EQU      $02
+PEN     EQU      6       ; PENETRATION DEPTH
+PENS    EQU      2       ; PENETRATION DEPTH-- SIDE COLLISION
+VP      EQU      6       ; ?? $ PADDLE VELOCITY ('$' caused by missing line $7B?)
+;                        ; ?? Line $007B is missing in assembly listing
+;
+LSVB    EQU      $01     ; LEFT SERVE BUTTON
+RSVB    EQU      $04     ; RIGHT SERVE BUTTON
+LDVJ    EQU      $01     ; LEFT DOWN VERTICAL JOYSTICK
+RDVJ    EQU      $10     ; RIGHT DOWN VERTICAL JOYSTICK
+;       *
+SERV    EQU      $7F     ; MODE = SERVE
+PLAY    EQU      $80     ; MODE = PLAY
+LSV     EQU      $BF     ; NEXT TO SERVE = LEFT
+RSV     EQU      $40     ; NEXT TO SERVE = RIGHT
+CLBN    EQU      $CF     ; CLEAR BALL & NET SETTINGS
+LBLN    EQU      $20     ; LEFT BALL LEFT NET
+RBLN    EQU      $0      ; RIGHT BALL LEFT NET
+LBRN    EQU      $30     ; LEFT BALL RIGHT NET
+RBRN    EQU      $10     ; RIGHT BALL RIGHT NET
+HBF     EQU      $08     ; HIDE BALL FLAG
+HBFN    EQU      $F7     ; HIDE BALL FLAG NOT
+BBYH    EQU      $04     ; BALLBOY Y-H.O.
+BYHN    EQU      $FB     ; BALLBOY Y-H.O. NOT
+BBIM    EQU      $02     ; BALLBOY IMAGE 2 BIT
+UPFL    EQU      $80     ; UPDATE FLAG
+LPIM    EQU      $40     ; LEFT PADDLE IMAGE 2 BIT
+RPIM    EQU      $20     ; RIGHT PADDLE IMAGE 2 BIT
+PIMN    EQU      $9F
+;       *
+PERB    EQU      16      ; PERIOD BOUNDARY COLLISION
+PERH    EQU      8       ; PERIOD PADDLE HIT
+PERS    EQU      4       ; PERIOD SCOPE
+;       *
+LTER    EQU      -1      ; SHORT UPDATE TERMINATOR
+STER    EQU      -2      ; SHORT UPDATE TERMINATOR
+EVNF    EQU      -3      ; EVEN FIELD MARKER
+NOBJ    EQU      13      ; NUMBER OF OBJECTS
+;       *
+;       *PROGRAM VARIABLES*
+;       *******************
+XP      EQU      00
+X       EQU      01
+YP      EQU      02
+Y       EQU      03
+VXP     EQU      04
+VX      EQU      05
+VYP     EQU      06
+VY      EQU      07
+SACC    EQU      010
+TEMP    EQU      HU
+TMP2    EQU      HL
+PCOM    EQU      S       ; S.P. O'20'
+PSTA    EQU      S       ; S.P. O'21'
+LPY     EQU      S       ; S.P. O'22'
+RPY     EQU      S       ; S.P. O'23'
+PY      EQU      S       ; S.P. O'22'--O'23'
+PST1    EQU      S       ; S.P. O'24'
+HITK    EQU      S       ; S.P. O'25'
+BBK1    EQU      S       ; S.P. O'26'
+BBK2    EQU      S       ; S.P. O'27'
+PXLS    EQU      030     ; ^S.P. O'30'
+XLST    EQU      S       ; S.P. O'30'--O'47'
+LSCD    EQU      S       ; S.P. O'50'
+RSCD    EQU      S       ; S.P. O'51'
+BVX     EQU      S       ; S.P. O'52'
+BBX     EQU      S       ; S.P. O'53'
+BVY     EQU      S       ; S.P. O'54'
+BBY     EQU      S       ; S.P. O'55'
+SNDP    EQU      S       ; S.P. O'60'
+SNDD    EQU      S       ; S.P. O'61'
+SNDL    EQU      S       ; S.P. O'62'
+SIS     EQU      S       ; S.P. O'70'
+SJ      EQU      S       ; S.P. O'71'
+SHU     EQU      S       ; S.P. O'72'
+SHL     EQU      S       ; S.P. O'73'
+;       *
+;       *MEMORY ALLOCATION*
+;       *******************
+BASE    EQU      $1800   ; LOADING ORIGIN
+ODAT    EQU      $1200   ; DATA ORIGIN
+RAM     EQU      $0C00   ; RAM
+;       *
+;       *
+;       ********************************************
+;       *                                          *
+;       *      DATA                                *
+;       *                                          *
+;       ********************************************
+;       *
+;       *
+        ORG      ODAT
+;       *
+;       *VELOCITY TABLE*
+;       ****************
+VTBL    DC       <VY40
+        DC       >VY40
+        DC       <VY20
+        DC       >VY20
+;       *
+;       *BALL BOY ROM-POINTER TABLE*
+;       ****************************        
+BBTB    DC       >LB1E+RED+GRN+BLU
+        DC       <LB1E
+        DC       >LB1O+RED+GRN+BLU
+        DC       <LB1O
+        DC       >LB2E+RED+GRN+BLU
+        DC       <LB2E               
+        DC       >LB2O+RED+GRN+BLU         
+        DC       <LB2O                                
+        DC       >RB1E+RED+GRN+BLU      
+        DC       <RB1E      
+        DC       >RB1O+RED+GRN+BLU
+        DC       <RB1O
+        DC       >RB2E+RED+GRN+BLU
+        DC       <RB2E
+        DC       >RB2O+RED+GRN+BLU
+        DC       <RB2O
+;       *
+;       *DIGITS*
+;       ********
+DIGS    DC       $3E     ; ZERO
+        DC       $22
+        DC       $22
+        DC       $22
+        DC       $22
+        DC       $22
+        DC       $3E
+;       *
+        DC       $38     ; ONE
+        DC       $08
+        DC       $08            
+        DC       $08
+        DC       $08
+        DC       $08
+        DC       $3E
+;       *
+        DC       $3C     ; TWO
+        DC       $06
+        DC       $02
+        DC       $04
+        DC       $18
+        DC       $30
+        DC       $3E
+;       *
+        DC       $3E     ; THREE
+        DC       $02
+        DC       $02
+        DC       $1C
+        DC       $02
+        DC       $02
+        DC       $3E
+;       *
+        DC       $24     ; FOUR
+        DC       $24
+        DC       $24
+        DC       $3E
+        DC       $04
+        DC       $04
+        DC       $04
+;       *
+        DC       $3E     ; FIVE
+        DC       $20
+        DC       $20
+        DC       $1E
+        DC       $02
+        DC       $22
+        DC       $1E
+;       *
+        DC       $1C     ; SIX
+        DC       $20
+        DC       $20
+        DC       $3C
+        DC       $22
+        DC       $22
+        DC       $1C
+;       *
+        DC       $3E     ; SEVEN
+        DC       $02
+        DC       $04
+        DC       $08
+        DC       $10
+        DC       $20
+        DC       $20
+;       *
+        DC       $1C     ; EIGHT
+        DC       $22
+        DC       $22
+        DC       $1C
+        DC       $22
+        DC       $22
+        DC       $1C
+;       *
+        DC       $1C     ; NINE
+        DC       $22
+        DC       $22
+        DC       $1E
+        DC       $02
+        DC       $02
+        DC       $1C
+;       *
+;       *INITIAL DISPLAY DATA*
+;       **********************
+;       *
+DAT0    DC       DELX-RPL      ; DELTA-X + INTENSITY
+        DC       1+HI
+        DC       1+HI
+        DC       1+HI
+        DC       1+HI
+        DC       1+HI
+        DC       1+HI
+        DC       $97+HI
+        DC       $97+HI
+        DC       2+HI
+        DC       2+HI
+        DC       2+HI
+        DC       5+COPY+HI
+        DC       5+COPY+HI
+;       *
+        DC       DELY-RPL      ; DELTA-Y
+        DC       BH
+        DC       PH
+        DC       PH
+        DC       $00           ; ?? Missing line in assembly listing ($126C)
+        DC       NH
+        DC       NH
+        DC       CBH
+        DC       CBH
+        DC       SCH
+        DC       SCH
+        DC       BBH
+        DC       CRH
+        DC       CRH
+;       *
+        DC       XV-RPL        ; X-VALUE        
+        DC       CRB-BW2
+        DC       LPX-PW2
+        DC       RPX-PW2
+        DC       NX-NW2
+        DC       NX-NW2
+        DC       NX-NW2
+        DC       $01
+        DC       $01
+        
+        DC       LSX
+        DC       RSX       
+        DC       CLB+CW2-BBW2               
+        DC       LCRX      
+        DC       RCRX
+;       *
+        DC       EVNF          ; EVEN FIELD OFFSET
+        DC       EVNR - . - 1
+;       *
+        DC       RPL-RPL       ; RPL -- ODD FIELD                              
+        DC       <BL
+        DC       <LP1O
+        DC       <RP1O
+        DC       <NL                       
+        DC       <NL
+        DC       <NL
+        DC       <CB
+        DC       <CB                       
+        DC       <LSCR
+        DC       <RSCR
+        DC       <LB1O       
+        DC       <CR1O
+        DC       <CR1O
+;       *
+        DC       RPH-RPL       ; RPH + COLOR
+        DC       >BL+RED+GRN+BLU
+        DC       >LP1O+RED+GRN        
+        DC       >RP1O+BLU
+        DC       >NL+RED+GRN+BLU       
+        DC       >NL+RED+GRN+BLU
+        DC       >NL+RED+GRN+BLU        
+        DC       >CB+RED+GRN+BLU
+        DC       >CB+RED+GRN+BLU        
+        DC       >LSCR
+        DC       >RSCR+BLU        
+        DC       >LB1O+RED+GRN+BLU
+        DC       >CR1O+RED+GRN
+        DC       $00           ; ?? Missing line in assembly listing ($12A1)
+        DC       STER          ; SHORT UPDATE TERMINATOR
+;       *
+        DC       YVLA-RPL      ; Y-VALUE A
+        DC       CUB-CBH-CRH       
+        DC       CUB-CBH-CRH               
+        DC       CUB-CBH       
+        DC       CBB
+        DC       CUB+CH2-PH2       
+        DC       SY
+        DC       $FF       
+        DC       CUB
+        DC       CUB+NH       
+        DC       CUB+NH+NH
+        DC       $00           ; ?? Missing line in assembly listing ($12AE)
+        DC       CUB+CH2-PH2       
+        DC       CUB+CH2-BH2
+;       *
+        DC       YXA-RPL       ; X-ORDER A
+        DC       11
+        DC       12
+        DC       6
+        DC       7
+        DC       1
+        DC       8+$80
+        DC       10+$80
+        DC       3
+        DC       4
+        DC       5
+        DC       9+$80
+        DC       2
+        DC       0
+;       *
+        DC       LTER          ; LONG UPDATE TERMINATOR
+;       *        
+EVNR    DC       RPL-RPL       ; RPL -- EVEN FIELD
+        DC       <BL
+        DC       <LP1E
+        DC       <RP1E
+        DC       <NL
+        DC       <NL
+        DC       <NL
+        DC       <CB
+        DC       <CB
+        DC       <LSCR
+        DC       <RSCR
+        DC       <LB1E
+        DC       <CR1E
+        DC       <CR1E
+;       *        
+        DC       RPH-RPL       ; RPH + COLOR
+        DC       >BL+RED+GRN+BLU
+        DC       >LP1E+RED+GRN                                          
+        DC       >RP1E+BLU
+        DC       >NL+RED+GRN+BLU
+        DC       >NL+RED+GRN+BLU
+        DC       >NL+RED+GRN+BLU
+        DC       >CB+RED+GRN+BLU
+        DC       >CB+RED+GRN+BLU
+        DC       >LSCR
+        DC       >RSCR+BLU
+        DC       >LB1E+RED+GRN+BLU
+        DC       >CR1E+RED+GRN
+        DC       >CR1E+BLU
+;       *
+        DC       STER          ; SHORT UPDATE TERMINATOR
+;       *
+;       ********************************************
+;       *                                          *
+;       *     ROM OBJECTS                          *
+;       *                                          *
+;       ********************************************
+;       *
+;       *BALL
+BL      DC       $60           ; LEFT IMAGE
+        DC       $F0
+        DC       $F0
+        DC       $F0
+        DC       $F0
+        DC       $60
+;       DC       >BL+BL+BL+BL+BL+BL+BL+BL
+;       DC       <BL+BL+BL+BL+BL+BL+BL+BL
+;       DC       BH
+BR      DC       $06           ; RIGHT IMAGE
+        DC       $0F
+        DC       $0F
+        DC       $0F
+        DC       $0F
+        DC       $06
+;       DC       >BR+BR+BR+BR+BR+BR+BR+BR
+;       DC       <BR+BR+BR+BR+BR+BR+BR+BR
+;       DC       BH
+;
+;LEFT PADDLE--IMAGE 1
+LP1O    DC       $1C,$1C,$1C,$1C,$1C  ; ODD FIELD
+        DC       $18
+        DC       $38
+        DC       $00                  ; ?? Missing line in assembly listing ($12F0)
+        DC.W     $FEFE
+        DC       $BA,$BA,$BA,$BA,$BA,$BA
+        DC       $38
+        DC       $BA
+        DC       $3A
+        DC       $3F
+        DC       $2F,$2F,$2F,$2F
+        DC       $28,$28,$28        
+        DC.W     $2828
+        DC       $28
+        DC       $3C
+        DC       $3C
+;       DC       >LP1E+LP1E+LP1E+LP1E+LP1E+LP1E+LP1E+LP1E
+;       DC       <LP1E+LP1E+LP1E+LP1E+LP1E+LP1E+LP1E+LP1E
+;       DC       PH
+LP1E    DC       $1C           ; EVEN FIELD
+        DC       $3E
+        DC       $1C,$1C,$1C
+        DC       $18
+        DC       $7C
+        DC       $7E
+        DC       $FE
+        DC       $FA
+        DC       $BA,$BA,$BA,$BA,$BA,$BA,$BA,$BA
+        DC.W     $3A3F
+        DC       $2F,$2F,$2F
+        DC       $28,$28,$28
+        DC.W     $2828
+        DC.W     $2828
+        DC       $00           ; ?? Missing line in assembly listing ($1327)
+        DC       $00           ; ?? Missing line in assembly listing ($1328)
+;       DC       >LP1O+LP1O+LP1O+LP1O+LP1O+LP1O+LP1O+LP1O
+;       DC       <LP1O+LP1O+LP1O+LP1O+LP1O+LP1O+LP1O+LP1O
+;       DC       PH
+;
+;LEFT PADDLE--IMAGE 2
+LP2O    DC.W     $1CE0         ; ODD FIELD
+        DC.W     $1CE0
+        DC.W     $1CE0
+        DC.W     $1CE0
+        DC.W     $1CE0
+        DC.W     $1840
+        DC.W     $3840
+        DC.W     $7C40
+        DC.W     $FFC0         
+        DC.W     $FF00         
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $3800
+        DC.W     $B800
+        DC.W     $3E00
+        DC.W     $3E00
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $E200
+        DC.W     $E200
+        DC.W     $8200
+        DC.W     $8300
+        DC.W     $0300
+;       DC       >LP2E+LP2E+LP2E+LP2E+LP2E+LP2E+LP2E+LP2E
+;       DC       <LP2E+LP2E+LP2E+LP2E+LP2E+LP2E+LP2E+LP2E
+;       DC       PH
+LP2E    DC.W     $1CE0         ; EVEN FIELD
+        DC.W     $3EE0
+        DC.W     $1CE0
+        DC.W     $1CE0
+        DC.W     $1C40
+        DC.W     $1840
+        DC.W     $7C40
+        DC.W     $7E00
+        DC.W     $FFC0         
+        DC.W     $FA00
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC.W     $B800
+        DC       $00           ; ?? Missing line in assembly listing ($1387)
+        DC       $00           ; ?? Missing line in assembly listing ($1388)
+        DC.W     $B800
+        DC.W     $BE00
+        DC.W     $3E00
+        DC.W     $3E00
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $2200
+        DC.W     $E200
+        DC.W     $E200
+        DC.W     $8200
+        DC.W     $8200
+        DC.W     $0300
+        DC.W     $0300
+;       DC       >LP2O+LP2O+LP2O+LP2O+LP2O+LP2O+LP2O+LP2O
+;       DC       <LP2O+LP2O+LP2O+LP2O+LP2O+LP2O+LP2O+LP2O
+;
+;RIGHT PADDLE--IMAGE 1
+RP1O    DC       $38,$38,$38,$38,$38    ; ODD FIELD
+        DC       $18
+        DC       $1C
+        DC       $7E
+        DC.W     $7F7F
+        DC       $5D,$5D,$5D,$5D,$5D,$5D
+        DC       $1C
+        DC       $5D
+        DC       $5C
+        DC       $FC
+        DC       $F4,$F4,$F4,$F4
+        DC       $14,$14,$14
+        DC.W     $1414
+        DC       $14
+        DC       $3C
+        DC       $3C
+;       DC       >RP1E+RP1E+RP1E+RP1E+RP1E+RP1E+RP1E+RP1E
+;       DC       <RP1E+RP1E+RP1E+RP1E+RP1E+RP1E+RP1E+RP1E
+;       DC       PH
+;
+RP1E    DC       $38
+        DC       $7C
+        DC       $38,$38,$38
+        DC       $18
+        DC       $3E
+        DC       $7E
+        DC       $7F
+        DC       $5F
+        DC       $5D,$5D,$5D,$5D,$5D,$5D,$5D,$5D
+        DC.W     $5CFC
+        DC       $F4,$F4,$F4
+        DC       $14,$14,$14
+        DC.W     $1414
+        DC.W     $1414
+        DC.W     $3C3C
+;       DC       >RP1O+RP1O+RP1O+RP1O+RP1O+RP1O+RP1O+RP1O
+;       DC       <RP1O+RP1O+RP1O+RP1O+RP1O+RP1O+RP1O+RP1O
+;       DC       PH
+;
+;RIGHT PADDLE--IMAGE 2
+RP2O    DC.W     $0738         ; ODD FIELD
+        DC.W     $0738
+        DC.W     $0738
+        DC.W     $0738
+        DC.W     $0738
+        DC.W     $0218
+        DC.W     $021C
+        DC.W     $023E
+        DC.W     $03FF
+        DC.W     $00FF
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001C
+        DC.W     $001D
+        DC.W     $007C
+        DC.W     $007C
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0047
+        DC.W     $0047
+        DC.W     $0041
+        DC.W     $00C1
+        DC.W     $00C0
+;       DC       >RP2E+RP2E+RP2E+RP2E+RP2E+RP2E+RP2E+RP2E
+;       DC       <RP2E+RP2E+RP2E+RP2E+RP2E+RP2E+RP2E+RP2E
+;       DC       PH
+RP2E    DC.W     $0738         ; EVEN FIELD
+        DC.W     $077C
+        DC.W     $0738
+        DC.W     $0738
+        DC.W     $0238        
+        DC.W     $0218
+        DC.W     $023E
+        DC.W     $007E
+        DC.W     $03FF
+        DC.W     $005F
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $001D
+        DC.W     $007D
+        DC.W     $007C
+        DC.W     $007C
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0044
+        DC       $00           ; ?? Missing line in assembly listing ($1457)
+        DC       $00           ; ?? Missing line in assembly listing ($1458)
+        DC.W     $0044
+        DC.W     $0044
+        DC.W     $0047
+        DC.W     $0047
+        DC.W     $0041
+        DC.W     $0041
+        DC.W     $00C0
+        DC.W     $00C0
+;       DC       >RP20+RP20+RP20+RP20+RP20+RP20+RP20+RP20
+;       DC       <RP20+RP20+RP20+RP20+RP20+RP20+RP20+RP20
+;       DC       PH
+;
+;NET
+NL      RES.B    NH,$C0        ; LEFT IMAGE
+;       DC       >NL+NL+NL+NL+NL+NL+NL+NL
+;       DC       <NL+NL+NL+NL+NL+NL+NL+NL
+;       DC       NH
+;
+NR      RES.B    NH,$03        ; RIGHT IMAGE
+;       DC       >NR+NR+NR+NR+NR+NR+NR+NR
+;       DC       <NR+NR+NR+NR+NR+NR+NR+NR
+;       DC       NH
+;
+;COURT BOUNDARIES
+CB      RES.B    CBH,$FF        ; RIGHT IMAGE
+;       DC       >CB,CB,CB,CB,CB,CB,CB,CB         
+;       DC       <CB,CB,CB,CB,CB,CB,CB,CB
+;       CBH      CBH
+;
+;LEFT BALL BOY-- IMAGE 1
+LB1O    DC.W     $0E00         ; ODD FIELD
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0600
+        DC.W     $0700
+        DC.W     $0FC0
+        DC.W     $0FC0
+        DC.W     $1F40
+        DC.W     $3740
+        DC.W     $E740
+        DC.W     $07C0
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0F00
+        DC.W     $0F00
+;       DC       >LB1E+LB1E+LB1E+LB1E+LB1E+LB1E+LB1E+LB1E         
+;       DC       <LB1E+LB1E+LB1E+LB1E+LB1E+LB1E+LB1E+LB1E
+;       DC       BBH
+;
+LB1E    DC.W     $0E00         ; EVEN FIELD
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0600
+        DC.W     $0FC0
+        DC.W     $0FC0
+        DC.W     $0FC0
+        DC.W     $1740
+        DC.W     $F740
+        DC.W     $27C0
+        DC.W     $07C0
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0700
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0500
+        DC.W     $0F00
+        DC.W     $0F00
+;       DC       >LB1O+LB1O+LB1O+LB1O+LB1O+LB1O+LB1O+LB1O
+;       DC       <LB1O+LB1O+LB1O+LB1O+LB1O+LB1O+LB1O+LB1O
+;       DC       BBH
+;
+;LEFT BALL BOY--IMAGE 2
+LB2O    DC.W     $0E00         ; ODD FIELD
+        DC.W     $0E00         
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0600                                                               
+        DC.W     $0700
+        DC.W     $0F80
+        DC.W     $0FC0
+        DC.W     $1FC0
+        DC.W     $3740
+        DC.W     $E740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $1F40
+        DC.W     $1F40
+        DC       $00           ; ?? Missing line in assembly listing ($158D)
+        DC       $00           ; ?? Missing line in assembly listing ($158E)
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $13C0
+        DC.W     $13C0
+        DC.W     $1040
+        DC.W     $3040
+        DC.W     $3000
+;       DC       >LB2E+LB2E+LB2E+LB2E+LB2E+LB2E+LB2E+LB2E         
+;       DC       <LB2E+LB2E+LB2E+LB2E+LB2E+LB2E+LB2E+LB2E
+;       DC       BBH
+;
+LB2E    DC.W     $0E00         ; EVEN FIELD
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0E00
+        DC.W     $0600
+        DC.W     $0F80
+        DC.W     $0FC0
+        DC.W     $1FC0
+        DC.W     $1740
+        DC.W     $F740
+        DC.W     $2740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $0740
+        DC.W     $1F40
+        DC.W     $1F40
+        DC.W     $1F40
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $1200
+        DC.W     $13C0
+        DC.W     $13C0
+        DC.W     $1040
+        DC.W     $1040
+        DC.W     $3000
+        DC.W     $3000
+;       DC       >LB2O+LB2O+LB2O+LB2O+LB2O+LB2O+LB2O+LB2O         
+;       DC       <LB2O+LB2O+LB2O+LB2O+LB2O+LB2O+LB2O+LB2O
+;
+;RIGHT BALL BOY--IMAGE 1
+RB1O    DC.W     $0070         ; ODD FIELD
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0060
+        DC.W     $00E0
+        DC.W     $03F0
+        DC.W     $03F0
+        DC.W     $02F8
+        DC.W     $02EC
+        DC.W     $02E7
+        DC.W     $03E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00F0
+        DC.W     $00F0
+;       DC       >RB1E+RB1E+RB1E+RB1E+RB1E+RB1E+RB1E+RB1E         
+;       DC       <RB1E+RB1E+RB1E+RB1E+RB1E+RB1E+RB1E+RB1E
+;       DC       BBH
+RB1E    DC.W     $0070         ; EVEN FIELD
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0060
+        DC.W     $03F0
+        DC.W     $03F0
+        DC.W     $03F0
+        DC.W     $02E8
+        DC.W     $02EF
+        DC.W     $03E4
+        DC.W     $03E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00E0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00A0
+        DC.W     $00F0
+        DC.W     $00F0
+;       DC       >RB1O+RB1O+RB1O+RB1O+RB1O+RB1O+RB1O+RB1O                                                     
+;       DC       <RB1O+RB1O+RB1O+RB1O+RB1O+RB1O+RB1O+RB1O
+;       DC       BBM
+;
+;RIGHT BALL BOY--IMAGE 2
+RB2O    DC.W     $0070        ; ODD FIELD
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0060
+        DC.W     $00E0
+        DC.W     $01F0
+        DC.W     $03F0
+        DC.W     $03F8
+        DC.W     $02EC
+        DC.W     $02E7
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02F8
+        DC.W     $02F8
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $03C8
+        DC.W     $03C8
+        DC.W     $0208
+        DC.W     $020C
+        DC.W     $000C
+;       DC       >RB2E+RB2E+RB2E+RB2E+RB2E+RB2E+RB2E+RB2E
+;       DC       <RB2E+RB2E+RB2E+RB2E+RB2E+RB2E+RB2E+RB2E
+;       BBH
+;
+RB2E    DC.W     $0070         ; EVEN FIELD
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0070
+        DC.W     $0060
+        DC.W     $01F0
+        DC.W     $03F0
+        DC.W     $03F8
+        DC.W     $02E8
+        DC.W     $02EF
+        DC.W     $02E4
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02E0
+        DC.W     $02F8
+        DC.W     $02F8
+        DC.W     $02F8
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $0048
+        DC.W     $03C8
+        DC.W     $03C8
+        DC.W     $0208
+        DC.W     $0208
+        DC.W     $000C
+        DC.W     $000C
+;       DC       >RB2O+RB2O+RB2O+RB2O+RB2O+RB2O+RB2O+RB2O
+;       DC       <RB2O+RB2O+RB2O+RB2O+RB2O+RB2O+RB2O+RB2O
+;       DC       BBH
+;
+;CROWD--IMAGE 1
+CR1O    DC.W     $3838         ; ODD FIELD
+        DC       $FE
+        DC       $38
+        DC       $28
+        DC       $78
+        DC       $38
+        DC       $18
+        DC       $38
+        DC       $18
+        DC.W     $7E7E
+;       DC       >CR1E+CR1E+CR1E+CR1E+CR1E+CR1E+CR1E+CR1E         
+;       DC       <CR1E+CR1E+CR1E+CR1E+CR1E+CR1E+CR1E+CR1E
+;       DC       CRH
+;
+CR1E    DC.W     $3838         ; EVEN FIELD
+        DC       $FE
+        DC.W     $3838
+        DC       $78
+        DC       $38,$38,$38
+        DC       $18
+        DC.W     $7E7E
+;       DC       >CR1O+CR1O+CR1O+CR1O+CR1O+CR1O+CR1O+CR1O
+;       DC       <CR1O+CR1O+CR1O+CR1O+CR1O+CR1O+CR1O+CR1O
+;       CRH
+;
+;CROWD--IMAGE 2
+CR2O    DC.W     $1C1C         ; ODD FIELD
+        DC       $7F
+        DC       $1C
+        DC       $14
+        DC       $1E
+        DC       $1C
+        DC       $18
+        DC       $1C
+        DC       $18
+        DC.W     $7E7E
+;       DC       >CR2E+CR2E+CR2E+CR2E+CR2E+CR2E+CR2E+CR2E
+;       DC       <CR2E+CR2E+CR2E+CR2E+CR2E+CR2E+CR2E+CR2E
+;       DC       CRH
+;
+CR2E    DC.W     $1C5C         ; EVEN FIELD ?? Assembly doesn't match
+        DC       $00           ; ?? Missing line in assembly listing ($170B)
+        DC.W     $1C1C
+        DC       $1E
+        DC       $1C,$1C,$1C
+        DC       $18
+        DC.W     $7E7E
+;       DC       CR2O+CR2O+CR2O+CR2O+CR2O+CR2O+CR2O+CR2O
+;       DC       CR2O+CR2O+CR2O+CR2O+CR2O+CR2O+CR2O+CR2O
+;       DC       CRH
+;
+;
+;*******************************************
+;*                                         *
+;*     MAIN PROGRAM                        *
+;*                                         *
+;*******************************************
+;
+;INITIALIZE*
+;***********
+        ORG      BASE
+;
+;CLEAR I/O SYSTEM
+        CLR
+        OUTS     OPSU
+        OUTS     OSMI
+        OUTS     1                 ; DISABLE JOYSTICKS
+        DI                         ; DISABLE CPU INTERRUPTS
+;
+;INITIALIZE SCRATCH PAD VARIABLES
+        LISU     2
+        LISL     1
+        NOP                        ; ?? Missing line in assembly listing ($1807)
+        LR       PSTA+1,A          ; PSTA = BBHY
+;
+        LI       CRB-BW2
+        LR       X,A               ; X <= CRB-BW/2
+        LI       CUB+CH2
+        LR       LPY+1,A           ; LPY = CUB+CH/2
+        LR       RPY+1,A           ; RPY = CUB+CH/2
+;
+        CLR
+        LR       PST1,A            ; PST1 <= 0
+        LISL     6
+        LI       60
+        LR       BBK1,A            ; BBK1 <= 60
+;
+        LISU     5
+        LISL     0
+        CLR
+        LR       LSCD+1,A          ; LSCD <= 0
+        LR       RSCD+1,A          ; RSCD <= 0
+        LR       BVX+1,A           ; BVX <= 0
+        LI       CLB+CW2-BBW2
+        LR       BBX+1,A           ; BBX <= CLB+CW/2+BBW/2
+        CLR
+        LR       BVY+1,A           ; BVY <=0
+        COM
+        LR       BBY+1,A           ; BBY <= $FF
+        LISU     6
+        LISL     0
+        CLR
+        LR       SNDP,A            ; SNDP <= 0
+;
+        LI       PXLS
+        LR       IS,A
+        LIS      12
+        LR       XLST+1,A          ; BALL
+        LIS      4
+        LR       XLST+1,A          ; LEFT-PADDLE
+        LIS      11
+        LR       XLST+1,A
+        LIS      7
+        LR       XLST+1,A          ; NET
+        LIS      8
+        LR       XLST+1,A          ; NET
+        LIS      9
+        LR       XLST+1,A          ; NET
+        LIS      2
+        LR       XLST+1,A          ; UPPER BOUNDARY
+        LIS      3
+        LR       XLST+1,A          ; LOWER BOUNDARY
+        LISU     4
+        LIS      5
+        LR       XLST+1,A          ; LEFT SCORE
+        LIS      10
+        LR       XLST+1,A          ; RIGHT SCORE
+        LIS      6
+        LR       XLST+1,A          ; BALL BOY
+        LIS      0
+        LR       XLST+1,A          ; LEFT CROWD
+        LIS      1
+        LR       XLST+1,A          ; RIGHT CROWD
+;
+;ZERO UM-1 WRITE ONLY REGISTERS
+        DCI      YINT
+        LIS      COM-YINT
+        LR       TEMP,A
+        PI       ZERO
+;
+;CLEAR UM-1 WRITE ONLY REGISTERS
+        DCI      RPL
+        LI       $90
+        LR       TEMP,A
+        PI       CLER
+;
+;MOVE INITIAL UPDATE DATA INTO RAM
+        DCI      DATU
+        XDC
+        DCI      DAT0
+;       LI       NOBJ+NOBJ+NOBJ+NOBJ+NOBJ+NOBJ+NOBJ+NOBJ - ?? Didn't work right
+        LI       [NOBJ+1]*9+5  ; ?? Correction to assembly made here
+        LR       TEMP,A
+        PI       MOVE
+;
+;LOAD UM-1 READ/WRITE REGISTERS & DISPLAY
+;
+        DCI      DAT0              ; INITIALIZE UM-1 REGISTERS
+        PI       UPDT
+        CLR
+        LR       TEMP,A            ; SYNC ON LINE 0
+        PI       SYNC
+        LI       SELA+ENB
+        DCI      COM               ; SELECT LIST A AND
+        NOP                        ; ?? Missing line in assembly listing ($1873)
+;
+        LISU     2
+        LISL     0
+        LR       PCOM+1,A          ; SET PROGRAM COPY OF COM
+;
+
+;******
+;
+SE0     LISU     2
+        LISL     1
+        CLR
+        XS       PSTA
+        BM       SEO1              ; IF MODE = SERVE [
+;
+        LR       A,X
+        CI       CLB+BW2
+        BZ       SE1               ; IF X=CLB+BW2
+        CI       CRB-BW2
+        BNZ      SE2               ; OR X=CRB-BW2 [
+SE1     LISL     6
+        LISU     2
+        DS       BBK1              ; BBK1 <= BBK1-1
+        BZ       SE1A              ; IF BBK1.NE.0 [
+;
+;BUILD SCORE OBJECTS
+BSCO    LISU     5
+        LISL     0
+        LR      A,LSCD
+        SR      4
+        LR      TEMP,A
+        DCI     LSCR
+        PI      MOVD               ; CALL MOVD(LSCD/16,LSCR)
+        LR      A,LSCD
+        SL      4
+        SR      4
+        LR      TEMP,A
+        DCI     LSCR+1
+        PI      MOVD               ; CALL MOVD(LSCD.MOD.16,LSCR+1)
+        LISL    1
+        LR      A,RSCD
+        SR      4
+        LR      TEMP,A
+        DCI     RSCR
+        PI      MOVD               ; CALL MOVD(RSCD/16,RSCR)
+        LR      A,RSCD
+        SL      4
+        SR      4
+        NOP                        ; ?? Missing line in assembly listing ($18AD)
+        DCI     RSCR+1
+        PI      MOVD               ; CALL MOVD(RSCR.MOD.16,RSCR+1
+        JMP     MP0
+SE1A    LIS     1
+        LR      BBK1,A             ; BBK1 <= 1
+        LISL    1
+        LR      A,PSTA
+        SL      1
+        LI      NX-NW2-8
+        BP      . + 4
+        LI      NX+NW2+8
+        LISU    5
+        LISL    3
+        LR      BBX,A
+SE1B    LI      CBB-BBH
+        LISL    5
+        LR      BBY,A              ; BBY <= CBB-BBM
+        LI      BYHN-BBIM
+        LISU    2
+        LISL    1
+        NS      PSTA
+        LR      PSTA+1,A           ; PSTA <= PSTA-BBYH-BBI
+        NOP                        ; ?? Missing line in assembly listing ($18CF)
+        LIS     BBVX               ; BVX <= BBVX
+        LISU    5
+        BM      SE1C               ; IF NXTS=L [
+        LI      <-BBVX             ;    BVX<=-BBVX
+SE1C    LR      BVX,A              ;    ]
+        LI      <-BBVY
+        LISL    4
+        LR      BVY+2,A            ; BVY <= -BBVY
+        LR      A,BBX
+        BM      SE1D               ; IF NXTS=L [
+        AI      <-BBW2-BW2          ;    BBX<=BBX-BBW2-BW2 ]
+        BR      SE1E               ; ELSE [
+SE1D    AI      BBW2+BW2           ;    BBX<=BBX+BBW2+BW2 ]
+SE1E    LR      X,A
+        LI      CBB-BBH+11-BH2
+        LR      Y,A                ; Y <= CBB-BBH+11-BW2
+        CLR
+        LR      VXP,A
+        LR      VYP,A
+        LISL    2
+        LR      A,BVX
+        LR      VX,A               ; VX <= BVX
+        LI      <-BBVY
+        LR      VY,A               ; VY <= -BBVY
+        LISU    2
+        LISL    7
+        LIS     7
+        LR      BBK2,A             ; BBK2 <= 7
+SEO1    BR      SEO2               ; ]
+SE2     CLR
+        LISU    5
+        LISL    2
+        XS      BVX
+        BP      SE3                ; ELSEIF BVX<0
+        LISL    3
+        AS      BBX+2              ; ANDIF BBX+BVX>=
+        CI      LPX+PW2+8+BBW2-1
+        BNC     SEO2               ;    LPX+PW2+8+BBW2 [
+;                                       ]
+SE3     CLR
+        XS      BVX
+        BZ      SE4                ; ELSEIF BVX>0
+        BM      SE4
+        LISL    3
+        AS      BBX+2              ; ANDIF BBX+BVX<=
+        CI      RPX-PW2-8-BBW2
+        BC      SEO2               ;    PBX-PW2-8-BBW2 [
+;                                       ]
+SE4     CLR
+        XS      BVX
+        BZ      SE5                ; ELSEIF BVX.NE.0 [
+;                                       X <= LPX+PW2+BW2
+        LI      LPX+PW2+BW2
+        BM      SE4A               ;    IF BVX>0 [
+        LI      RPX-PW2-BW2
+SE4A    LR      X,A                ;       X<=RPX-PW2-BW2
+        CLR                        ;       ]
+        LR      VX,A               ;    VX <= 0
+        LR      VY,A               ;    VY <= 0
+        LR      BVX,A              ;    BVX <= 0
+SEO2    BR      SEO3               ;    ]
+SE5     LISL    5
+        LR      A,BBY
+        CI      $FF
+        BZ      SE6                ; ELSEIF BBY.NE.$FF
+        LISL    4
+        AS      BVY+1
+        CI      CUB-1
+        BNC     SEO3               ; ANDIF BBY+BVY>=CUB [
+;                                          ]
+SE6     LR      A,BBY
+        CI      $FF
+        BZ      SE7                ; ELSEIF BBY.NE.$FF [
+        LI      NX
+        LISL    3
+        LR      BBX,A              ;    BBX <= NX
+        LI      $FF
+        LISL    5
+        LR      BBY,A              ;    BBY <= $FF
+        LISU    2
+        LISL    1
+        LR      A,PSTA
+        OI      BBYH
+        LR      PSTA,A             ;    PSTA <= PSTA+BBYH
+        CLR
+        LISU    5
+        LISL    2
+        LR      BVX,A              ;    BVX <= 0
+        LISL    4
+        LR      BVY,A              ;    BVY <= 0
+SEO3    BR      MB0                ;    ]
+;                                  ; ELSEIF [
+SE7     LISU    2
+        LISL    1
+        LR      A,PSTA
+        SL      1
+        LI      LPX+PW2+BW2        ;    IF NEXT TO SERVE = LEFT
+        BP      . + 4              ;      X = LPX+PW/2+BW/W]
+        LI      RPX-PW2-BW2        ;    ELSE [
+        LR      X,A                ;      X = RPX-PW/2-BW/2]
+;
+        LISL    5
+        LIS     4
+        LR      HITK+1,A           ; HITK <= 4
+        LI      60
+        LR      BBK1,A             ; BBK1 <= 60
+;
+        CLR
+        OUTS    1
+        INS     1
+        LR      TEMP,A             ; TEMP <= BUTTONS INPUT
+        NI      LSVB
+        BZ      SE7A               ; IF LSVB PRESSED
+        CLR                        ; ANDIF X> = 0 [
+        XS      X                  ;    X <= X-1
+        BM      SE7A               ; IF EOG [SCORE <= 0]
+        NOP                        ; ?? Missing line in assembly listing ($1964)
+        NOP                        ; ?? Missing line in assembly listing ($1965)       
+        BR      SE7B               ;    ]
+SE7A    LR      A,TEMP
+        NI      RSVB
+        BZ      MP0                ; ELSEIF RSVB PRESSED
+        CLR
+        XS      X
+        BP      MP0                ; ANDIF X<0 [
+        INC
+SE7B    LR      X,A                ;    X <= X+1
+        LISL    1
+        LR      A,PSTA
+        OI      PLAY               ; MODE <= PLAY
+        LR      PSTA,A
+;
+        LISU    5
+        LISL    0
+        LR      A,LSCD+1
+        CI      MAXS
+        BZ      SE7C               ; IF LSCD=MAXS
+        LR      A,RSCD
+        CI      MAXS
+        BNZ     MP0                ; OR RSCD=MAXS [
+SE7C    LISL    0
+        CLR
+        LR      LSCD+1,A           ;      LSCD <= 0
+        LR      RSCD,A             ;      RSCD <= 0
+;                                         ]
+;                                  ; ]
+;                             ;   ]
+;
+;*MOVE BALL*
+;***********
+MB0     LR       A,XP
+        AS       VXP
+        LR       XP,A         ; XP = XP + VXP
+        LR       A,X
+        LNK
+        AS       VX
+        LR       X,A          ; X = X + VX + LNK
+        LR       A,YP
+        AS       VYP
+        LR       YP,A         ; YP = YP + VYP
+        LR       A,Y
+        LNK
+        AS       VY
+        LR       Y,A          ; Y = Y + VY + LNK
+;
+;*MOVE PADDLES*
+;**************
+MP0     LISU     2
+        LIS     LDVJ
+        LR      TEMP,A         ; TEMP <= LDVJ
+;
+        DCI     YCUR
+        LM
+        AI      3
+        LR      TMP2,A         ; TEMP2 <= YCUR+3
+;
+        PI      JOYI           ; ACC <= JOYI(TEMP,TMP2)
+        AI      SUB            ; IF ACC<CUB+PH/2 [
+        CI      CUB+PH2-1
+        BNC     MP1            ;    LPY <= CUB+PH/2
+        LI      CUB+PH2        ;     ]
+        BR      MP2            ; ELSEIF ACC>CBB-PH/2 [
+MP1     CI      CBB-PH2        ;    LPY <= CBB-PH/2
+        BC      MP2            ;    ]
+        LI      CBB-PH2        ; ELSE [
+MP2     LISL    2
+        LR      LPY,A          ;    LPY <= ACC
+;
+        LI      RDVJ
+        LR      TEMP,A         ; TEMP <= RDVJ
+;
+        DCI     YCUR
+        LM
+        AI      3
+        LR      TMP2,A         ; TMP2 <= YCUR+3
+;
+        PI      JOYI           ; ACC <= JOYI(TEMP,TMP2)
+        AI      SUB            ; IF ACC<CUB+PH/2 [
+        CI      CUB+PH2-1
+        BNC     MP3            ;    RPY <= CUB+PH/2
+        LI      CUB+PH2        ;    ]
+        BR      MP4            ; ELSEIF ACC>CBB-PH/2 [
+MP3     CI      CBB-PH2        ;    RPY <= CBB-PH/2
+        BC      MP4            ;    ]
+        LI      CBB-PH2        ; ELSE [   
+MP4     LISL    3
+        LR      RPY,A          ;    RPY <= ACC
+;                                   ]
+;
+;*GENERATE SOUND*
+;****************
+        PI      SOND           ; CALL SOND
+;
+;* MOVE BALL BOY*
+;****************
+MBB     LISU    5
+        LISL    2
+        LR      A,BVX+1
+        AS      BBX
+        LR      BBX+1,A        ; BBX <= BBX+BVX
+;
+        LR      A,BVY+1
+        AS      BBY
+        LR      BBY,A          ; BBY <= BBY+BVY
+;
+;*CHECK FOR COLLISIONS*
+;**********************
+;
+;COURT UPPER BOUNDARY
+C0      LR       A,Y           ; IF Y-BH/2<CUB [
+        CI       CUB+BH2-1
+        BNC      C1
+        LI       CUB+BH2       ;    Y=CUB+BH/2
+        BR       C1A           ;    VY=-VY]
+;
+;COURT BOTTOM BOUNDARY
+C1      CI       CBB-BH2  
+        BC       C2            ; ELSE Y+BH/2>CBB [
+        LI       CBB-BH2
+C1A     LR       Y,A           ;    Y=CBB-BH/2
+        PI       VYCH          ;    VY=-VY
+        LI       PERB
+        LISU     6
+        LISL     0
+        LR       SNDP,A        ;    SNDP <= PERB
+;                              ;    ]
+;
+;BELOW NET
+C2      LISL     1
+        LISU     2
+        LR       A,X           ; IF X*BW/2>NW-NW/2
+        CI       NX-NW2-BW2
+        BC       C2A
+        CI       NX+NW2+BW2-1
+        BNC      C2A           ; .AND. X-BW/2<NX+NW/2 [
+        LI       HBFN
+        NS       PSTA
+        OI       HBF           ;    SET HIDE BALL FLAG
+        BR       C2B           ;    ]
+C2A     LI       HBFN          ; ELSE [
+        NS       PSTA          ;    RESET HIDE BALL FLAG
+C2B     LR       PSTA,A        ;    ]
+;
+;
+;IN FRONT OF PADDLE
+C3      LISL     4
+        LR       A,PST1
+        NI       PIMN          ; PLIM <= 0
+        LR       PST1,A        ; RPIM <= 0
+        LR       A,X
+        CI       LPX+PW2+7-BW2+8
+        BC       C3A           ; IF LPX+PW/2+8<=X+BW/2-8
+        CI       NX-1
+        BNC      C3A           ; AND X<NX
+        CLR
+        NOP                    ; ?? Missing line in assembly listing ($1A1C)
+        BM       C3A           ; ANDIF VX>=0 [
+        LR       A,PST1
+        OI       LPIM          ;    LPIM <= 1
+        BR       C3B           ;    ]
+C3A     LR       A,X
+        CI       NX-1
+        BC       C4            ; ELSEIF NX<=X
+        CI       RPX-PW2-8+BW2-8
+        BNC      C4            ; AND X-BW/2+8<=RPX-PW/2-8
+        CLR
+        XS       VX
+        BP       C4            ; ANDIF VX<0 [
+        LR       A,PST1
+        OI       RPIM          ;    RPIM <= 1
+C3B     LR       PST1,A        ;    ]
+;*
+;*ON COURT
+C4      LR       A,X
+        CI       LPX+PW2+BW2-1
+        BC       C5            ; IF LPX+PW/2<=X-BW/2
+        CI       RPX-PW2-BW2
+        BC       CO1           ; .AND. X+BW/2<=RPX-PW/2 [ ]
+;
+;LEFT COURT BOUNDARY
+C5      LISL     1
+        CI       CLB+BW2-1
+        BNC      C6            ; ELSEIF X-BW/2<CLB [
+        LR       A,PSTA
+        NI       SERV          ;    MODE = SERVE
+        OI       RSV           ;    NEXT TO SERVE = RIGHT
+        LR       PSTA,A
+        LI       CLB+BW2
+        LR       X,A           ;    X = CLB+BW/2
+        BR       C6A           ;    UPDATE SCORE ]
+;
+; RIGHT COURT BOUNDARY
+C6      NOP                    ; ?? Missing line in assembly listing ($1A4E)
+        NOP                    ; ?? Missing line in assembly listing ($1A4F)
+        BC      C7             ; ELSEIF X+BW/2>CRB
+        LR      A,PSTA
+        NI      SERV           ;     MODE = SERVE
+        NI      LSV            ;     NEXT TO SERVE = LEFT
+        LR      PSTA,A
+        LI      CRB-BW2
+        LR      X,A            ;     X = CRB-BW/2
+        LISL    0
+C6A     LISU    5
+        LI      $66+1
+        ASD     RSCD
+        LR      RSCD,A         ;     RSCD <= RSCD+1
+        LIS     PERS
+        LISU    6
+        LISL    0
+        LR      SNDP,A         ;     SND <= PERS
+CO1     BR      CO2            ;     ]
+;
+;BEYOND LEFT PADDLE
+C7      CI      LPX-PW2-BW2
+        BC      CO2            ; ELSEIF X+BW/2<=LPX-PW/2 [ ]
+;
+C8      CI      RPX+PW2+BW2-1
+        BNC     CO2            ; ELSEIF X-BW/2>=RPX+PW/2 [ ]
+;
+;BALL IN PADDLE REGION
+;                              ; ELSE [
+        COM                    ; IF X>0 [
+        LISL    2              ;    PY = LPY]
+        BM      . + 3          ; ELSE   [
+        LISL    3              ;    PY = RPY]
+;
+;BALL ABOVE PADDLE
+C9      LR      A,Y            ; IF Y+BH/2<PY-PH/2-1 [
+        COM
+        AI      <-PH2-BH2
+        AS      PY
+        BC      CO2            ;    ]
+;
+;BALL BELOW PADDLE
+C10     LR      A,PY           ; ELSEIF Y-BH/2>=PY+PH/2+1 [
+        COM      
+        AI      <-PH2-BH2
+        AS      Y
+        BC      CO2            ;    ]
+;
+;SIDE COLLISION- TOP OF PADDLE
+C11     LR      A,Y            ; ELSEIF Y+BH/2<=PY-PH/2-1+PEN
+        COM
+        AI      <-PH2-BH2-1+PENS
+        AS      PY
+        BNC     C12
+        CLR                    ; .AND. VY>0 [
+        XS      VY
+        BM      C12
+        BZ      C12
+        LR      A,PY           ;    IF PY-PH/2<CUB+BH [
+        CI      CUB+BH+PH2-1
+        BNC     C11A
+        LI      CUB+BH+PH2
+        LR      PY,A           ;       PY = CUB+BH+PH/2]
+C11A    AI      <-PH2-BH2      ;   Y = PY-PH/2-BH/2
+        BR      C12B           ;    VY = -VY]
+;
+;SIDE COLLISION--BOTTOM OF PADDLE
+C12     LR      A,PY           ; ELSEIF Y-BH/2>PY+PH/2+1-PEN
+        COM
+        AI      <-PH2-BH2-1+PENS
+        AS      Y
+        BNC     C13
+        CLR                    ; .AND. VY<0 [
+        XS      VY
+        BP      C13
+        LR      A,PY           ;    IF PY+PH/2>CBB-BH [
+        CI      CBB-BH-PH2
+        BC      C12A
+        LI      CBB-BH-PH2
+        LR      PY,A           ;   PY = CBB-PH/2-PH]
+C12A    AI      PH2+BH2
+C12B    LR      Y,A            ; Y = PY+PH/2+BH/2
+        PI      VYCH           ; VY = -VY
+;                                SNDP <= PERH
+        BR      C15G           ; ]
+;
+;THROUGH LEFT PADDLE
+C13     LR      A,X            ; ELSEIF X-BW/2<LPX+P2/2-PEN        
+        CI      LPX+PW2+BW2-PEN-1
+        BNC     C14
+        LI      LPX-PW2-BW2
+        BR      C14A           ;    X = LPX-PW/2-BW/2]
+;
+;THROUGH RIGHT PADDLE
+C14     CI      RPX-PW2+PEN-BW2
+        BC      C15            ; ELSEIF X+BW/2>RPX-PW/2+PEN
+        LI      RPX+PW2+BW2
+C14A    LR      X,A            ;    X = RPX+PW/2+BW/2]
+CO2     BR      CHIM
+;
+;FRONT HIT      
+C15     LIS     5              ; ELSE [
+        LR      TEMP,A
+        LR      A,PY           ;    TEMP = 5
+        COM                    ;    DISP = PH/2+BH/2+1
+        AS      Y              ;    REPEAT [
+        AI      <-PH2-BH2      ;       TEMP = TEMP-1
+C15A    DS      TEMP           ;       DISP = DISP=H/5]
+        AI      HBY5           ;    UNTIL
+        BM      C15A           ;       Y-PY-DISP>=0
+        DCI     VTBL
+        CLR
+        XS      TEMP
+        CI      2
+        BNZ     C15B           ; IF TEMP=2 [
+        CLR
+        LR      VYP,A
+        LR      VY,A           ;    VY = 0
+        BR      C15D
+C15B    BNC     C15C           ; ELSEIF TEMP<2 [
+        SL      1
+        ADC
+        LM
+        LR      VYP,A
+        LM
+        LR      VY,A
+        PI      VYCH           ;    VY = -VTBL (2*TEMP)
+        BR      C15D           ;    ]
+C15C    COM                    ; ELSE [
+        AI      5
+        SL      1
+        NOP                    ; ?? Missing line in assembly listing ($1AF3)
+        LM
+        LR      VYP,A
+        LM                     ;    VY = +VTBL(2*(4-TEMP))
+        LR      VY,A
+C15D    CLR
+        XS      X
+        BM      C15E           ; IF X>=0 [
+        LI      <VX0
+        LR      VXP,A
+        LI      >VX0
+        LR      VX,A           ;      VX = VX0
+        LI      LPX+PW2+BW2    ;      X = LPX+PW/2+B2/2
+        BR      C15F
+C15E    LI      <-VX0          ; ELSE [
+        LR      VXP,A
+        LI      >-VX0
+        LR      VX,A           ;      VX = -VX0
+        LI      RPX-PW2-BW2    ;      X = RPX-PW/2-BW/2
+C15F    LR      X,A            ;      ]
+;
+C15G    LIS     PERH        
+        LISU    6
+        LISL    0
+        LR      SNDP,A         ; SNDP <= PERH
+        LISL    5
+        LISU    2
+        DS      HITK           ; HITK <= HITK-1
+        BNZ     CHIM           ; IF HITK=0 [
+        LIS     1
+        LR      HITK,A         ;    HITK <= 1
+        LIS     4
+        LR      IS,A           ;    VX <= 2*VX
+        PI      MPY2           ;    VY <= 2*VY
+        PI      MPY2           ;    ]
+;                              ; ]
+;                              ; ]
+;
+;OUTPUT*
+;*******
+;
+;CHOOSE BALL & NET IMAGES
+CHIM    LR      A,X
+        CI      LPX+PW2-PEN+BW2-1
+        BNC     CHI1           ; IF X-BW/2<LPX+PW/2-PEN [                 
+        LI      RBLN           ;    RBLN <= 1
+        BR      CHIE           ;    ]
+CHI1    CI      LPX+PW2+8-BW2-1
+        BNC     CHI2           ; ELSEIF X<LPX+PW/2+8-BW/2 [
+        LI      LBLN           ;    LBLB <= 1
+        BR      CHIE           ;    ]
+CHI2    CI      NX
+        BNC     CHI3           ; ELSEIF X<NX [
+        LI      RBLN           ;    RBLN <= 1
+        BR      CHIE           ;    ]
+CHI3    CI      RPX-PW2-8+BW2
+        BNC     CHI4           ; ELSEIF X<=RPX-PW/2-8+BW/2 [
+        LI      LBRN           ;    RBLN <= 1
+        BR      CHIE           ;    ]
+CHI4    CI      RPX-PW2+PEN-BW2
+        BNC     CHI5           ; ELSEIF S+BW/2<=RPX-PW/2+PEBN
+        LI      RBRN           ;    RBRN <= 1
+        BR      CHIE           ;    ]
+CHI5    LI      LBRN           ; ELSE [
+CHIE    LISL    1              ;    LBRN <= 1
+        LISU    2              ;    ]
+        LR      TEMP,A
+        NOP                    ; ?? Missing line in assembly listing ($1B50)
+        NI      CLBN
+        XS      TEMP
+        LR      PSTA,A
+;
+;UPDATE ROM POINTERS, X-VALUES & DELTA-X
+UPRX    LISL    1              ; SELECT LEFT/RIGHT BALL
+        LISU    2
+        LR      A,PSTA
+        NI      LBLN
+;
+        LI      <BL            ; UPDATE RPL(0)
+        BNZ     . + 4
+        LI      <BR
+        DCI     RPLE
+        ST
+        DCI     RPLO
+        ST
+;
+        LI      >BL+RED+GRN+BLU
+        BNZ     . + 4          ; UPDATE RPH(0)
+        LI      >BR+RED+GRN+BLU
+        DCI     RPHE
+        ST
+        DCI     RPHO
+        ST
+;
+        LI      <-BW2          ; UPDATE XVAL(0)
+        BNZ     . + 4
+        LI      <[BW2-8]
+        AS      X
+        DCI     XVU
+        ST
+;
+        LISL    4
+        LR      A,PSTA         ; SELECT LEFT PADDLE IMAGE
+        NI      LPIM
+        LI      <LP1E          ; UPDATE RPL(1)
+        BZ      . + 4
+        LI      <LP2E
+        DCI     RPLE+1
+        ST
+        LI      <LP1O
+        BZ      . + 4
+        LI      <LP2O
+        DCI     RPLO+1
+        ST
+        LI      >LP1E+RED+GRN
+        BZ      . + 4          ; UPDATE RPH(1)
+        LI      >LP2E+RED+GRN
+        DCI     RPHE+1
+        ST
+        LI      >LP1O+RED+GRN
+        BZ      . + 4
+        LI      >LP2O+RED+GRN
+        DCI     RPHO+1
+        ST
+        LI      1+HI           ; UPDATE DELX(1)
+        BZ      . + 4
+        LI      2+HI
+        DCI     DLXU+1
+        ST
+        LR      A,PST1         ; SELECT RIGHT PADDLE IMAGE
+        NI      RPIM
+        LI      <RP1E           ; UPDATE RPL(2)
+        BZ      . + 4
+        LI      <RP2E
+        DCI     RPLE+2
+        ST
+        LI      <RP1O
+        BZ      . + 4
+        LI      <RP2O
+        DCI     RPLO+2
+        ST
+        LI      >RP1E+BLU
+        BZ      . + 4          ; UPDATE RPH(2)
+        LI      >RP2E+BLU
+        DCI     RPHE+2
+        ST
+        LI      >RP1O+BLU
+        BZ      . + 4
+        LI      >RP2O+BLU
+        DCI     RPHO+2
+        ST
+        LI      RPX-PW2
+        BZ      . + 4
+        LI      RPX-PW2-8
+        DCI     XVU+2
+        ST
+        LI      1+HI           ; UPDATE DELX(2)
+        BZ      . + 4
+        LI      2+HI
+        DCI     DLXU+2
+        ST
+;
+        LISL    1
+        LR      A,PSTA         ; SELECT LEFT/RIGHT NET
+        NI      RBRN
+;
+        LI      <NL             ; UPDATE RPL(3,4,5)
+        BZ      . + 4
+        LI      <NR
+        DCI     RPLE+3
+        ST
+        ST
+        ST
+        DCI     RPLO+3
+        ST
+        ST
+        ST
+;
+        LI      >NL+[RED+GRN+BLU]
+        BZ      . + 4          ; UPDATE RPH(3,4,5)
+        LI      >NR+[RED+GRN+BLU]
+        DCI     RPHE+3
+        ST
+        ST
+        ST
+        DCI     RPHO+3
+        ST
+        ST
+        ST
+;
+        LI      <-NW2          ; UPDATE XVAL (3,4,5)
+        BZ      . + 4
+        LI      <[NW2-8]
+        AI      NX
+        DCI     XVU+3
+        ST
+        ST
+        ST
+;
+        LR      A,PSTA         ; SELECT LEFT/RIGHT BALL BOY
+        SR      1
+        SR      4
+        NI      $02
+        LR      TEMP,A
+        LR      A,PSTA         ; SELECT BALL BOY IMAGE
+        SR      1
+        NI      $01
+        AS      TEMP
+        SL      1
+        SL      1
+        DCI     BBTB
+        ADC
+        LM
+        XDC
+        DCI     RPHE+10        ; UPDATE RPL(10) & RPH(10)
+        NOP                    ; ?? Missing line in assembly listing ($1C42)
+        XDC
+        LM
+        XDC
+        DCI     RPLE+10
+        ST
+        XDC
+        LM
+        XDC
+        DCI     RPHO+10
+        ST
+        XDC
+        LM
+        DCI     RPLO+10
+        ST
+;        
+        LISL    7
+        DS      BBK2           ; BBK2 <= BBK2-1
+        BNZ     SBB1           ; IF BBK2=0 [
+        LIS     7
+        LR      BBK2,A         ;    BBK2 <= 7
+        LI      BBIM
+        LISL    1
+        XS      PSTA
+        LR      PSTA,A         ;    BBIM <= 1.XOR.BBIM
+;                                   ]
+;
+SBB1    LI      <-BBW2         ; UPDATE XVAL(10)
+        LISU    5
+        LISL    3
+        AS      BBX
+        DCI     XVU+10
+        ST
+;
+        LR      A,X            ; SELECT LEFT/RIGHT CROWD
+        CI      NX
+;
+        LI      <CR1E          ; UPDATE PRL(11,12)
+        BC      . + 4
+        LI      <CR2E
+        DCI     RPLE+11
+        ST
+        ST
+        LI      <CR1O
+        BC      . + 4
+        LI      <CR2O
+        DCI     RPLO+11
+        ST
+        ST
+;
+        LI      >CR1E[+RED+GRN]
+        BC      . + 4          ; UPDATE RPH(11)
+        LI      >CR2E[+RED+GRN]
+        DCI     RPHE+11
+        ST
+        LI      >CR1E[+BLU]
+        BC      . + 4          ; UPDATE RPM(12)
+        LI      >CR2E[+BLU]
+        ST
+        LI      >CR1O[+RED+GRN]
+        BC      . + 4        
+        LI      >CR2O[+RED+GRN]        
+        DCI     RPHO+11
+        NOP                    ; ?? Missing line in assembly listing ($1C9E)        
+        NOP                    ; ?? Missing line in assembly listing ($1C9F)
+        NOP                    ; ?? Missing line in assembly listing ($1CA0)
+        BC      . + 4
+        LI      >CR2O[+BLU]
+        ST
+;
+;SELECT INACTIVE LIST
+        LISU    2
+        LISL    0
+        LR      A,PCOM         ; IF LIST B IS SELECTED [
+        NI      SELA           ;    Q<-DC0<-^X-ORD A
+        DCI     YXA            ;    ]
+        BZ      . + 5          ; ELSE [
+        DCI     YXB            ;     Q<=DC0<=^X-ORD B
+        LR      Q,DC           ;    ]
+;               
+;COPY ACTIVE LIST INTO INACTIVE
+        DCI     YVLB
+        XDC
+        DCI     YVLA
+        NOP                    ; ?? Missing line in assembly listing ($1CBB)        
+        NOP                    ; ?? Missing line in assembly listing ($1CBC)
+        XDC
+        LI      NOBJ
+        LR      TEMP,A
+        PI      MOVE
+        LI      YXA-YVLA-NOBJ
+        ADC
+        XDC
+        ADC
+        XDC
+        LI      NOBJ
+        LR      TEMP,A
+        PI      MOVE
+;
+;SORT INACTIVE LIST
+SORT    LIS     10             ; REPEAT [ 
+        AI      PXLS
+        LR      IS,A
+        LR      DC,Q
+        LR      A,XLST
+        AI      <-1
+        ADC
+        PI      COMP           ; IF XVAL (XORD(XLST(10)-1))
+        BR      SO1            ;    XVAL (XORD(XLST(10)))  [
+        PI      EXCH           ;    EXCHANGE ENTRIES
+        BR      SORT           ;    ]
+SO1     LIS     10
+        AI      PXLS
+        LR      IS,A
+        LR      DC,Q
+        LR      A,XLST
+        ADC
+        PI      COMP           ; IF XVAL(XORD(XLST(10)))>
+        BR      SO2            ;    XVAL(XORD(XLST(10)+1))>  [
+        PI      EXCH           ;    EXCHANGE ENTRIES
+        BR      SO1            ;    ]
+;                              ; ELSE [EXIT]
+;                              ; ]
+SO2     LI      PXLS           ; REPEAT [
+        LR      IS,A
+        LR      DC,Q
+        CLR
+        XS      XLST           ;    IF XLST.NE.0
+        BZ      SO3
+        AI      <-1
+        ADC
+        PI      COMP           ;    ANDIF XVAL(XORD(XLST-1))>
+        BR      SO3            ;       XVAL(XORD(XLST)) [
+        PI      EXCH           ;       EXCHANGE ENTRIES
+        BR      SO2            ;       ]
+SO3     LI      PXLS           ;    ELSEIF XLST<NOBJ-1
+        LR      IS,A
+        LR      DC,Q
+        LR      A,XLST
+        CI      NOBJ-2
+        BNC     UPYV
+        ADC
+        PI      COMP           ;    ANDIF XVAL(XORD(XLST))>
+        BR      UPYV           ;       XVAL(XORD(XLST+1)) [
+        PI      EXCH           ;       EXCHANGE ENTRIES
+        BR      SO3            ;       ]
+;                              ;    ELSE [EXIT]
+;                              ; ]
+;
+;UPDATE Y-VALUES
+UPYV    LISU    3     
+        LISL    0
+        LR      A,XLST+1
+        LR      DC,Q
+        ADC
+        XDC
+        LR      DC,Q
+        ADC
+        LISU    2
+        LR      A,PSTA+2
+        NI      HBF            ; IF HIDE BALL FLAG = 1 [
+        LM                     ;    XORD(XLST(0)) <= 1
+        BZ      UPY1           ;      XORD(XLST(0))+$80
+        OI      $80            ;    ]
+        BR      UPY2           ; ELSE [
+UPY1    NI      $7F            ;    XORD(XLST(0)) <=
+UPY2    XDC                    ;      XORD(XLST(0)).AND.$7F
+        ST
+;
+        LISU    4
+        LR      A,XLST+1
+        LR      DC,Q
+        ADC
+        XDC
+        LR      DC,Q
+        ADC
+        LISU    2              ; IF MODE = SERVE [
+        CLR
+        XS      PSTA           ;    XORD(XLST(8)) <=
+        LM
+        BM      UPY3           ;    XORD(XLST(8)).AND.$7F
+        NI      $7F            ; ]
+        NOP                    ; ?? Missing line in assembly listing ($1D43)        
+        NOP                    ; ?? Missing line in assembly listing ($1D44)
+UPY3    OI      $80            ; XORD(XLST(8)) <=
+UPY4    XDC                    ;   XORD(XLST(8))+$80
+        ST
+;
+        LISU    4
+        LR      A,XLST
+        LR      DC,Q
+        ADC
+        XDC
+        LR      DC,Q
+        ADC
+        LISU    2              ; IF MODE=SERVE [
+        CLR
+        XS      PSTA+2         ;    XORD(XLST(9)) <=
+        LM
+        BM      UPY5           ;      XORD(XLST(9)).AND.$7F
+        NI      $7F
+        BR      UPY6           ; ELSE [
+UPY5    OI      $80            ;    XORD(XLST(9))+$80
+UPY6    XDC                    ;      XORD(XLST(9))+$80
+        ST                     ;    ]
+;
+        LISU    4
+        LISL    2
+        LR      A,XLST+2
+        LR      DC,Q
+        ADC
+        XDC
+        LR      DC,Q
+        ADC
+        LISU    2
+        LR      A,PSTA
+        NI      BBYH           ; IF BBYH=1 [
+        LM                     ;    XORD(XLST(10)) <=
+        BZ      UPY7           ;      XORD(XLST(10))+$80
+        OI      $80            ;    ]
+        BR      UPY8           ; ELSE [
+UPY7    NOP                    ; ?? Missing line in assembly listing ($1D71)
+        NOP                    ; ?? Missing line in assembly listing ($1D72)
+UPY8    XDC                    ;      XORD(XLST(10)).AND.$7F
+        ST                     ;    ]
+;
+        LR      DC,Q
+        LI      <[YVLA-YXA]
+        ADC
+        LR      Q,DC
+        LISU    3
+        LISL    0
+        LR      A,XLST+1
+        ADC
+        LI      <-BH2
+        AS      Y
+        ST                     ; YVAL(XLST(0)) <= Y-BH/2
+        LR      DC,Q
+        LR      A,XLST
+        ADC
+        LISU    2
+        LISL    2
+        LI      <-PH2[+1]
+        AS      LPY
+        ST                     ; YVAL(XLST(1)) <= LPY-PH/2+1
+        LR      DC,Q
+        LISU    3
+        LISL    2
+        LR      A,XLST
+        ADC
+        LISU    2
+        LISL    3
+        LI      <-PH2[+1]
+        AS      RPY
+        NOP                    ; ?? Missing line in assembly listing ($1D95)
+;                              ; VAL(XLST(2)) <= RPY-PH/2+1
+        LR      DC,Q
+        LISU    4
+        LISL    2
+        LR      A,XLST
+        ADC
+        LISU    5
+        LISL    5
+        LR      A,BBY
+        ST                     ; YVAL(XLST(10)) <= BBY
+;
+; RED BACKGROUND BELOW COURT
+WCBB    LI      CBB+2                
+        LR      TEMP,A
+        PI      SYNC
+        DCI     BGRN
+        LI      RB+LOB
+        ST                     ; BGRN = RED--LO INT
+;
+;UPDATE DEL-Y & ROM POINTERS
+        DCI     DATU
+;
+;SWITCH LISTS
+        NOP                    ; ?? Missing line in assembly listing ($1DAE)
+        NOP                    ; ?? Missing line in assembly listing ($1DAF)
+        NOP                    ; ?? Missing line in assembly listing ($1DB0)
+        LISU    2
+        LISL    0
+        LR      A,PCOM
+        XI      SELA
+        LR      PCOM,A
+        DCI     COM
+        ST
+;
+;FRAME COMPUTED & DISPLAYED
+;       NOP                      FOR BREAKPOINT                
+;       NOP
+;       NOP
+;       NOP
+;
+;GREEN BACKGROUND FOR COURT
+WCUB    LI      CUB-2
+        LR      TEMP,A
+        PI      SYNC
+        DCI     BGRN
+        LI      GB+LOB
+        ST                     ; BGRN = GREEN--LO INT
+;
+        JMP     SE0            ; CONTINUE MAIN LOOP
+;
+;
+;***************************************************
+;*                                                 *
+;*     SUBROUTINES                                 *
+;*                                                 *
+;***************************************************
+;
+;
+;CLEAR UM-1 REGISTERS*
+;*********************
+CLER    LI      $FF            ; REPEAT [        
+        ST                     ;    MEM(DCO++) <= $FF
+        DS      TEMP           ;    TEMP <= TEMP-1]
+        BNZ     . - 2          ; UNTIL TEMP=0
+        POP                    ; RETURN
+;
+;MOVE DATA IN MEMORY*
+;********************
+MOVE    LR      K,P
+        LM
+        XDC
+        ST                     ; REPEAT [
+        XDC                    ;    MEM(DC1++) <= MEM(DC0++)
+        DS      TEMP           ;    TEMP <= TEMP-1]
+        BNZ     MOVE+1         ; UNTIL TEMP=0
+        PK                     ; RETURN
+;
+;ZERO MEMORY*
+;************                        
+ZERO    CLR                    ; REPEAT [
+        ST                     ;    MEM(DC0++) <= 0
+        DS      TEMP           ;    TEMP <= TEMP-1
+        BNZ     . - 2          ; UNTIL TEMP=0
+        POP                    ; RETURN
+;
+;SYNC ON A GIVEN LINE .GT. 7*
+;****************************
+SYNC    LR      K,P
+        LR      A,TEMP
+        DCI     YCUR
+        CM                     ; REPEAT []
+        BNZ     . - 4          ; UNTIL YCUR=TEMP
+        PK                     ; RETURN
+;
+;       VY*                    ; ?? Missing part of line in assembly listing
+;**********
+VYCH    LR      K,P
+        LR      A,VYP
+        COM
+        INC
+        LR      J,W
+        LR      VYP,A
+        LR      A,VY
+        COM
+        LR      W,J
+        LNK
+        LR      VY,A
+        PK
+;
+;MULTIPLY BY 2*
+;**************
+MPY2    LR      K,P
+        CLR
+        XS      S
+        LR      J,W
+        SL      1
+        LR      S+1,A
+        LR      A,S
+        SL      1
+        LR      W,J
+        BP      . + 3
+        INC
+        LR      S+1,A
+        PK
+;
+;COMPARE X-VALUE ENTRIES*
+;************************
+COMP    LR      K,P
+        LM 
+        NI      $0F
+        XDC
+        DCI     XVU
+        ADC
+        LM
+        LR      TEMP,A
+        XDC
+        LM
+        NI      $0F
+        XDC
+        DCI     XVU
+        ADC
+        LR      A,TEMP
+        CM                     ; IF X-VAL(X-ORD(DC0++))>
+        XDC
+        BC      CMP1           ;    X-VAL(X-ORD(DC0++)) [
+        LR      A,KL           ;    RETURN
+        AI      2              ;    ]
+        LR      KL,A           ; ELSE [
+        LR      A,KU
+        LNK
+        LR      KU,A           ;    RETURN
+CMP1    PK                     ;    ]
+;
+;EXCHANGE X-ORDER & Y-VALUE ENTRIES*
+;***********************************
+EXCH    LR      K,P
+        LI      <-2
+        ADC
+        LR      H,DC
+        XDC
+        LR      DC,H
+        LM                     ; EXCHANGE X-ORD ENTRIES
+        LR      TEMP,A
+        LM
+        XDC
+        ST
+;
+        AI      PXLS
+        LR      IS,A
+        LI      <-1
+        AS      XLST
+        LR      XLST,A         ; XLST(ENT2) <= XLST(ENT2)-1
+;
+        LR      A,TEMP
+        ST
+;
+        AI      PXLS
+        LR      IS,A
+        LIS     1
+        AS      XLST
+        LR      XLST,A         ; XLST(ENT1) <= XLST(ENT1)+1
+        LI      <-2[+YVLA-YXA]
+        ADC
+        LR      H,DC
+        XDC
+        LR      DC,H
+        LM                     ; EXCHANGE Y-VAL ENTRIES
+        NOP                    ; ?? Missing line in assembly listing ($1E46)
+        LM
+        XDC
+        ST
+        LR      A,TEMP
+        ST
+        LI      YXA-YVLA
+        ADC
+        PK
+;
+;UPDATE ROUTINE*
+;***************
+UPDT    LR      K,P
+        LISU    2
+        LISL    4
+        XDC
+        LI      CBB+CBH+2
+        DCI     YCUR           ; SYNC ON LINE CBB+CBH+2
+        CM
+        BNZ     . - 4
+        XDC
+;
+UPD0    LM                     ; REPEAT [
+        LR      TEMP,A         ;    TEMP <= MEM(DC0++)
+UPD1    CI      <LTER          ;    IF TEMP=LTEP [
+        BNZ     UPD2
+        LR      A,PST1
+        OI      UPFL           ;       UPFL <= 1
+        LR      PST1,A         ;       RETURN
+        PK                     ;       ]
+UPD2    CI      <STER          ;       ]
+        BNZ     UPD3           ;    ELSEIF TEMP=STEP [
+        CLR                    ;       IF UPFL=1 [
+        XS      PST1           ;          RETURN
+        BP      UPD0           ;          ]
+        PK                     ;       ]
+UPD3    LR      A,TEMP
+        CI      <EVNF
+        BNZ     UPD4           ;    ELSEIF TEMP=ODDF [
+        XDC
+        DCI     ODD
+        LM                     ;       ACC <= MEM(DC0++)
+        NS      PST1
+        XDC                    ;       IF FLD=ODD
+        NOP                    ; ?? Missing line in assembly listing ($1E7D)
+        BP      . + 3          ;          DC0<=DC0+ACC
+        ADC                    ;          ]
+        BR      UPD0           ;       ]
+UPD4    LR      A,TEMP         ;    ELSE [
+        XDC
+        DCI     RPL
+        ADC
+        XDC                    ;       DC1 <= RPL+TEMP
+        LI      NOBJ           ;       MOVE(DC0,DCI,
+        LR      TEMP,A         ;          NOBJ)
+        LM
+        XDC
+        ST
+        XDC
+        DS      TEMP
+        BNZ     . - 5          ;       ]
+        BR      UPD0           ; ]
+;
+;MOVE SCORE DIGIT SUBROUTINE*
+;****************************
+MOVD    LR      K,P
+        XDC
+        DCI     DIGS-SCH
+        LR      A,TEMP
+        INC
+        LR      TEMP,A
+        LI      SCH
+        ADC
+        DS      TEMP
+        BNZ     . - 2
+        LI      SCH
+        NOP                    ; ?? Missing line in assembly listing ($1EA6)
+MVD1    LM
+        XDC
+        ST
+        LIS     1
+        ADC
+        XDC
+        DS      TEMP
+        BNZ     MVD1
+        PK
+;
+;SOUND GENERATION ROUTINES*
+;**************************
+;
+;
+SINT    LR      SACC,A         ; SACC <= ACC
+        NOP                    ; ?? Missing line in assembly listing ($1EB2)
+        LISU    7
+        LISL    0
+        LR      SIS+1,A        ; SIS <= ISAR
+        LR      A,9
+        LR      SJ+1,A         ; SJ <= J
+        LR      J,W            ; J <= W
+        LR      A,HU
+        LR      SHU+1,A        ; SHU <= HU
+        NOP                    ; ?? Missing line in assembly listing ($1EBB)
+        LR      SHL,A          ; SHL <= HL
+        LR      H,DC           ; H <= DC
+;
+        LISU    6        
+        LISL    1
+        DS      SNDD+1         ; SNDD <= SNDD-1
+        BZ      SIN1           ; IF SNDD.NE.0 [
+        LIS     $7
+        XS      SNDL
+        LR      SNDL,A         ;    SNDL <= SNDL.XOR.7
+        OUTS    0              ;    SET LEVEL
+        LIS     1
+        SL      4
+        OUTS    1              ;    SET ENABLE
+        CLR
+        OUTS    1              ;    LATCH
+        DCI     YCUR
+        LISL    0
+        LM
+        AS      SNDP
+        DCI     YINT
+        ST                     ;    YINT <= YCUR+SNDP
+        BR      SIN2           ;    ]
+SIN1    LISL    0              ; ELSE [
+        CLR
+        LR      SNDP,A         ;    SNDP <= 0
+        LIS     INT
+        LISU    2
+        LISL    0
+        XS      PCOM
+        LR      PCOM,A         ;    PCOM <= PCOM-INT
+        DCI     COM            ;    DISABLE UM-1 INT
+        ST
+        CLR                    ;    DISABLE SMI INT
+        OUTS    OSMI           ;    ]
+SIN2    LR      DC,H           ; DC <= H
+        LISU    7
+        LISL    3
+        LR      A,SHL+2
+        LR      HL,A           ; HL <= SHL
+        LR      A,SHU+2        
+        LR      HU,A           ; HU <= SHU
+        LR      W,J            ; W <= J
+        LR      A,SJ+2
+        LR      9,A            ; J <=SJ
+        LR      A,SIS
+        LR      IS,A           ; ISAR <= SIS
+        LR      A,SACC         ; ACC <= SACC
+        EI
+        POP                    ; RETURN
+;
+;
+SOND    LISU    6
+        LISL    0
+        CLR
+        XS      SNDP+1
+        BZ      SND2           ; IF SNDP.NE.0 [
+        SL      1
+        SR      4
+        AI      2
+        LR      SNDD,A
+        LI      64
+        SR      1
+        DS      SNDD
+        BNZ     . - 2
+        LR      SNDD+1,A       ;    SNDD <= 64/SNDP
+        LI      >SINT          ;    SMI INT VECTOR <= ^SIN
+        OUTS    IVU
+        LI      <SINT
+        OUTS    IVL
+        LIS     $6
+        LR      SNDL,A         ;    SNDL <= 6
+        OUTS    0              ;    SET LEVEL
+        LIS     1
+        SL      4
+        OUTS    1              ;    SET ENABLE
+        CLR
+        OUTS    1              ;    LATCH
+        LIS     ESMI           ;    ENABLE SMI INT
+        OUTS    OSMI
+        DCI     YCUR
+        LISL    0
+        LM
+        AS      SNDP
+        DCI     YINT
+        ST                     ;    YINT <= YCUR+SNDP
+        LIS     INT
+        LISU    2
+        XS      PCOM
+        LR      PCOM,A         ;    PCOM <= PCOM+INT
+        DCI     COM            ;    UM-1 LINE-INT MODE
+        ST
+        EI                     ;    ENABLE CPU INT
+;
+SND2    POP                    ; RETURN
+;
+;JOYSTICK INPUT ROUTINE*
+;***********************
+JOYI    LR      K,P         
+        LISU    2
+        LISL    0
+        LR      A,TMP2
+        DCI     YINT
+        ST                     ; YINT <= TMP2
+        LR      A,TEMP         ; SELECT JOYSTICK POT
+        OUTS    0
+;
+        LI      >JOY1          ; SMI INT VECTOR <= ^JOY1
+        OUTS    IVU
+        LI      <JOY1
+        OUTS    IVL
+;
+        LIS     ESMI           ; ENABLE SMI INT
+        OUTS    OSMI
+;
+        EI                     ; ENDABLE CPU INT
+;
+        LIS     INT
+        XS      PCOM
+        LR      PCOM,A         ; PCOM <= PCOM+INT
+        DCI     COM
+        ST                     ; UM-1 LINT-INT MODE
+;
+        BR      *              ; WAIT FOR INTERRUPT
+;
+; WAIT FOR INTER
+;
+;
+;
+;MAP X-Y FREEZE READINGS INTO SCREEN COORDINATES
+MAP     DCI     YFRZ
+        LR      A,TMP2
+        COM
+        INC
+        AM
+        LR      TEMP,A         ; TEMP <= DEL.YFRZ
+        CLR
+        LR      HL,A
+        LR      DC,H           ; DC0 <= TEMP*256
+        LI      228
+MAP1    ADC
+        DS      TEMP
+        BNZ     MAP1
+        XDC                    ; DC1 <= DEL.YFRZ*228
+        DCI     XFRZ
+        CLR
+        XM
+        XDC
+        ADC
+        LI      <-533
+        ADC
+        LR      H,DC
+        LI      >-533[+1]
+        BP      MAP2
+        AI      1
+MAP2    AS      HU             ; H <= DEL.YFRZ*228+XFPZ-53
+        BP      MAP3
+        CLR
+        BR      MAP5
+MAP3    BNZ     MAP4
+        LR      A,HL
+        CI      199
+        BC      MAP5
+MAP4    LI      199
+MAP5    LR      TEMP,A
+;
+        LIS     FRZ
+        XS      PCOM
+        LR      PCOM,A         ; PCOM <= PCOM-FPZ
+        DCI     COM
+        ST                     ; RESET FREEZE MODE
+;
+        LR      A,TEMP
+        PK                     ; RETURN
+;
+JOY1    LI      EJOY           ; ENABLE JOYSTICK
+        OUTS    1
+;
+        LI      >JOY2          ; SMI INT VECTOR <= ^JOY2
+        OUTS    IVU
+        LI      <JOY2
+        OUTS    IVL
+;
+        LIS     INT+FRZ
+        XS      PCOM
+        LR      PCOM,A         ; PCOM <= PCOM-INT+FRZ
+        NOP                    ; ?? Missing line in assembly listing ($1F8F)
+        NOP                    ; ?? Missing line in assembly listing ($1F90)
+        NOP                    ; ?? Missing line in assembly listing ($1F91)
+        ST                     ; UM-1 FREEZE MODE
+;
+        EI                     ; ENABLE CPU INT
+;
+        BR      *              ; WAIT FOR INTERRUPT
+;
+;
+JOY2    CLR
+        OUTS    1              ; DISABLE JOYSTICK
+        OUTS    OSMI           ; DISABLE SMI INT
+;
+        BR      MAP            ; READ X & Y-FREEZE REGISTERS
+;
+;
+;*****************************************************
+;*                                                   *
+;*     RAM ASSIGNMENTS                               *
+;*                                                   *        
+;*****************************************************
+;
+        ORG     RAM
+;
+;LEFT SCORE
+LSCR    ORG     *
+        ORG     *+SCH+SCH
+;       DC      LSCR+LSCR+LSCR+LSCR+LSCR+LSCR+LSCR+LSCR                               
+;       DC      LSCR+LSCR+LSCR+LSCR+LSCR+LSCR+LSCR+LSCR
+;       DC      SCH
+;
+;RIGHT SCORE
+RSCR    ORG     *        
+        ORG     *+SCH+SCH
+;       DC      RSCR+RSCR+RSCR+RSCR+RSCR+RSCR+RSCR+RSCR
+;       DC      RSCR+RSCR+RSCR+RSCR+RSCR+RSCR+RSCR+RSCR
+;       DC      SCH
+;
+DATU    ORG     *
+DLXU    ORG     *+1
+XVU     ORG     *+NOBJ+NOBJ+2
+RPLO    ORG     *+NOBJ+3
+RPHO    ORG     *+NOBJ+1
+RPLE    ORG     *+NOBJ+NOBJ+NOBJ+5
+RPHE    ORG     *+NOBJ+1
+;
+;
+        END

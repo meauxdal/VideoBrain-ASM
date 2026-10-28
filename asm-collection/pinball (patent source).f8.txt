@@ -1,0 +1,865 @@
+       processor f8            ; Sets DASM to assemble F8 assembly code
+;  VideoBrain "Pinball" (Patent Source Code)
+;  -----------------------------------------
+;  Original Assembly Time:            December 15, 1976, 9:45am
+;  Original Source of Assembly Code:  "Tape 134A"
+;
+;  F8 CPU Source Code Retyped:  Adam Trionfo
+;     Special Thanks to Fredric Blaholtz and Sean Riddle for help
+;     with proofreading, and general F8 and DASM assembler help
+;     and tips.                              
+;
+;     - Versions 1.0:     July 9, 2012
+;          - First Release of fully re-typed and proofread sourcecode,
+;            with full distribution
+;          - The output of version 1.0's binary matches exactly
+;            with version .04.     
+;     - Versions .01-.04: July 3-6, 2012
+;          - Retyped source code and proofread, limited distribution
+;                                 
+;
+;  Patent U.S. 4177462, Pages 14-24
+;  "Computer Control of Television Receiver Display"
+;
+;  Patent Assignee: UMtech, Inc.
+;         Inventor: David H. Chung, Palo Alto, Calif.
+;            Filed: Dec. 30, 1976
+;
+;       The coupler of the invention has been programmed, utilizing
+;  the specific register implementation described above, to display
+;  a "pinball" video game which is externally controlled by a user.
+;       The following pages are a program listing of the assembled
+;  language for such game.  The microprocessor utilized is the
+;  previously mentioned F-8 microprocessor available from Mostek 
+;  Corporation and the Fairchild Semiconductor Components Group of 
+;  Fairchild Camera and Instrument Corporation.  It was programmed
+;  in accordance with the "F-8 User's Guide and Guide to
+;  Programming" available in 1976 from Fairchild; and the 1975
+;  "F-8 Preliminary Data Book" available from Mostek.  The memory,
+;  allocations (in hexadecimal) for the following are:
+;
+;       ROM "Pinball" Program:    F800-FFAF
+;       Display Composer:         0800-OBFF
+;       ROM Segment Information:  1000-17FF
+;
+;       Also, the designation UM1 is used to refer to the display
+;  composer; and the designation UM 2 is used to refer collectively
+;  to the system controller, the timer and the timing and sync
+;  signal generator.
+
+;******************************************       
+;*       INITIALIZATION PACKAGE COMMON TO *
+;*       ALL PROGRAMS ON THE UM1/UM2      *
+;*       SYSTEM.  PROGRAM PACKAGE REQUIRES*
+;*       MEMORY LOCATIONS F800 THROUGH    *
+;*       F83F--A TOTAL OF 40 BYTES (HEX). *
+;******************************************
+;*       PROGRAM FUNCTIONS:               *
+;*       (1) CLER  LOADS MEMORY LOCATIONS *
+;*               800-88F WITH FF.         *
+;*       (2) INIT  TRANSFERS XX BYTES OF  *
+;*               DATA (XX BEING STORED    *
+;*               IN REGISTER 1) STARTING  *
+;*               AT LOCATION GIVEN BY     *
+;*               REGISTER Q TO LOCATION   *
+;*               GIVEN BY REGISTER H.     *
+;*       (3) INTS  INITIALIZES ALL UM     *
+;*               REGISTERS WITH DATA      *
+;*               STARTING IN LOCATION     *
+;*               GIVEN BY REGISTER Q.     *
+;*       (4) SYNC  SYNCHRONIZES TO LINE   *
+;*               NUMBER HEX D.  WILL NOT  *
+;*               SYNCHRONIZE TO CORRECT   *
+;*               FIELD.                   *
+;******************************************
+;*       PROGRAM ENTRY POINTS:            *
+;*       CLER----$F800                    *
+;*       INTS----$F817                    *
+;*       INIT----$F80D                    *
+;*       SYNC----$F837                    *
+;******************************************
+        ORG     $F800
+        
+; Labels not defined in parent source code
+
+        
+CLER    DCI     $800
+        LI      $90
+        LR      1,A     ; SET COUNTER
+        LI      $FF     
+CLR1    ST              ; STORE FF
+        DS      1       ; DECREMENT COUNTER
+        BNZ     CLR1    ; DONE?
+        POP             ; YES--RETURN
+;******************************************
+INIT    LR      DC,Q    ; GET ORIGIN ADDRESS
+        LM              ; GET CONTENTS SAME
+        LR      Q,DC    ; SAVE NEW ORIGIN
+        LR      DC,H    ; GET DEST. ADDRESS
+        ST              ; TRANSFER BYTE
+        LR      H,DC    ; SAVE NEW DEST.
+        DS      1       ; DECREMENT COUNTER
+        BNZ     INIT    ; TRANSFER DONE?
+        POP             ; YES--RETURN
+;******************************************        
+INTS    LR      K,P     ; SAVE RETURN ADDR.
+        PI      CLER    ; CLEAR REGISTERS
+        LI      $60     ; SET TRANSFER COUNT
+        LR      1,A     ; AND STORE IN 1
+        DCI     $800
+        LR      H,DC    ; SET DEST. ADDRESS
+        PI      INIT
+        LI      $10
+        ADC
+        LR      H,DC    ; Y L.O.A. LOAD
+        LR      1,A     ; TRANSFER COUNT
+        PI      INIT
+        DCI     $8F0
+        LR      H,DC
+        LIS     $7
+        LR      1,A
+        PI      INIT    ; SET SELECTED REGS.
+        PK              ; AND RETURN
+;******************************************
+SYNC    DCI     $8FB
+        LM              ; GET LINE NUMBER
+        CI      $D
+        BNZ     SYNC    ; ARE WE AT LINE D?
+        POP             ; YES--RETURN
+;******************************************
+X       EQU     $0
+VX      EQU     $1
+Y       EQU     $2
+VY      EQU     $3
+VYP     EQU     $4
+SCOR    EQU     $5
+PSTA    EQU     $6
+SCAD    EQU     $7
+TEMP    EQU     $9
+TMP2    EQU     $A
+TMP3    EQU     $B
+HU      EQU     $A
+HL      EQU     $B
+
+        ORG     $F900
+        
+        DCI     $8F7
+        CLR             ; CLEAR ACCUMULATOR
+        ST              ; DISABLE DMA+VIDEO
+        DCI     $1230   ;         START INIT. DATA
+        LR      Q,DC    ; INTO REGISTER Q
+        PI      INTS    ; INITIALIZE REGISTERS
+        LIS     $0      ; CLEAR ACC
+        LR      SCOR,A  ; CLEAR SCORE REGISTER
+        LISU    6
+        LISL    0
+        LR      S,A     ; SET HEX SCORE TO ZERO
+        LISU    4       ; $20=BALL CNTR REGISTER
+        LIS     $5
+        LR      S,A     ; SET FOR FIVE BALL
+        LISL    4
+        LIS     $0
+        LR      S,A     ; SET INIT. FIN.MOD REG(PRG COPY)
+LOOP    LISU    3
+        LISL    0
+        PI      SYNC
+        DCI     $8FA
+        CLR
+        XM              ; ODD/NULL EVEN W/STATUS
+        BM      LOOP
+        LI      $44     ; PROPERLY SYNCHED
+        DCI     $8F7
+        ST
+        LR      S,A     ; SET COMMAND REGISTER
+        LISU    5
+        LIS     $8      ; SET CENTRAL BUMPER
+        LR      S,A     ; COLOR CHANGE TIMER
+        LIS     $0
+        OUTS    0       ; CLEAR BUTTON PORT
+        LI      $3A     ; INIT Y COORD
+        LR      Y,A     ; INTO Y
+        LI      $7E
+        LR      X,A     ; STORE INIT X
+        LIS     $1
+        LR      VX,A
+        LIS     $0
+        LR      VY,A
+        LR      VYP,A
+LP1     PI      CNGC    ; CHANGE BACKGROUND TO RED
+        INS     0       ; GET INPUT
+        BNZ     LP2     ; IS THERE ANY?
+        PI      UPDX    ; NO--UPDATE X COORD
+        PI      CNGB    ; CHANGE COLOR TO PURPLE    
+        PI      CENB    ; CHECK FOR BUMPER COLOR CHANGE 
+        BR      LP1     ; AND LOOK BACK
+LP2     LR      TEMP,A  ; LOAD INPUT IN TEMP
+        PI      PACK    ;         THEN PACK IT
+LP3     PI      UD0     ; UPDATE FALLING BALL
+        PI      DSPY    ; MATCH INACTIVE TO ACTIVE LIST
+        PI      FILL    ; PUT X & Y CURRENT ON LIST
+        PI      SORT    ; SORT INACTIVE LIST
+        PI      CNGB    ; SYNCHRONIZE&SWITCH BACKGROUND
+        PI      CENB    ; CHECK FOR BUMPER COLOR CHANGE
+        PI      SCHD    ; UPDATE SCORE
+        PI      PADC    ; SET PADDLES
+        LISU    3
+        LISL    0
+        LR      A,S     ; GET PROGRAM COMREG
+        XI      $40     ; COMPLEMENT A/NULL B
+        DCI     $8F7
+        ST
+        LR      S,A
+        PI      CNGC    ; CHANGE COLOR RED
+        PI      FLSH    ; FLASH IF COLLISION
+        INS     0       ; GET INPUT (IF ANY)
+        BNZ     LP2     ; IS THERE ANY?
+        LIS     $0      ; NO.CLEAR PSTA
+        LR      PSTA,A
+        BR      LP3     ; AND CONTINUE
+CLRS    DCI     $8FB
+        LM              ; GET LINE NUMBER
+        XS      TEMP
+        BNZ     CLRS    ; AT DESIRED LINE?
+        DCI     $8F5    ; YES.
+        LR      A,TMP2  ; GET NEW BACKGROUND
+        ST              ; STORE IT
+        POP             ; AND RETURN
+CNGC    LR      K,P     ; SAVE RETURN ADDRESS
+        LI      $38
+        LR      TEMP,A
+        LI      $11     ; BACKGROUND RED
+CNG1    LR      TMP2,A
+        PI      CLRS
+        PK              ; AND RETURN
+CNGB    LR      K,P
+        LIS     $8      ; LINE FOR CHANGE
+        LR      TEMP,A
+        LI      $1D     ; BACKGRND PURPLE
+        BR      CNG1
+PACK    LR      A,TEMP
+        SR      1
+        LR      TMP2,A  ; BIT 1=PADDLE RIGHT
+        LR      A,TEMP
+        NI      $1
+        SL      4
+        XS      TMP2    ; BIT 0=PADDLE LEFT
+        LR      PSTA,A  ; STORE PACKED
+        POP             ; AND RETURN
+UPDX    LR      K,P     ; SAVE RETURN ADDRESS
+        LR      A,X
+        AS      VX
+        LR      X,A
+        CI      92
+        BNC     UPD2    ; AT LEFT BNDRY
+UPD1    PI      VXCH    ; YES.
+        JMP     FL3
+UPD2    CI      160
+        BNC     UPD1    ; AT RT BNDRY?
+        JMP     FL3     ; NO.RESET X AND RETURN
+FILL    LR      K,P     ; SAVE RETURN
+        PI      PREP
+FL1     LR      DC,Q
+        LM
+        CI      $F
+        XDC             ; SAVE X ORDER POINTER
+        LR      DC,H    ; GET Y L.O.PTR
+        LM              ; INCREMENT IT
+        BZ      FL2     ; OBJ#=BALL'S?              
+        LR      H,DC    ; NO.UPDATE H&Q
+        XDC
+        LR      Q,DC
+        BR      FL1
+FL2     LR      DC,H    ; Y L.O. BALL PTR
+        LR      A,Y
+        ST              ; UPDATE Y
+FL3     LR      A,X
+        DCI     $84F
+        ST              ; UPDATE X
+        PK              ; AND RETURN
+DSPY    LR      K,P
+        PI      ACT     ; ACTIVE IN Q, INACTIVE IN H
+        LR      A,VX    ; GET VX
+        LR      8,A     ; SAVE IN REG 8
+        LI      $10
+        LR      1,A     ; SET TRANSFER COUNT
+        PI      INIT    ; TRANSFER
+        LI      $10
+        LR      DC,H
+        ADC
+        LR      H,DC    ; XORD INACTIVE PNTR
+        LR      DC,Q
+        ADC
+        LR      Q,DC    ; XORD ACTIVE PNTR
+        LR      1,A     ; TRANSFER COUNT
+        PI      INIT   ; TRANSFER
+        LR      A,8     ; GET VX
+        LR      VX,A    ; RESTORE IT
+        PK              ; AND RETURN
+UD0     LR      K,P     ; SET ADDRESS FOR RETURN
+        LISU    2
+        LISL    0       ; SET ISAR FOR TBCL OFFSETS
+UD      LR      A,VYP   ; LET L.O. BITS FOR VY
+        AI      $1      ; ADD ACCELERATIONS
+        LR      VYP,A   ; SAVE RESULTS
+        BNC     UD1     ; IF CARRY, MUST INCR. H.D. VY BIT
+        LR      A,VY
+        AI      $10
+        BR      UD2
+UD1     SR      4
+        LR      TEMP,A  ; SAVE NEW VY LO BITS
+        LR      A,VY    ; GET VY
+        NI      $F0     ; CLEAR ALL SAVE H.O. BITS
+        AS      TEMP    ; AND CALCULATE NEW VY
+UD2     LR      VY,A    ; SAVE RESULT AND
+        AS      Y       ; UPDATE THE Y COORD.
+        CI      $38
+        BNC     UD3     ; ABOVE TOP BOUNDARY?
+        LI      $39     ; YES.
+        LR      Y,A     ; SET NEW Y,
+        JMP     VYCH    ; COMPLEMENT VY & RETURN
+UD3     CI      $F0     ; BELOW BOTTOM BOUNDARY?
+        BC      UD4
+        JMP     RSET    ; RESET OR END GAME
+UD4     LR      Y,A     ; NO. SAVE Y COORD.
+        LR      A,X     ; GET X COORD.
+        AS      VX      ; UPDATE IT
+        LR      X,A     ; AND STORE IT
+        CI      $15
+        BNC     UD5     ; OFF LEFT BOUNDARY?
+        LI      $16     ; YES.
+        LR      X,A
+        PI      VXCH    ; COMPLEMENT VX
+        BR      UD6
+UD5     CI      $DF
+        BC      UD6     ; OFF RT BNDRY?
+        LI      $DE     ; YES
+        LR      X,A
+        PI      VXCH
+UD6     LR      A,Y     ; GET Y COORD
+        CI      117
+        BNC     EDPT+2  ; Y G.T. 117?
+UD7     CI      75      ; NO--POSSIBLE OBJ 8-11 COLLISIONS
+        BC      UDRT    ; Y L.E. 76
+UD8     CI      92      ; NO. POSSIBLE COLLISIONS
+        BC      UDC     ; Y G.T. 92
+        CI      99      ; YES.
+        BC      UDRT    ; Y G.T. 92 & L.E. 100?
+UD9     LIS     $3      ; NO. CAN HAVE COLLISION     
+        LR      TEMP,A  ; SET POSSIBLE SCORE ADD
+        CLR             ; CLEAR ACCUMULATOR
+        XS      X       ; GET X WITH STATUS IN
+        DCI     $6B2F   ; SET DC0 FOR OBJ 8 CHECK
+        BP      UDB     ; CHECK OBJ 11 INSTEAD?
+        LI      $98     ; YEST. SET X COORD OFFSET
+UDA     ADC
+UDB     LR      Q,DC    ; QL=X COORD, QU=Y COORD
+        LI      $12     ; X OFFSET FOR RT COL.
+        LR      I,A     ; STORE IN SCRATCH 20(OCTAL)
+        LIS     $A      ; Y OFFSET FOR BOTTOM COLLIS.
+        LR      D,A     ; ST. IN SCR 21 & RESET ISAR
+        PI      TBCL    ; CHECK FOR COLLISION
+; CHECK FOR POSSIBLE CENTRAL BUMBER COLLISION
+;
+        LR      A,Y     ; GET Y COORDINATE
+        CI      115     ; TOPSIDE DANGER POINT
+        BNC     UDCK    ; CHECK IF Y > 115
+;
+UDRT    PK              ; DONE, SO RETURN
+UDC     LIS     $2
+        LR      TEMP,A  ; SET POSSIBLE SCORE ADD
+        CLR
+        XS      X       ; GET X WITH STATUS IN
+        DCI     $5347   ; SET DCO FOR OBJ 9
+        BP      UDB     ; CHECK OBJ 10 INSTEAD?
+        LI      $6A     ; YES, SET OFFSET
+EDPT    BR      UDA     ; AND GO ADD IT IN
+        JMP     UDCK
+UDCK    LR      A,Y     ; SET Y COORDINATE
+        CI      137     ; BOTTOMSIDE CEN.BUMP.DANGER PT.
+        BNC     UD10    ; CHECK OBJ 13?
+        LIS     $0      ; YES. SET POSSIBLE
+        LR      TEMP,A  ; SCORE ADD
+        DCI     $7B79   ; SET X&Y COORDS, TEST OBJECT
+        LR      Q,DC    ; QU=Y COORD, QL=X COORD
+        LI      $12     ; WIDTH OF TEST OBJECT
+        LR      I,A     ; INTO SCATCH 20(OCTAL)
+        LIS     $E      ; HEIGHT OF TEST OBJECT
+        LR      D,A     ; INTO SCRATCH 21
+        PI      TBCL    ; CHECK ON COLLISION
+; CHECK FOR POSSIBLE LOWER BUMPER COLLISIONS...
+; (NECESSARY IF THE BALL IS STRADDLING BOTH THE
+; CENTRAL BUMBER LOWSIDE DANGER POINT, AND THE
+; HIGHSIDE DANGER POINT OF THE TOP TWO OF THE BOTTOM
+; BUMBERS).
+;
+        LR      A,Y     ; GET Y COORDINATE
+        CI      136     ; HIGHSIDE DANGER POINT,LOW BUMPERS
+        BNC     UD10    ; IF Y>136,MUST CHECK
+; 
+        PK              ; AND RETURN
+UD10    LIS     $1
+        LR      TEMP,A  ; SET POSSIBLE SCORE ADD  
+        LI      $1A     ; WIDTH AND HEIGHT OF BUMPERS
+        LR      I,A     ; STORE IN SCRATCH 20(OCTAL)
+        LR      D,A     ; AND 21(OCTAL)&RESET ISAR
+        LR      A,Y     ; GET Y COORD
+        CI      167
+        BNC     UD12    ; Y L.E. 167?
+UDL0    DCI     $8F13   ; YES.SET FOR OBJ 2 CHECK
+        CLR             ; CLEAR ACC
+        XS      X       ; GET X WITH STATUS
+        BP      UD11    ; CHECK OBJ 7 INSTEAD?
+        LI      $C4     ; YES.
+        ADC
+UD11    LR      Q,DC    ; QL=X,QU=Y COORDS OF BUMPER
+        PI      TBCL    ; CHECK FOR COLLISION
+        LR      A,Y
+        CI      160
+        BNC     UD12    ; Y L.E. 160?
+        PK              ; YES, NO OTHER COLLISIONS POSSIBLE
+UD12    CI      191     ; Y G.T. 160. CHECK OBJ 3&6
+        BNC     UD14    ; Y .E. 191?
+UDL1    DCI     $A72B   ; YES.SET FOR OBJ 3
+        CLR             ; CLEAR ACC
+        XS      X       ; X IN WITH STATUS
+        BP      UD13    ; CHECK OBJECT 6 INSTEAD?
+        LI      $94     ; YES.
+        ADC
+UD13    LR      Q,DC
+        PI      TBCL    ; CHECK FOR COLLISION
+        LR      A,X
+        CI      43      ; IF X L.E. 43, RECHECK FOR
+        BC      UDL0    ; POSSIBLE OBJ 2 COLLISION
+        CI      208     ; IF X G.T. 208, RECHECK FOR
+        BNC     UDL0    ; POSSIBLE OBJ 7 COLLISION
+        LR      A,Y
+        CI      $B7
+        BNC     UD14    ; Y. L.E. $B8=184?
+        PK              ; YES, SO NO COLLISIONS LEFT
+UD14    CI      215     ; CHECK OBJ 4&5
+        BNC     UDEP+2  ; IF Y G.T. 215, ONLY PADDLE CAN HIT
+        DCI     $BF43   ; SET FOR OBJECT 4
+        CLR             ; CLEAR ACC
+        XS      X       ; GET X IN WITH STATUS
+        BP      UD15    ; CHECK OBJ 5 INSTEAD?
+        LI      $64     ; YES
+        ADC
+UD15    LR      Q,DC
+        PI      TBCL    ; CHECK FOR COLLISION
+        LR      A,X
+        CI      67      ; X L.E. 67?  IF SO, RECHECK FOR
+        BC      UDL1    ; POSSIBLE OBJ 3 COLLISION
+        CI      184     ; IF X G.T. 184, RECHECK FOR
+UDEP    BNC     UDL1    ; POSSIBLE OBJECT 6 COLLISION
+        JMP     UDP
+UDP     LR      A,Y     ; GET Y COORD
+        CI      $D0
+        BC      PPUP    ; Y>$D0?
+        CI      $EC     ; YES.
+        BNC     PPUP    ; Y L.E. $EC?
+        PI      UPAK    ; UNPACK PADDLE STATUS
+        DCI     $D957   ; SET FOR OBJ 12 CHECK
+        PI      STA1    ; SET WIDTH FOR STATUS=1
+        CLR             ; CLEAR ACCUMULATOR
+        XS      X       ; X COORD IN WITH STATUS
+        BP      UDP3    ; CHECK OBJ 14 INSTEAD?
+        LI      $3C     ; YES.
+        ADC             ; RESET XCOB FOR OBJ 14 IN STATUS 1
+        CLR             ; CLEAR ACCUMULATOR
+        XS      TMP3    ; GET STATUS OF OBJ 14
+        BNZ     UDP4    ; STATUS=0?
+        LIS     $8      ; YES.
+        ADC             ; RESET X COORD FOR STATUS=0
+UDP2    PI      STA0    ; RESET XCOB FOR STATUS 0
+        BR      UDP4
+UDP3    CLR             ; CLEAR ACC
+        XS      TMP2    ; GET STATUS=0, RESET WIDTH
+        BZ      UDP2    ; IF STATUS=0,RESET WIDTH
+UDP4    LIS     $0
+        LR      TEMP,A  ; SET POSSIBLE SCORE ADD.
+        LR      Q,DC    ; QU=Y COORD, QL=X COORD
+        PI      TBCL    ; CHECK FOR COLLISION
+PPUP    PK              ; AND RETURN
+UPAK    LR      A,PSTA
+        SR      4
+        LR      TMP2,A
+        LR      A,PSTA
+        NI      $1
+        LR      TMP3,A
+        POP
+STA0    LI      $10     ; STATUS 0 WIDTH
+        LR      I,A     ; IN SCATCH 20
+        BR      STA2
+STA1    LI      $18     ; STATUS 1 WIDTH
+        LR      I,A     ; IN SCRATCH 20
+STA2    LI      $14     ; HEIGHT IN EITHER STATUS 
+        LR      D,A     ; INTO 21 AND RESET ISAR
+        POP             ; RETURN
+ACT     DCI     $850
+        LR      H,DC
+        LISU    3
+        LISL    0
+        LR      A,S     ; GET PROG COMREG
+        COM
+        NI      $40
+        SR      1
+        SR      1
+        ADC             ; Y L.O.ACTIVE ADDR
+        LR      Q,DC    ; STORE IN REG Q
+        COM
+        NI      $10
+        LR      DC,H
+        ADC             ; Y L.O. INACTIVE ADDR
+        LR      H,DC    ; STORE IN REG H
+        POP             ; AND RETURN
+PADC    LR      K,P     ; SAVE RETURN ADDRESS
+        PI      UPAK    ; UNPACK PADDLE STATUS
+        CLR             ; CLEAR ACCUMULATOR
+        XS      TMP2    ; LEFT PADDLE STATUS IN
+        BNZ     PAD4    ; STATUS=1?
+        PI      ST0     ; NO.
+PAD2    PI      UDPL    ; UPDATE LEFT PADDLE PNTRS
+        PI      ST1     ; ASSUME PT PADDLE STATUS=1
+        LI      $2A
+        AS      8
+        LR      8,A     ; OFFSET ADDRESS FOR RT PAD IMAGE
+        CLR             ; CLEAR ACCUMULATOR
+        XS      TMP3    ; RT PADDLE STATUS IN
+        BNZ     PAD5    ; STATUS REALLY=1?
+        DCI     $849    ; NO. SET X COORD
+        LI      $A0     ; OF RIGHT PADDLE
+        ST              ; ACCORDINGLY
+        PI      ST0     ; SET POINTERS FOR STATUS=0
+        LI      $2A
+        AS      8
+        LR      8,A     ; AND OFFSET FOR RT PADDLE
+PAD3    PI      UDPR    ; UPDATE RT PADDLE PNTRS
+        PK              ; AND RETURN
+PAD4    PI      ST1
+        BR      PAD2
+PAD5    DCI     $849    ; SET X COORD OF
+        LI      $98     ; RT PADDLE FOR STATUS
+        ST              ; ONE MODE
+        BR      PAD3
+ST0     LIS     $0
+        LR      8,A
+        LI      $61
+        LR      TEMP,A
+        LI      $14
+        LR      TMP2,A
+        POP
+ST1     LI      $17
+        LR      8,A
+        LI      $62
+        LR      TEMP,A
+        LIS     $8
+        LR      TMP2,A
+        POP
+UDPL    DCI     $807
+        BR      UDPD
+UDPR    DCI     $809
+UDPD    LR      A,8
+        ST
+        LI      $1F
+        ADC
+        LR      A,TEMP
+        ST
+        LIS     $F
+        ADC
+        LR      A,TMP2
+        ST
+        POP
+PREP    DCI     $850
+        LISU    3
+        LISL    0
+        LR      A,S     ; GET PROG COMREG
+        NI      $40     ; EXTRACT A NULL B BIT
+        SR      1
+        SR      1       ; NOW HAVE OFFSET TO INACTIVE LIS
+        ADC             ; SET DCO TO Y L.O. INACTIVE
+        LR      H,DC    ; AND SAVE IN H
+        LI      $20
+        ADC             ; DCO TO Y H.O.+X ORDER INACTIVE
+        LR      Q,DC
+        POP
+SORT    LR      K,P     ; SET ADDRESS FOR RETURN
+        PI      PREP
+SRT1    LR      DC,H    ; Y L.O.
+        XDC
+        LR      DC,Q    ; X ORDER
+        LI      $10
+        LR      TEMP,A  ; SET COUNTER
+SRT2    DS      TEMP    ; DECREMENT COUNTER
+        LM              ; GET NEXT OBJ NUMBER
+        CI      $F      ; COMPARE WITH BALL'S OBJ. NO
+        XDC
+        LM
+        XDC             ; INCR. H&RESTORE
+        BNZ     SRT2    ; OBJ#=BALL'S?
+        LR      Q,DC    ; YES.DCO=1 PAST XORD BALL
+        XDC
+        LR      H,DC    ; AND H=1 PAST Y L.O. BALL
+        LR      A,HL    ; GET HL
+        AI      $FE
+        LR      HL,A    ; H=1 BEFORE Y L.O. BALL NOW
+        LR      A,TEMP  ; GET COUNTER
+        CI      $F
+        BZ      SRT5    ; BALL LOWEST ON LIST?
+        LR      A,QL    ; NO.GET L.O.BITS OF XORDER ADDR.
+        AI      $FE
+        LR      QL,A    ; NOW POINTS 1 BEFORE XORD BALL
+        LR      DC,Q    ; LOAD DCO
+        LM              ; GET OBJ# PRECEEDING OBJ ON LIST        
+        DCI     $840
+        ADC             ; DCO TO X COORD, THIS OBJECT
+        LM              ; NOW HAVE ITS X COORD
+        COM
+        INC
+        AS      X
+        BNC     EXC1    ; IF XBALL<XOB,EXCHANGE BACK
+        CLR             ; CLEAR ACCUMULATOR
+        XS      TEMP    ; COUNTER IN WITH STATUS
+        BZ      SRTD    ; IF BALL HIGHEST ON LIST--DONE.
+SRT3    LR      DC,Q    ; DCO POINTS TO OBJ# PREC. BALL
+        LM
+        LR      Q,DC    ; Q POINS TO XORDER BALL
+SRT4    LM
+        LM              ; GET OBJ# FOLLOWING BALL
+        DCI     $840
+        ADC             ; AND DCO POINTS TO ITS X COORD
+        LM              ; GET IT
+        LR      TEMP,A  ; SAVE IT
+        LR      A,X     ; GET X BALL
+        COM
+        INC
+        AS      TEMP
+        BNC     EXC2    ; IF XOB <XBALL EXCHANGE FORWARD
+SRTD    PK              ; OTHERWISE, RETURN
+EXC2    LR      A,HL    ; GET HL
+        INC             ; INCREMENT IT
+        LR      HL,A    ; AND STORE
+EXC1    PI      SWIT    ; SWITCH X ORDERS
+        LR      DC,H
+        LR      Q,DC
+        PI      SWIT    ; SWITCH Y L.O.
+        PK              ; AND RETURN
+SWIT    LR      DC,Q    ; GET START ADDRESS
+        LM              ; AND CONTENTS SAME
+        LR      TEMP,A  ; STORE TEMPORARILY
+        LM              ; GET NEXT ITEM
+        LR      DC,Q
+        ST              ; STORE IT IN 1ST ADDR
+        LR      A,TEMP
+        ST              ; COMPLETE SWITCH
+        POP             ; AND RETURN
+SRT5    LR      A,QL
+        AI      $FF
+        LR      QL,A    ; Q POINTS TO XORD BALL
+        LR      DC,Q    ; AS DOES DCO
+        BR      SRT4
+SCHD    LR      K,P     ; SAVE RETURN ADDRESS
+        CLR             ; CLEAR ACCUMULATOR
+        XS      SCAD    ; GET SCORE ADD WITH STATUS
+        BZ      SCND    ; ANY CHANGE?
+        AI      $66     ; YES
+        ASD     SCOR    ; CALC. NEW DECIMAL SCORE
+        LR      SCOR,A  ; AND UPDATE SCORE RED.
+        LISU    6
+        LISL    0
+        LR      A,SCAD  ; GET SCORE ADD
+        AS      S       ; ADD PREVIOUS HEX SCORE
+        LR      S,A     ; AND UPDATE HEX SCORE
+        CI      $63     
+        BC      SCH1    ; SCORE>99 DECIMAL?
+        AI      $AD     ; YES.SUBTRACT 100
+        LR      S,A     ; AND UPDATE THE HEX SCORE
+        LISU    4       ; NOW WE UPDATE FINAL MOD.
+        LISL    4
+        LR      A,S     ; GET PROG COPY FINAL MOD REG
+        INC
+        INC             ; INCREMENT COLOR MOD
+        LR      S,A     ; UPDATE PROGRAM COPY
+        DCI     $8F2
+        ST              ; AND UPDATE UM1 COPY
+SCH1    LR      A,SCOR  ; RECOVER SCORE
+        SR      4       ; AND UNPACK OBJECT VALUE
+        LR      TEMP,A  ; SAVE IN TEMP
+        PI      SET     ; SET NEW OBJECT 0 ADDR H
+        LR      DC,H
+        LR      Q,DC    ; TRANSFER TO Q REGISTER
+        LR      A,SCOR
+        SL      4
+        SR      4       ; UNPACK OBJ 1 VALUE
+        LR      TEMP,A  ; SAVE IN TEMP
+        PI      SET     ; SET NEW VALUE IN H
+        DCI     $800
+        LR      A,QL
+        ST              ; SET NEW L.O. ROM, OBJ0
+        LR      A,HL
+        ST              ; SET NEW L.O. ROM, OBJ1
+        DCI     $810
+        LR      A,QU
+        ST              ; SET NEW H.O. ROM+COLOR,OBJ10
+        LR      A,HU
+        ST              ; SET NEW H.O. ROM+COLOR,OBJ1
+SCND    PK              ; AND RETURN
+SET     DCI     $1500   ; START ADDR FOR NUMBERS
+        LIS     $F      ; OFFSET BETWEEN NUMBERS
+        BZ      S3      ; ALREADY HAVE ZERO
+S2      ADC             ; ADD OFFSET
+        DS      TEMP    ; DECREMENT COUNTER
+        BNZ     S2      ; ADDED ENOUGH OFFSETS?
+S3      LR      H,DC    ; YES, NUMBER READ. LOAD IN H
+        LR      A,HU    ; GET ROM H.O.
+        OI      $E0     ; TURN ON COLOR BITS
+        LR      HU,A    ; AND STORE RESULT.
+        POP             ; AND RETURN
+TBCL    LR      A,QL    ; GET X COORD, TEST OBJJ.
+        COM
+        INC
+        LR      TMP2,A  ; SAVE ITS NEGATIVE
+        LR      A,X     ; GET X COORD, BALL
+        AI      $7
+        AS      TMP2
+        BC      TBC1    ; XCOB G.T. X+7?
+        POP             ; YES, NO COLLISION POSSIBLE
+TBC1    LR      A,QL    ; GET X COORD. TEST OBJ.
+        AS      S       ; ACC=XCOB+WIDTH
+        COM
+        INC
+        AS      X
+        BNC     TBC2    ; XCOB+WIDTH L.E. X?
+        POP             ; YES, NO COLLISION--RETURN
+TBC2    LR      A,TEMP  ; COLLISION!
+        LR      SCAD,A  ; SET SCORE ADDITION
+        LISU    7       ; COLLISION FLAG IN SCRATCH O'70'
+        LIS     $1      ; SET COLLISION FLAG
+        LR      S,A     ; VALUE IN
+        LISU    2       ; RESET ISAR
+        LR      A,X
+        AI      $4
+        AS      TMP2
+        BC      TBC4    ; XCOB G.T. X+4?
+        LR      A,QL    ; YES, LEFT SIDE COLLISION
+        AI      $F7     ; X=XCOB-9
+TBC3    LR      X,A
+        JMP     VXCH    ; VX=-VX&RETURN FROM THERE
+TBC4    LR      A,QL    ; GET X COORD. TEST OBG
+        AS      S       ; ACC=XCOB+WIDTH
+        LR      TMP3,A  ; SAVE THIS TEMPORARILY
+        COM
+        INC
+        AS      X
+        AI      $4
+        BNC     TBC5    ; XCOB+WIDTH L.E. X+4?
+        LR      A,TMP3  ; YES.RT SIDE COLLISION
+        INC             ; X=XCOB+WIDTH+1
+        BR      TBC3
+TBC5    CLR             ; MUST BE TOP OF BOTTOM COLLISION
+        XS      VY      ; GET VY IN WITH STATUS
+        LR      A,I     ; ADVANCE ISAR TO OFFSET FOR BOT.COL.
+        LR      A,QU    ; GET YCOB
+        BP      TBC7    ; IF VY<O,BOTTOM,VY>0,TOP.
+        AS      D       ; Y=YCOB+HEIGHT SAME+1,RESET ISAR
+        INC
+TBC6    LR      Y,A     ; STORE NEW Y VALUE
+        JMP     VYCH    ; VY=-VY&DONE.  VYCH RETURNS
+TBC7    AI      $F7     ; TOP,SO Y=YCOB-9
+        BR      TBC6
+VYCH    LR      A,VY
+        COM
+        INC
+        LR      VY,A
+        SL      4
+        LR      VYP,A
+        POP
+VXCH    LR      A,VX
+        COM
+        INC
+        LR      VX,A
+        POP
+FLSH    CLR             ; CLEAR ACCUMULATOR
+        LISU    7
+        LISL    0       ; ISAR TO COLLISION FLAR
+        XS      S       ; COLLISION FLAG IN W/STATUS
+        LIS     $0
+        LR      S,A     ; CLEAR FLAG
+        BNZ     F1      ; COLLISION?
+        BR      F2
+F1      JMP     SOND
+F2      NOP             ; NO-OPS FOR BREAKPOINTS
+        NOP             ; FOR DEBUGGING
+        NOP             ; DELETE LATER.
+        NOP
+        NOP                        
+        POP             ; RETURN
+RSET    LI      $A0
+        LR      TMP3,A  ; SET TIME DELAY ON RESET
+RST1    PI      CNGB
+        PI      CENB
+        PI      CNGC
+        DS      TMP3
+        BNZ     RST1    ; DELAY DONE?
+        DCI     $8F7
+        LIS     $4      ; SET FOR LIST B
+        ST              ; BEFORE DIDDLING LIST A
+        LISU    4
+        LISL    0
+        DS      S       ; DECREMENT BALL COUNT
+        BNZ     RST2    ; BALLS LEFT TO PLAY?
+        JMP     $F900   ; NO.RESET FROM START
+RST2    DCI     $81F
+        LR      Q,DC
+        LI      $E0
+        AM
+        LR      DC,Q
+        ST              ; UPDATE BALL COLOR
+        DCI     $1270   ; SOURCE ADDRESS
+        LR      Q,DC    ; INTO REGISTER Q
+        DCI     $840    ; DESTINATION ADDRESS
+        LR      H,DC    ; INTO REGISTER H
+        LI      $20     ; SET TRANSFER COUNT
+        LR      1,A     ; INTO REGISTER 1
+        PI      INIT    ; RESET X VALUES AND Y L.O. A
+        LI      $10
+        ADC
+        LR      H,DC
+        LR      1,A
+        PI      INIT    ; RESET THE XORDER A LIST
+        LIS     $0
+        LR      PSTA,A  ; CLEAR PADDLE STATUS
+        PI      PADC    ; AND RESET CORRESPONDING IMAGES
+        JMP     LOOP    ; AND JUMP BACK
+SOND    CLR             ; CLEAR ACCUMULATOR
+        XS      SCAD    ; SCORE ADD IN W/STATUS
+        BNZ     SN1
+        LIS     $5      ; PADDLE OR CENTRAL BUMBER
+SN1     AI      $FF     ; SET FREQUENCY
+        OI      $8      ; SET ENABLE BIT
+        OUTS    1       ; TURN ON SOUND
+        LI      $10     ; OUTER LOOP REPITITIONS
+        LR      TMP2,A  ; OUTER LOOP COUNTER
+SN2     LI      $4E     ; OUTER LOOP START
+        LR      TMP3,A  ; INNER LOOP COUNTER
+SN3     DS      TMP3    ; DECREMENT INNER COUNTER
+        BNZ     SN3     ; INNER LOOP DONE?
+        DS      TMP2    ; YES, DECREMENT OUTER COUNTER
+        BNZ     SN2     ; TIME TO TURN OFF SOUND?
+        LIS     $0      ; YES.
+        OUTS    1       ; TURN OFF SOUND
+        LR      SCAD,A  ; AND CLEAR SCORE ADD
+        POP             ; AND RETURN
+CENB    LISU    5
+        LISL    0
+        DS      S
+        BNZ     CEN1    ; TIME FOR COLOR CHANGE?
+        LIS     $8      ; YES.RESET TIMER FIRST
+        LR      S,A
+        DCI     $818
+        LR      Q,DC    ; SAVE ADDRESS IN Q
+        LI      $40
+        AM
+        LR      DC,Q
+        ST              ; AND RESET COLOR
+CEN1    POP
+        END

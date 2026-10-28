@@ -2,6 +2,14 @@
 
 Annotated disassembly and analysis tools for VideoBrain software.
 
+## ASM collection
+
+[Historical listings and source](asm-collection/README.md), with additional
+comments on Financier's missing ROM window, the RES1 bitmap routine,
+Expander I code matches, and cartridge text. These listings have not all
+been verified by assembly; the Information Manager checks below apply only
+to Information Manager.
+
 ## Information Manager
 
 - [Annotated VB-1200 listing](infoman/infoman.lst), September 25/26, 1978.
