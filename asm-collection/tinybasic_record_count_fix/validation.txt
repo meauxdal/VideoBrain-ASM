@@ -1,0 +1,102 @@
+VideoBrain Tiny BASIC - phase 1 hardware validation
+
+Use the preserved recordfix ROM, CRC32 D40A8E2B, with 4K RAM fallback.
+Run sections separately. Stop at the first failure and record the command
+and displayed result. Leading numeric spaces are allowed. READY and typed
+command echoes are omitted from expected output. No section is confirmed
+until tested on hardware.
+
+1. Numeric output and expressions (direct commands)
+
+PRINT 1
+PRINT -1
+PRINT 2+3*4
+PRINT (2+3)*4
+
+Expected values: 1, -1, 14, 20, respectively. No stray sign symbols.
+
+2. Output followed by expression parsing (direct commands)
+
+PRINT "A",1
+PRINT 1,2
+PRINT "B",2+3
+
+Expected values on each output line: A then 1; 1 then 2; B then 5.
+These exercise expression parsing after character output.
+
+3. Sorted insertion, replacement, and deletion
+
+NEW
+30 PRINT "C"
+10 PRINT "A"
+20 PRINT "B"
+LIST
+
+Expected: exactly lines 10, 20, 30, in that order.
+
+20 PRINT "X"
+30
+LIST
+RUN
+
+Expected LIST: exactly 10 PRINT "A" and 20 PRINT "X".
+Expected RUN: A, X, then READY, with no extra line or error.
+
+4. Variables, IF, and bounded GOTO
+
+NEW
+10 A=1
+20 PRINT A
+30 A=A+1
+40 IF A<4 GOTO 20
+50 PRINT "DONE"
+RUN
+
+Expected: 1, 2, 3, DONE, then READY.
+
+5. FOR/NEXT
+
+NEW
+10 FOR I=1 TO 3
+20 PRINT I
+30 NEXT I
+40 PRINT "DONE"
+RUN
+
+Expected: 1, 2, 3, DONE, then READY.
+
+6. GOSUB/RETURN
+
+NEW
+10 GOSUB 40
+20 PRINT "BACK"
+30 STOP
+40 PRINT "SUB"
+50 RETURN
+RUN
+
+Expected: SUB, BACK, then READY. No fallthrough into line 40.
+
+7. Numeric INPUT
+
+NEW
+10 INPUT A
+20 PRINT A+1
+RUN
+
+At the input prompt, enter 4.
+Expected: 5, then READY. This tests expression parsing after keyboard I/O.
+
+8. Error recovery
+
+PRINT 1/0
+PRINT 2
+
+Expected: HOW for division by zero, then 2 for the next command.
+No reset should be required.
+
+Remaining coverage after these checks: negative STEP, nested loops and
+subroutines, READ/DATA/RESTORE, strings/arrays, relational operators,
+functions, input editing and limits, memory exhaustion, and sustained
+scrolling. Break behavior needs separate investigation before infinite
+loop tests.

@@ -1,28 +1,53 @@
-VideoBrain Tiny BASIC - stored-record count correction (experimental)
+VideoBrain Tiny BASIC - preserved working baseline
 
-Base: TINYBASICVB-expanded-runbank.bin (CRC32 DC9724E6)
-New:  TINYBASICVB-expanded-recordfix.bin (CRC32 D40A8E2B)
+ROM: TINYBASICVB-expanded-recordfix.bin (4096 bytes)
+CRC32: D40A8E2B
+SHA256: 8da31d819e65bd1d186ec484587caa63b1c1a3cceb13710d96134c4290f61ad5
 
-In ST3, PUSHDC saves the start of the line in R10:R11. The two ST
-instructions overwrite the ASCII line number with its two-byte binary
-form but do not change R10:R11. The original count, EOL - R11 (low byte),
-already includes the two header bytes. A previous patch added 2 and
-created a two-byte gap after each line. LIST and RUN could interpret
-those bytes as additional lines beyond the final valid record.
+Load with Mapper Fallback -> 4K RAM. Expansion RAM is $3000-$3FFF.
+Hardware-confirmed: NEW, storing lines 10/20, LIST, RUN, quoted HI/BYE
+output in order, and clean return to READY. Direct PRINT tests also
+confirm 1, -1, 2+3*4 = 14, and (2+3)*4 = 20.
+The corrected mixed-output VBK passes on this baseline: A and 1, 1 and 2,
+B and 5, with a small numeric spacing gap and no WHAT. The experimental
+bank-only PRINT patch is not required by this test result. Other paths
+need validation.
 
-The original five-instruction count is restored and the unused helper
-removed. All other runbank ROM fixes are retained. No RTL changes.
+Line-editing test: final RUN output A, X is hardware-confirmed after
+out-of-order insertion, replacement, and deletion. Exact edited LIST
+contents have not been separately confirmed.
+Bounded GOTO with variable increment and IF/equality, and default-step
+FOR/NEXT are hardware-confirmed: both print 1, 2, 3, DONE, then READY.
+GOSUB/RETURN with STOP passes (SUB, BACK). Numeric INPUT passes: input 4
+produces 5 from A+1. Both tests return to READY.
+DATA/READ/RESTORE passes (7, 9, 7). Division by zero reports HOW and
+malformed expressions report WHAT; subsequent commands work without reset.
+Negative STEP and nested GOSUB/RETURN pass their hardware checks.
+String variables fail to display their final character correctly in
+this preserved ROM. Stringfix (CRC32 34207B22) passes tests 13 and 13b,
+including odd/even lengths and reassignment. Use it for further phase 1
+checks; see stringfix_README.txt. This original baseline remains intact.
 
-Load the ROM using Mapper Fallback -> 4K RAM. Enter NEW first to
-discard any program records stored using the broken length format.
-Then test:
-10 PRINT "HI"
-20 PRINT "BYE"
-LIST
-RUN
+The source assembles byte-for-byte to the preserved ROM with DASM
+2.20.14.1. Rebuild with Python 3 and an F8-capable DASM:
 
-Expected: LIST shows only lines 10/20; RUN prints HI and BYE, returns
-READY, and does not show WHAT or a bogus third line.
+python build_tinybasic_record_count_restore.py --dasm <path-to-dasm>
 
-This is a static source/byte-level fix; it has not been hardware-tested.
-Rebuild: python build_tinybasic_record_count_restore.py
+Output, listing, and symbols go to build/tinybasic in the repository.
+The script verifies every byte against the preserved baseline. No
+intermediate ROMs or earlier source packages are required.
+
+The stored-record count includes the two-byte binary line header.
+Enter NEW after switching from ROMs that stored an incorrect length.
+
+Phase 1: complete and validate the interpreter with its current display.
+Maintain confirmed behavior and refactor contracts in LEARNINGS.md.
+See validation.txt for the first hardware checks and expected results.
+Pending: exact edited LIST contents, further variables/arithmetic,
+further IF/GOTO, deeper loop/subroutine/stack limits, further INPUT,
+further DATA cases, strings/arrays, further error recovery, memory limits,
+and sustained scrolling/break handling.
+
+Phase 2: refactor for the Timeshare display layout after examining its
+font, video objects, framebuffer, cursor, and scrolling routines.
+Cartridge budget: 16 KiB. Preserve the phase 1 behavior as a baseline.
