@@ -27,3 +27,7 @@ The Timeshare reference is a 24-column, 15-row bitmap layout with 6-pixel
 character cells and a 5-by-7 font. It uses internal RAM and cartridge RAM;
 the BASIC expansion-RAM mapper cannot provide that display unchanged.
 See `timeshare/DESIGN.md` for the mapping and integration constraints.
+
+The combined BASIC mapping probe passes on hardware. The
+[banked 24x15 interpreter](banked/README.md) is assembled; integrated
+simulation and hardware acceptance are pending.

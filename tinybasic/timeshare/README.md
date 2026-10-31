@@ -80,4 +80,5 @@ restart the probe normally after it has selected other banks.
 
 The builder verifies bank markers, 2 KiB bank sizes, and identical common
 regions at `1700-17FF`. Core simulation covers CPU and DMA access, RAM
-independence, and reset behavior. Hardware validation is pending.
+independence, and reset behavior. The mapping probe passes on MiSTer with
+the BASIC mapper.

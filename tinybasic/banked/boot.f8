@@ -1,0 +1,40 @@
+        PROCESSOR F8
+        INCLUDE "VBCHARS.ASM"
+        INCLUDE "runtime_equates.inc"
+        ORG $1000
+        DC $AA,$55,0
+        DC __,_T,_I,_N,_Y,__,_B,_A,_S,_I,_C,__,_2,_4, __
+        DI
+        DCI RUNTIME
+        XDC
+        DCI $3D00
+        LIS 2
+        LR 2,A
+        CLR
+        LR 1,A
+COPYRT  XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ COPYRT
+        DS 2
+        BNZ COPYRT
+        DCI $3F1C
+        CLR
+        ST
+        ST
+        DCI $3F22
+        ST
+        ST
+        LI INIT_ID
+        LR 0,A
+        PI G_ENTRY
+        LI NEW_ID
+        LR 0,A
+        JMP G_JUMP
+        INCLUDE "boot_ids.inc"
+        INCLUDE "common.inc"
+        ORG $17FF
+        DC $FF
+        END

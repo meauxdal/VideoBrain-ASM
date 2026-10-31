@@ -1,0 +1,210 @@
+        PROCESSOR F8
+        ORG $3D00
+G_ENTRY LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LIS 0
+        BR G_MODE
+G_JUMP  LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LIS 1
+        BR G_MODE
+G_RETURN
+        LR 0,A
+        LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LIS 2
+G_MODE  LISU 7
+        LISL 1
+        LR (IS),A
+        LISU 6
+        LISL 1
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        XDC
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        LR A,J
+        LR (IS),A
+        LR J,W
+        LISU 7
+        LISL 0
+        LR A,J
+        LR (IS),A
+        DCI $3F00
+        INCLUDE "save_direct.inc"
+        LISU 6
+        LISL 0
+G_STEMP LR A,I
+        ST
+        BR7 G_STEMP
+        LR A,(IS)
+        ST
+        LISU 7
+        LISL 0
+        LR A,(IS)
+        ST
+        LR K,P
+        LR A,KU
+        ST
+        LR A,KL
+        ST
+        LISL 1
+        LR A,(IS)
+        ST
+        CI 2
+        BZ G_POP
+        CI 1
+        BZ G_LOOKUP
+        DCI $3F1D
+        LM
+        LR 4,A
+        AI 3
+        CI 97
+        BC G_OVERFLOW
+        DCI $3F1D
+        ST
+        DCI $3F1C
+        LM
+        LR 3,A
+        DCI $3F19
+        LM
+        LR 5,A
+        LM
+        LR 6,A
+        DCI $3F40
+        LR A,4
+        ADC
+        LR A,3
+        ST
+        LR A,5
+        ST
+        LR A,6
+        ST
+        DCI $3F19
+        LI >G_RETURN
+        ST
+        LI <G_RETURN
+        ST
+G_LOOKUP
+        DCI $17FF
+        LIS 7
+        ST
+        DCI $3F00
+        LM
+        LR 1,A
+        SR 4
+        SR 1
+        SR 1
+        AI $10
+        LR QU,A
+        LR A,1
+        SL 1
+        SL 1
+        LR QL,A
+        LR DC,Q
+        LM
+        LR 3,A
+        LM
+        LR 4,A
+        LM
+        LR 5,A
+        BR G_TARGET
+G_OVERFLOW
+; Target zero is the interpreter's SORRY path.
+        CLR
+        DCI $3F00
+        ST
+        DCI $3F1D
+        ST
+        BR G_LOOKUP
+G_POP   DCI $3F1D
+        LM
+        AI $FD
+        DCI $3F1D
+        ST
+        DCI $3F40
+        ADC
+        LM
+        LR 3,A
+        LM
+        LR 4,A
+        LM
+        LR 5,A
+        DCI $3F19
+        LR A,4
+        ST
+        LR A,5
+        ST
+G_TARGET
+        DCI G_TRANSFER+1
+        LR A,4
+        ST
+        LR A,5
+        ST
+        DCI $17FF
+        LR A,3
+        ST
+        DCI $3F1C
+        ST
+        DCI $3F19
+        LM
+        LR KU,A
+        LM
+        LR KL,A
+        LR P,K
+        DCI $3F00
+        INCLUDE "restore_direct.inc"
+        DCI $3F10
+        LISU 6
+        LISL 0
+G_LTEMP LM
+        LR I,A
+        BR7 G_LTEMP
+        LM
+        LR (IS),A
+        LM
+        LR J,A
+        LR W,J
+        LISL 7
+        LR A,(IS)
+        LR J,A
+        LISL 5
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        XDC
+        LISL 3
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        LISL 1
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LISL 0
+        LR A,(IS)
+        LR IS,A
+G_TRANSFER
+        JMP $1000
+        END

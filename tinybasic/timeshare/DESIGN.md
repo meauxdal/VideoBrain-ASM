@@ -100,7 +100,8 @@ bank-switch call and return stubs. This leaves 1,792 bank-specific bytes
 per bank. Reset selects bank zero and preserves RAM; power cycle clears
 internal and cartridge RAM. Software initializes workspace RAM.
 
-This new profile is implemented in the core and awaits hardware validation.
+This new profile is implemented in the core. The combined mapping probe
+(`5E00141E`) passes on MiSTer with the BASIC mapper.
 It is not a historical cartridge contract. See the
 [core mapping specification](https://github.com/meauxdal/VideoBrain_MiSTer/blob/main/docs/CARTRIDGES.md#basic-homebrew-mapping).
 

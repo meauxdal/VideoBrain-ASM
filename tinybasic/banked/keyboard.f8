@@ -1,0 +1,149 @@
+        PROCESSOR F8
+        INCLUDE "runtime_equates.inc"
+        INCLUDE "key_id.inc"
+        ORG $1000
+CON_KEY LR K,P
+        PI C_SAVE
+        DCI $3FFB
+        LIS 1
+        ST
+C_KEYLOOP
+        LI TICK_ID
+        LR 0,A
+        PI G_ENTRY
+        LR A,0
+        PI $4361
+        LR A,8
+        NI $7F
+        LR 8,A
+        CI 0
+        BNZ C_KEYDOWN
+        DCI $3FF9
+        ST
+        BR C_KEYLOOP
+C_KEYDOWN
+        DCI $3FF9
+        CM
+        BNZ C_FRESH
+        DCI $3FF8
+        LM
+        AI $FF
+        DCI $3FF8
+        ST
+        BNZ C_KEYLOOP
+        LIS 4
+        BR C_REPEAT
+C_FRESH DCI $3FF9
+        LR A,8
+        ST
+        LI 20
+C_REPEAT
+        DCI $3FF8
+        ST
+        LR A,8
+        SL 1
+        LR 8,A
+        CI $3C
+        BNZ C_TRANSLATE
+        DCI $3FF8
+        LM
+        CI 20
+        BNZ C_KEYLOOP
+        DCI $0FE2
+        LIS 1
+        XM
+        DCI $0FE2
+        ST
+        BR C_KEYLOOP
+C_TRANSLATE
+        DCI $0FE2
+        LM
+        CI 0
+        BZ C_KEYTABLE
+        DS 8
+C_KEYTABLE
+        DCI KEYTABLE
+        LR A,8
+        ADC
+        LM
+        CI 0
+        BZ C_KEYLOOP
+        DCI $3FFA
+        ST
+        DCI $3FFB
+        LIS 1
+        ST
+        JMP C_RESTORE
+C_SAVE  LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        XDC
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        DCI $3E80
+        INCLUDE "console_save.inc"
+        LISU 6
+        LISL 0
+C_STEMP LR A,I
+        ST
+        BR7 C_STEMP
+        DCI $3FFB
+        CLR
+        ST
+        POP
+C_RESTORE
+        DCI $3E80
+        INCLUDE "console_restore.inc"
+        LISU 6
+        LISL 0
+C_LTEMP LM
+        LR I,A
+        BR7 C_LTEMP
+        DCI $3FFB
+        LM
+        CI 0
+        BZ C_NOKEY
+        DCI $3FFA
+        LM
+        LR 8,A
+C_NOKEY
+        LISL 5
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        XDC
+        LISL 3
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        LISL 1
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+C_EXIT  LISU 7
+        LISL 7
+        LR A,8
+        PK
+        INCLUDE "key_data.inc"
+        INCLUDE "common.inc"
+        ORG $17FF
+        DC $FF
+        END

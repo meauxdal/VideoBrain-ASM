@@ -1,0 +1,292 @@
+        PROCESSOR F8
+        INCLUDE "runtime_equates.inc"
+        ORG $1000
+CON_INIT
+        LR K,P
+        PI C_SAVE
+        CLR
+        OUTS 0
+        OUTS 1
+        DCI $08F2
+        ST
+        ST
+        ST
+        ST
+        ST
+        ST
+        DCI $08F8
+        ST
+        ST
+        ST
+        LR 5,A
+C_CLEAR PI A12dd
+        LR A,5
+        INC
+        LR 5,A
+        CI 15
+        BNZ C_CLEAR
+        DCI OBJECTS
+        XDC
+        DCI $0800
+        LI 128
+        LR 1,A
+C_OBJECT
+        XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ C_OBJECT
+        DCI $0FFA
+        LIS 2
+        ST
+        LIS 1
+        ST
+        LI $17
+        ST
+        LI $CC
+        ST
+        LI $17
+        ST
+        LI $CC
+        ST
+        DCI INITIALY
+        XDC
+        DCI $0FB0
+        LIS 15
+        LR 1,A
+C_YINIT XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ C_YINIT
+        DCI $3FF0
+        CLR
+        ST
+        ST
+        LIS 15
+        ST
+        LIS 12
+        ST
+        DCI $0FE2
+        CLR
+        ST
+        DCI $3FF8
+        ST
+        ST
+        DCI $0FDD
+        ST
+        ST
+        DCI $0FEB
+        ST
+        DCI $0FE5
+        LI $E8
+        ST
+        DCI $0FEA
+        LI $44
+        ST
+        DCI $08F7
+        ST
+        JMP C_DONE
+CON_PUT LR K,P
+        PI C_SAVE
+        PI C_LOAD
+        DCI $3FA1
+        LM
+        CI 32
+        BNC C_BADCHAR
+        CI 96
+        BNC C_ASCII
+C_BADCHAR
+        LI 63
+C_ASCII AI $E0
+        LR 1,A
+        PI DRAWCHAR
+        LR A,6
+        CI 24
+        BNZ C_PUTDONE
+        CLR
+        LR 6,A
+        PI A1395
+C_PUTDONE
+        PI C_STORE
+        JMP C_DONE
+CON_NEWLINE
+        LR K,P
+        PI C_SAVE
+        PI C_LOAD
+        CLR
+        LR 6,A
+        PI A1395
+        PI C_STORE
+        JMP C_DONE
+CON_BACK
+        LR K,P
+        PI C_SAVE
+        PI C_LOAD
+        LR A,6
+        CI 0
+        BNZ C_BACKCOL
+        LR A,8
+        CI 15
+        BZ C_PUTDONE
+        INC
+        LR 8,A
+        LR A,5
+        AI $FF
+        CI $FF
+        BNZ C_BACKROW
+        LIS 14
+C_BACKROW
+        LR 5,A
+        LI 24
+        LR 6,A
+C_BACKCOL
+        DS 6
+        CLR
+        LR 1,A
+        PI DRAWCHAR
+        DS 6
+        BR C_PUTDONE
+C_DONE  PI C_REFRESH
+        JMP C_RESTORE
+CON_TICK
+        LR K,P
+        PI C_SAVE
+        JMP C_DONE
+C_LOAD  DCI $3FF0
+        LM
+        LR 5,A
+        LM
+        LR 6,A
+        LM
+        LR 8,A
+        LM
+        LISU 7
+        LISL 6
+        LR (IS),A
+        CLR
+        LR 7,A
+        LISU 2
+        LISL 4
+        LR (IS),A
+        POP
+C_STORE DCI $3FF0
+        LR A,5
+        ST
+        LR A,6
+        ST
+        LR A,8
+        ST
+        LISU 7
+        LISL 6
+        LR A,(IS)
+        ST
+        POP
+C_REFRESH
+        LR K,P
+        LISU 7
+        LISL 2
+        LR A,KU
+        LR I,A
+        LR A,KL
+        LR (IS),A
+        PI C_LOAD
+        PI $4501
+        PI A13c0
+        PI C_STORE
+        DCI $0FE2
+        LM
+        INC
+        DCI $0830
+        ST
+C_WAIT  DCI $08FB
+        LM
+        CI $E8
+        BC C_WAIT
+        LISU 7
+        LISL 2
+        LR A,I
+        LR KU,A
+        LR A,(IS)
+        LR KL,A
+        PK
+C_SAVE  LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        XDC
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        DCI $3FA0
+        INCLUDE "console_save.inc"
+        LISU 6
+        LISL 0
+C_STEMP LR A,I
+        ST
+        BR7 C_STEMP
+        DCI $3FFB
+        CLR
+        ST
+        POP
+C_RESTORE
+        DCI $3FA0
+        INCLUDE "console_restore.inc"
+        LISU 6
+        LISL 0
+C_LTEMP LM
+        LR I,A
+        BR7 C_LTEMP
+        DCI $3FFB
+        LM
+        CI 0
+        BZ C_NOKEY
+        DCI $3FFA
+        LM
+        LR 8,A
+C_NOKEY
+        LISL 5
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        XDC
+        LISL 3
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        LISL 1
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+C_EXIT  LISU 7
+        LISL 7
+        LR A,8
+        PK
+        INCLUDE "console_routines.inc"
+DRAWCHAR
+        LR K,P
+        LR A,1
+        INCLUDE "drawchar.inc"
+        INCLUDE "console_data.inc"
+        INCLUDE "common.inc"
+        ORG $17FF
+        DC $FF
+        END
