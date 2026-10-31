@@ -1,0 +1,290 @@
+; Standalone cursor, wrap, and row-rotation check. No interpreter or input.
+        PROCESSOR F8
+        INCLUDE "../baseline/VBCHARS.ASM"
+        ORG $1000
+        DC $AA,$55,0
+        DC __,_T,_B,__,_2,_4,_X,_1,_5,__,__,__,__,__,__
+
+START   DI
+        CLR
+        OUTS 0
+        OUTS 1
+        DCI $08F2
+        ST
+        ST
+        ST
+        ST
+        ST
+        ST
+        DCI $08F8
+        ST
+        ST
+        ST
+        LR 5,A
+CLEARALL
+        PI A12dd
+        LR A,5
+        INC
+        LR 5,A
+        CI 15
+        BNZ CLEARALL
+
+        DCI OBJECTS
+        XDC
+        DCI $0800
+        LI 128
+        LR 1,A
+INITVIDEO
+        XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ INITVIDEO
+
+        DCI $0FFA
+        LIS 2
+        ST
+        LIS 1
+        ST
+        LI $17
+        ST
+        LI $CC
+        ST
+        LI $17
+        ST
+        LI $CC
+        ST
+        DCI INITIALY
+        XDC
+        DCI $0FB0
+        LIS 15
+        LR 1,A
+INITY   XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ INITY
+        CLR
+        LR 5,A
+        LR 6,A
+        LR 7,A
+        LR 9,A
+        LISU 2
+        LISL 4
+        LR (IS),A
+        LIS 15
+        LR 8,A
+        LISU 7
+        LISL 6
+        LI 12
+        LR (IS),A
+        DCI SAMPLE
+        LR Q,DC
+        LISU 6
+        LISL 0
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR D,A
+        DCI $0FE5
+        LI $E8
+        ST
+        DCI $0FEA
+        LI $44
+        ST
+        DCI $08F7
+        ST
+FRAME   PI $4501
+        PI A13c0
+; Leave the refresh interval before waiting for the next frame.
+WAITTOP DCI $08FB
+        LM
+        CI $E8
+        BT 2,WAITTOP
+        LR A,9
+        CI 255
+        BZ FRAME
+        INC
+        LR 9,A
+        CI 4
+        BNZ FRAME
+        CLR
+        LR 9,A
+NEXTCHAR
+        LISU 6
+        LISL 0
+        LR A,I
+        LR QU,A
+        LR A,D
+        LR QL,A
+        LR DC,Q
+        LM
+        CI 0
+        BZ FINISHED
+        AI $E0
+        LR 1,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR D,A
+        PI DRAWCHAR
+        LR A,6
+        CI 24
+        BNZ FRAME
+        CLR
+        LR 6,A
+        PI A1395
+        JMP FRAME
+FINISHED
+        LI 255
+        LR 9,A
+        JMP FRAME
+
+A12dd:          LR   K,P
+A12de:          DCI  ROWS
+                LR   A,$5
+                SL   1
+                ADC
+                LM
+                LR   QU,A
+                LM
+                LR   QL,A
+                LR   DC,Q
+                LI   $12
+                LR   $1,A
+                LIS  $0
+A12ed:          ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                DS   $1
+                BF   $4,A12ed
+                PK
+
+A1395:          LR   K,P
+A1396:          LR   A,$5
+                INC
+                CI   $0e
+                BT   2,A139d
+                LIS  $0
+A139d:          LR   $5,A
+                DS   $8
+                BF   $4,A13bd
+                LIS  $1
+                LR   $8,A
+                DCI  $0fb0
+                XDC
+                DCI  $0851
+                LIS  $f
+                LR   $1,A
+A13ac:          LM
+                AI   $f4
+                CI   $2e
+                BF   $2,A13b5
+                AI   $b4
+A13b5:          XDC
+                ST
+                XDC
+                DS   $1
+                BF   $4,A13ac
+                LIS  $1
+                LR   $8,A
+A13bd:          JMP  A12de
+A13c0:          LR   K,P
+                DCI  $0832
+                LIS  $2
+                LR   $1,A
+                LIS  $7
+A13c7:          ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                DS   $1
+                BF   $4,A13c7
+                DCI  $0802
+                LIS  $2
+                LR   $1,A
+                LIS  $0
+A13d7:          ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                ST
+                LI   $80
+                DS   $1
+                BF   $4,A13d7
+                LIS  $e
+                LR   $1,A
+                DCI  $0812
+                XDC
+                DCI  ROWHIGHS
+A13ec:          LM
+                XDC
+                ST
+                XDC
+                DS   $1
+                BF   $4,A13ec
+                DCI  $0851
+                XDC
+                DCI  $0fb0
+                LIS  $f
+                LR   $1,A
+A13fc:          LM
+                XDC
+                ST
+                XDC
+                DS   $1
+                BF   $4,A13fc
+                LR   A,$8
+                COM
+                LR   $1,A
+                SL   1
+                AS   $1
+                SL   1
+                SL   1
+                AI   $f8
+                DCI  $0850
+                ST
+                LR   A,$6
+                SL   1
+                AS   $6
+                SL   1
+                AI   $17
+                DCI  $0840
+                ST
+                LISU 7
+                LISL 6
+                DS   (IS)
+                BF   $4,A142a
+                LIS  $c
+                LR   (IS),A
+                DCI  $0870
+                LR   H,DC
+                LIS  $8
+                SL   4
+                XM
+                LR   DC,H
+                ST
+A142a:          JMP  $424e
+DRAWCHAR
+        LR K,P
+        LR A,1
+        INCLUDE "drawchar.inc"
+        INCLUDE "console_data.inc"
+; BIOS row-pointer refresh stream, preserved at its Timeshare address.
+        ORG $17CC
+        DC $60,$00,$E0,$FB,$01,$07
+        ORG $17FF
+        DC $FF
+        END

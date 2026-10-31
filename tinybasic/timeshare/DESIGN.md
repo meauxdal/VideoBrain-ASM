@@ -9,9 +9,11 @@ the original listing remains unchanged. Public reference:
 [Sean Riddle's VideoBrain research](https://seanriddle.com/videobrain.html).
 
 The standalone display probe is hardware-confirmed with the Timeshare
-mapper: all 24 columns and 15 rows render correctly. Cursor and scrolling
-details below remain source-derived. This supersedes the proposed 4-by-5
-font and 900-byte framebuffer.
+mapper: all 24 columns and 15 rows render correctly. The separate console
+probe (CRC32 `8257C31E`) also passes on MiSTer with the Timeshare mapper,
+confirming cursor, wrapping, and scrolling behavior. Register and address
+details below are source-derived. This supersedes the proposed 4-by-5 font
+and 900-byte framebuffer.
 
 ## Font and packing
 
@@ -89,13 +91,18 @@ APL/S establishes ROM capacity, not a flat 16 KiB address range or a
 simultaneous 4 KiB BASIC RAM window. CPU `$2800-$2FFF` aliases video
 registers/internal RAM; it cannot supply another independent ROM window.
 
-The least disruptive combined homebrew design to evaluate is banked ROM
-in CS1, Timeshare-compatible RAM in CS2, and the existing 4 KiB workspace
-at `$3000-$3FFF`. Common bank-switch/return code must remain executable
-across switches; duplicating a common region in each ROM bank is one
-option. Specify bank selection and common-code capacity before relocating
-interpreter routines. This is a proposed new cartridge contract, not an
-existing historical mapper or an implemented core change.
+The BASIC homebrew profile combines eight 2 KiB ROM banks in CS1,
+Timeshare-compatible RAM in CS2, and the existing 4 KiB workspace at
+`$3000-$3FFF`. A write to `$17FF` selects data bits 2:0 as the bank;
+CPU and video DMA use the same selected ROM bank. `$1700-$17FF` is
+reserved for identical common code/data in all eight banks, including
+bank-switch call and return stubs. This leaves 1,792 bank-specific bytes
+per bank. Reset selects bank zero and preserves RAM; power cycle clears
+internal and cartridge RAM. Software initializes workspace RAM.
+
+This new profile is implemented in the core and awaits hardware validation.
+It is not a historical cartridge contract. See the
+[core mapping specification](https://github.com/meauxdal/VideoBrain_MiSTer/blob/main/docs/CARTRIDGES.md#basic-homebrew-mapping).
 
 APL/S is an alternative if workspace access is redesigned around its
 existing map. That would require moving/reducing the current BASIC RAM
@@ -112,5 +119,8 @@ allocation; selecting the APL/S fallback alone is insufficient.
 6. Connect the interpreter and relocate its code/data against the agreed map.
 7. Recheck affected language, editing, error-location, and memory-limit cases.
 
-The standalone probe does not implement BASIC, keyboard input, a cursor,
-or scrolling. No project-specific changes to MiSTer's sys tree are needed.
+The static probe does not implement keyboard input, a cursor, or scrolling;
+the console probe adds cursor and scrolling. Neither implements BASIC.
+The mapping probe checks the combined homebrew profile before displaying
+twenty numbered rows. No project-specific changes to MiSTer's sys tree
+are needed.

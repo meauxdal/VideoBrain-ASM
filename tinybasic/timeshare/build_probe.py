@@ -31,7 +31,12 @@ def main():
     repo = root.parents[1]
     parser = argparse.ArgumentParser(description='Build a Timeshare 24x15 display probe')
     parser.add_argument('--dasm', required=True, type=Path)
+    parser.add_argument('--console', action='store_true',
+                        help='build the cursor and scrolling probe')
+    parser.add_argument('--basic', action='store_true',
+                        help='build the eight-bank BASIC mapping probe')
     args = parser.parse_args()
+    args.console = args.console or args.basic
     dasm = args.dasm.resolve()
     out = repo / 'build' / 'tinybasic' / 'timeshare'
     out.mkdir(parents=True, exist_ok=True)
@@ -70,15 +75,70 @@ def main():
                [255] * 16 + [0x80] + list(range(1, 16)))
     if len(objects) != 128:
         raise SystemExit('Unexpected object table size')
-    sample = [f'{r:02d} ABCDEFGHIJKLMNOPQRST{r % 10}' for r in range(1, 16)]
+    if args.console:
+        positions = [48 + 12 * r for r in range(15)]
+        physical = 0
+        remaining = 15
+        contents = [None] * 15
+        for line in range(1, 31):
+            contents[physical] = line
+            physical = (physical + 1) % 15
+            remaining -= 1
+            if remaining == 0:
+                remaining = 1
+                positions = [y - 12 if y - 12 >= 46 else y + 168
+                             for y in positions]
+            contents[physical] = None
+            if sorted(positions) != [48 + 12 * r for r in range(15)]:
+                raise SystemExit('Row rotation changes display geometry')
+            if positions[physical] != 48 + 12 * (15 - remaining):
+                raise SystemExit('Cursor and recycled row disagree')
+        visible = [contents[r] for r in sorted(range(15), key=positions.__getitem__)]
+        if visible != list(range(17, 31)) + [None]:
+            raise SystemExit('Unexpected final scroll contents')
+    sample_rows = 20 if args.basic else 30 if args.console else 15
+    sample = [f'{r:02d} ABCDEFGHIJKLMNOPQRST{r % 10}'
+              for r in range(1, sample_rows + 1)]
     if any(len(line) != 24 for line in sample):
         raise SystemExit('Sample rows must contain exactly 24 characters')
     generated = (data('OBJECTS', objects) + data('ROWS', row_bytes) +
                  data('MASKS', masks) + data('FONT', font) +
-                 data('SAMPLE', ''.join(sample).encode('ascii')))
-    (out / 'display_data.inc').write_text(generated, encoding='ascii')
-    output = out / 'timeshare-display-probe.bin'
-    assemble(dasm, root / 'probe.f8', output, root, out)
+                 data('SAMPLE', ''.join(sample).encode('ascii') + (b'\0' if args.console else b'')))
+    if args.console:
+        generated += data('INITIALY', [48 + 12 * r for r in range(15)])
+        generated += data('ROWHIGHS', original[0x75E:0x76C])
+    include = 'console_data.inc' if args.console else 'display_data.inc'
+    if args.basic:
+        include = 'mapping_data.inc'
+    (out / include).write_text(generated, encoding='ascii')
+    if args.basic:
+        source = (root / 'console.f8').read_text(encoding='ascii')
+        check = (root / 'mapping_check.inc').read_text(encoding='ascii')
+        source = source.replace('START   DI', 'START   DI\n' + check, 1)
+        source = source.replace('console_data.inc', 'mapping_data.inc')
+        source = source.replace('        ORG $17CC',
+                                '        ORG $16FF\n        DC BANK_ID\n        ORG $17CC')
+        banks = []
+        for bank in range(8):
+            bank_source = out / f'mapping-bank-{bank}.f8'
+            bank_source.write_text(f'BANK_ID EQU {bank}\n' + source, encoding='ascii')
+            bank_output = out / f'mapping-bank-{bank}.bin'
+            assemble(dasm, bank_source, bank_output, root, out)
+            image = bank_output.read_bytes()
+            if len(image) != 2048 or image[0x6FF] != bank:
+                raise SystemExit('Unexpected mapping probe bank geometry')
+            banks.append(image)
+        if any(bank[0x700:] != banks[0][0x700:] for bank in banks[1:]):
+            raise SystemExit('Bank-switch common region differs between banks')
+        output = out / 'basic-mapping-probe.bin'
+        rom = b''.join(banks)
+        output.write_bytes(rom)
+        print(f'BASIC mapping probe CRC32 {zlib.crc32(rom):08X}')
+        print(output)
+        return
+    name = 'timeshare-console-probe' if args.console else 'timeshare-display-probe'
+    output = out / (name + '.bin')
+    assemble(dasm, root / ('console.f8' if args.console else 'probe.f8'), output, root, out)
     rom = output.read_bytes()
     if len(rom) != 2048:
         raise SystemExit('Display probe must fit the Timeshare 2 KiB ROM window')
