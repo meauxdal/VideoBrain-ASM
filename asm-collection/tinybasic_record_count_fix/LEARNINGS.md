@@ -11,8 +11,10 @@ hardware check passes.
 2. Replace the display and reorganize memory using Timeshare as the reference.
 
 The cartridge budget is 16 KiB. ROM capacity does not establish RAM or
-video-fetch capacity. The 24-column, 15-row display is the target; its font,
-objects, framebuffer, and timing still require disassembly review.
+video-fetch capacity. Timeshare's 24-column, 15-row layout is now mapped
+from the byte-verified original source. See the
+[display design](../../tinybasic/timeshare/DESIGN.md) and
+[consolidated baseline](../../tinybasic/README.md).
 
 ## Validation state
 
@@ -42,12 +44,17 @@ objects, framebuffer, and timing still require disassembly review.
 | `34207B22` | MiSTer: `19-multiple-statements.vbk` | Semicolon-separated assignment and PRINT statements pass: 2, 3, DONE. |
 | `FC982273` | MiSTer: tests 18 and 18b | Both pass after loading the intended ROM: 12/2 and 3/4. Earlier failures used the wrong ROM. Current tested variant includes stringfix and the empty-buffer guard. |
 | `FC982273` | MiSTer: `20-cancel-line.vbk` | Cancelled-line capacity is not reset: output 2, 3 instead of 14, 3. |
-| `F3BFF3D3` | Assembly and complete byte comparison | Cancellation-capacity reset added to inputfix. Hardware validation pending. |
+| `F3BFF3D3` | MiSTer: `20-cancel-line.vbk` | Passes: 14, 3. Current tested variant includes stringfix, empty-input backspace guard, and cancelled-line capacity reset. |
+| `F3BFF3D3` | MiSTer: `21-input-limit.vbk` | Full-input handling passes: excess characters are discarded; commands print 2 and 3. |
+| `F3BFF3D3` | MiSTer: `22-stack-limit.vbk` | Recursive GOSUB reports SORRY, displays line 10 with a question-mark location marker, then accepts PRINT 3. |
 | ROM not separately identified | MiSTer: `15-nested-for.vbk` | Nested FOR confirmed working. The first result can scroll out of view on the current display. |
+| `F3BFF3D3` | Consolidated source assembly and complete byte comparison | Standalone source/includes and preserved matching ROM under tinybasic/baseline. |
+| `957D7246` | Timeshare source assembly | All 2,048 bytes match the recognized original-ROM CRC. Font, row addresses, and glyph routine are verified source references. |
+| `7463DD42` | MiSTer: Timeshare display probe | All 24 columns and 15 rows render correctly with the Timeshare mapper. Font packing and split RAM placement are hardware-confirmed. |
 
-Exact edited LIST contents, deeper loop/subroutine/stack limits,
+Exact edited LIST contents, deeper loop limits and other stack paths,
 further INPUT and DATA cases, arrays and further string cases, further error cases,
-memory limits, and sustained scrolling
+program/array memory limits, and sustained scrolling
 remain unconfirmed. Do not infer their correctness from the two-line test.
 
 ## Interpreter and I/O contracts
@@ -77,7 +84,7 @@ Source basis: [interpreter](tinybasicvb-recordfix.f8) and
   CRC before evaluating a correction; unchanged results can reflect a
   different ROM rather than failure of the intended patch.
   GET4 restarts the input pointer without resetting R7; test 20 confirms
-  resulting truncation. The candidate CANCELRESET restores R7 to 72.
+  resulting truncation. CANCELRESET restores R7 to 72; test 20 passes.
   Full-buffer behavior still needs separate checks.
 - `LDRAWCHAR` saves Q, DC0, and DC1 in scratch bank 7. Newline and keyboard
   routines save Q and DC0. The renderer also uses bank 2 scratch registers;
@@ -146,13 +153,30 @@ boundaries. Relocation must include bounds checks and absolute addresses.
   Tiny BASIC converter profile supplies it for array expressions.
 - `<` is unavailable in the current converter; the bounded GOTO file uses
   equality instead.
-- A 900-byte framebuffer was only a proposal. Verify Timeshare's actual
-  video-fetch addressing and RAM use before adopting any framebuffer plan.
+- Timeshare uses 6-by-7 character cells with a 5-by-7 font: 18 bytes per
+  scanline, seven scanlines per row, and 15 slots of 128 bytes. Bitmap
+  payload is 1,890 bytes across seven internal-RAM slots and eight
+  cartridge-RAM slots. The proposed 900-byte layout was not accurate.
+- Timeshare scrolling rotates row-object Y positions and clears the
+  recycled physical row. It does not copy a full bitmap on each newline.
+- The existing 4K RAM fallback lacks video-visible cartridge RAM. APL/S
+  offers banked ROM and video RAM but uses the expansion window for ROM.
+  Neither profile alone supplies the current BASIC workspace plus the
+  Timeshare framebuffer. Specify the combined mapper before relocation.
+- With the wrong mapper, the display probe corrupted exactly rows 1-4
+  and 9-12 (cartridge RAM), while rows 5-8 and 13-15 (internal RAM) stayed
+  correct. Selecting Timeshare resolved all rows. Use this split to
+  distinguish cartridge mapping errors from glyph-packing errors.
 - RUN has no output paging. Small-display scrolling can hide earlier
   results during validation; inspect compact output or staged checks
   before interpreting a missing visible line as an execution failure.
 - SPECIAL cancels the current input buffer and advances to a new row.
   Earlier text remains visible; cancellation does not clear the screen.
+- ERROR prints WHAT, HOW, or SORRY, followed by the current program line
+  with an inserted question-mark location indicator. It temporarily
+  terminates the line at the saved text pointer, prints the prefix,
+  restores that character, then prints the marker and remaining text.
+  Preserve source-line diagnostics when replacing the renderer.
 
 ## Refactor acceptance
 

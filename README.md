@@ -2,6 +2,12 @@
 
 Annotated disassembly and analysis tools for VideoBrain software.
 
+## Tiny BASIC
+
+[Preserved tested baseline and Timeshare display work](tinybasic/README.md).
+The phase 1 source rebuilds byte-for-byte to CRC32 F3BFF3D3. The separate
+24x15 display probe passes on MiSTer with the Timeshare mapper.
+
 ## ASM collection
 
 [Historical listings and source](asm-collection/README.md), with additional

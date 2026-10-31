@@ -1,0 +1,145 @@
+; Standalone Timeshare 24x15 display check. No interpreter or serial I/O.
+        PROCESSOR F8
+        INCLUDE "../baseline/VBCHARS.ASM"
+        ORG $1000
+        DC $AA,$55,0
+        DC __,_T,_B,__,_2,_4,_X,_1,_5,__,__,__,__,__,__
+
+START   DI
+        CLR
+        OUTS 0
+        OUTS 1
+        DCI $08F2
+        ST
+        ST
+        ST
+        ST
+        ST
+        ST
+        DCI $08F8
+        ST
+        ST
+        ST
+        LR 5,A
+CLEARALL
+        PI CLEARROW
+        LR A,5
+        INC
+        LR 5,A
+        CI 15
+        BNZ CLEARALL
+
+        DCI OBJECTS
+        XDC
+        DCI $0800
+        LI 128
+        LR 1,A
+INITVIDEO
+        XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ INITVIDEO
+
+        DCI SAMPLE
+        LR Q,DC
+        LISU 6
+        LISL 0
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR D,A
+        CLR
+        LR 5,A
+        LR 6,A
+        LR 7,A
+        LISU 2
+        LISL 4
+        LR (IS),A
+NEXTCHAR
+        LISU 6
+        LISL 0
+        LR A,I
+        LR QU,A
+        LR A,D
+        LR QL,A
+        LR DC,Q
+        LM
+        AI $E0
+        LR 1,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR D,A
+        PI DRAWCHAR
+        LR A,6
+        CI 24
+        BNZ NEXTCHAR
+        CLR
+        LR 6,A
+        LR A,5
+        INC
+        LR 5,A
+        CI 15
+        BNZ NEXTCHAR
+
+        DCI $0FE5
+        LI $E8
+        ST
+        DCI $0FEA
+        LI $44
+        ST
+        DCI $08F7
+        ST
+FRAME   PI $4501
+        PI REFRESH
+        BR FRAME
+
+CLEARROW
+        LR K,P
+        DCI ROWS
+        LR A,5
+        SL 1
+        ADC
+        LM
+        LR QU,A
+        LM
+        LR QL,A
+        LR DC,Q
+        LI 126
+        LR 1,A
+        CLR
+CLEARBYTE
+        ST
+        DS 1
+        BNZ CLEARBYTE
+        PK
+
+REFRESH LR K,P
+        DCI OBJECTS
+        XDC
+        DCI $0800
+        LI 32
+        LR 1,A
+REFBYTE XDC
+        LM
+        XDC
+        ST
+        DS 1
+        BNZ REFBYTE
+        PK
+
+; Timeshare CM01 glyph routine from Sean Riddle's disassembly.
+; R5=row, R6=column, R7=mode.
+; Input is ASCII-32 in R1. Clobbers R1-R4, H, Q, DC0/DC1, and bank 5.
+DRAWCHAR
+        LR K,P
+        LR A,1
+        INCLUDE "drawchar.inc"
+        INCLUDE "display_data.inc"
+
+        ORG $17FF
+        DC $FF
+        END
