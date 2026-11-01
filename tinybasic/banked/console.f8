@@ -1,5 +1,6 @@
         PROCESSOR F8
         INCLUDE "runtime_equates.inc"
+        INCLUDE "serial_ids.inc"
         ORG $1000
 CON_INIT
         LR K,P
@@ -91,13 +92,19 @@ C_YINIT XDC
         JMP C_DONE
 CON_PUT LR K,P
         PI C_SAVE
+        DCI $3FA1
+        LM
+        LR 1,A
+        LI SERIAL_ID
+        LR 0,A
+        PI G_ENTRY
         PI C_LOAD
         DCI $3FA1
         LM
-        CI 32
-        BNC C_BADCHAR
-        CI 96
-        BNC C_ASCII
+        CI 31
+        BC C_BADCHAR
+        CI 95
+        BC C_ASCII
 C_BADCHAR
         LI 63
 C_ASCII AI $E0
@@ -115,6 +122,16 @@ C_PUTDONE
 CON_NEWLINE
         LR K,P
         PI C_SAVE
+        LIS 13
+        LR 1,A
+        LI SERIAL_ID
+        LR 0,A
+        PI G_ENTRY
+        LIS 10
+        LR 1,A
+        LI SERIAL_ID
+        LR 0,A
+        PI G_ENTRY
         PI C_LOAD
         CLR
         LR 6,A

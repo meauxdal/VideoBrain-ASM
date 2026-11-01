@@ -30,6 +30,27 @@ COPYRT  XDC
         LI INIT_ID
         LR 0,A
         PI G_ENTRY
+        LI SERIAL_INIT_ID
+        LR 0,A
+        PI G_ENTRY
+        DCI BANNER
+PRINT_BANNER
+        LM
+        CI 0
+        BZ BANNER_DONE
+        CI 13
+        BZ BANNER_NEWLINE
+        LR 1,A
+        LI PUT_ID
+        LR 0,A
+        PI G_ENTRY
+        BR PRINT_BANNER
+BANNER_NEWLINE
+        LI NEWLINE_ID
+        LR 0,A
+        PI G_ENTRY
+        BR PRINT_BANNER
+BANNER_DONE
         LI NEW_ID
         LR 0,A
         JMP G_JUMP

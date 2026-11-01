@@ -29,5 +29,6 @@ the BASIC expansion-RAM mapper cannot provide that display unchanged.
 See `timeshare/DESIGN.md` for the mapping and integration constraints.
 
 The combined BASIC mapping probe passes on hardware. The
-[banked 24x15 interpreter](banked/README.md) is assembled; integrated
-simulation and hardware acceptance are pending.
+[banked 24x15 interpreter](banked/README.md) passes native arithmetic and
+stored-program checks. Version 0.5 runs stored programs on MiSTer with the
+24x15 display. Broader language and memory-limit acceptance remains.

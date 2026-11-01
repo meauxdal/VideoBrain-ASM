@@ -10,6 +10,7 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
+VERSION = '0.9'
 
 
 def assemble(dasm, source, output):
@@ -41,6 +42,23 @@ def data(label, values):
     return result
 
 
+def instruction(line):
+    result = ''
+    index = 0
+    while index < len(line):
+        if line[index] == ';':
+            break
+        if line[index] == "'":
+            if index + 1 == len(line):
+                raise ValueError('Incomplete F8 character literal')
+            result += f'${ord(line[index + 1]):02X}'
+            index += 2
+        else:
+            result += line[index]
+            index += 1
+    return result.rstrip()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dasm', type=Path, required=True)
@@ -54,6 +72,13 @@ def main():
     if raw != (source.parent / 'tinybasic.bin').read_bytes() or zlib.crc32(raw) != 0xF3BFF3D3:
         raise SystemExit('Baseline mismatch')
     syms = symbols(baseline.with_suffix('.sym'))
+    # Statement transfers abandon native calls; BASIC retains its own stack.
+    entry_prefixes = {
+        syms['START']: ['        DCI $3F1D', '        CLR', '        ST'],
+        syms['RSML']: ['        LR H,DC', '        DCI $3F1D', '        CLR',
+                       '        ST', '        LR DC,H'],
+    }
+    entry_sizes = {syms['START']: 5, syms['RSML']: 7}
     pcs = {}
     active = False
     for line in baseline.with_suffix('.lst').read_text().splitlines():
@@ -64,7 +89,7 @@ def main():
     records = []
     branches = {'BR', 'BZ', 'BNZ', 'BP', 'BM', 'BC', 'BNC', 'BF', 'BT', 'BR7'}
     for n, line in enumerate(source.read_text().splitlines(), 1):
-        text = line.split(';')[0].rstrip()
+        text = instruction(line)
         if not text or n not in pcs:
             continue
         m = re.match(r'^(?:(\S+)\s+)?\s*(\S+)(?:\s+(.*))?$', text)
@@ -84,16 +109,30 @@ def main():
         size = 3 if op in {'PI', 'JMP', 'DCI'} else 2 if op in branches | {
             'LI', 'AI', 'NI', 'OI', 'XI', 'CI', 'IN', 'OUT'} else 1
         records.append({'pc': pc, 'op': op, 'arg': arg, 'size': size})
+    # Console output leaves ISAR in bank 7; the next PRINT item uses bank 2.
+    continuation, = [r['pc'] for r in records
+                     if syms['PR4'] <= r['pc'] < syms['PR5'] and
+                     r['op'] == 'PI' and r['arg'] == 'FINISH']
+    entry_prefixes[continuation] = ['        LISU 2']
+    entry_sizes[continuation] = 1
     # Replace the old packed cursor edit with the new console operation.
     index = next(i for i, r in enumerate(records) if r['pc'] == syms['GET3'] + 5)
     records[index+1:index+1] = [
         {'pc': -1, 'op': 'PI', 'arg': 'CON_BACK', 'size': 3},
         {'pc': -2, 'op': 'JMP', 'arg': 'GET2A', 'size': 3}]
-    # The baseline synthesizes an absolute return to GET2A in K.
-    # The banked version transfers there through the normal jump gate.
-    records = [r for r in records if not 0x1E0A <= r['pc'] <= 0x1E0E]
+    # Echo the accepted character before returning to keyboard input.
+    records = [r for r in records if not 0x1E0A <= r['pc'] <= 0x1E0F]
     done = next(r for r in records if r['pc'] == 0x1E08)
-    done.update(op='JMP', arg='GET2A', size=3)
+    done.update(op='LR', arg='A,8', size=1)
+    index = records.index(done)
+    records[index+1:index+1] = [
+        {'pc': -3, 'op': 'LR', 'arg': '1,A', 'size': 1},
+        {'pc': -4, 'op': 'PI', 'arg': 'TTY0', 'size': 3},
+        {'pc': -5, 'op': 'JMP', 'arg': 'GET2A', 'size': 3}]
+    # ST2NUM resumes its caller by jump rather than returning.
+    for r in records:
+        if r['op'] == 'PI' and r['arg'] == 'ST2NUM':
+            r['op'] = 'JMP'
     by_pc = {r['pc']: i for i, r in enumerate(records)}
     redirects = {'LDRAWCHAR': 'CON_PUT', 'LNEXTLINE': 'CON_NEWLINE', 'LGETKEY': 'CON_KEY'}
     for r in records:
@@ -105,6 +144,7 @@ def main():
     for i, r in enumerate(records):
         if r['op'] in branches:
             target = number(r['arg'].split(',')[-1], syms)
+            r['branch_target'] = target
             j = by_pc[target]
             forbidden.update(range(min(i, j), max(i, j)))
     chunks, start = [], 0
@@ -114,12 +154,41 @@ def main():
             start = i + 1
     if start != len(records):
         raise SystemExit('Unterminated interpreter chunk')
+    # Short relays preserve A and flags when bank calls lengthen a branch span.
+    relay_pc = -6
+    for chunk in chunks:
+        while True:
+            positions = {}
+            position = 0
+            for r in chunk:
+                positions[r['pc']] = position
+                position += r['size'] + (4 if r['op'] == 'PI' else 3 if r['op'] == 'JMP' else 0)
+                position += entry_sizes.get(r['pc'], 0)
+            distant = next((r for r in chunk if 'branch_target' in r and
+                            not -120 <= positions[r['branch_target']] - positions[r['pc']] - 1 <= 120), None)
+            if distant is None:
+                break
+            origin = positions[distant['pc']]
+            destination = positions[distant['branch_target']]
+            if destination > origin:
+                index = max(i for i, r in enumerate(chunk)
+                            if origin < positions[r['pc']] <= origin + 64)
+            else:
+                index = min(i for i, r in enumerate(chunk)
+                            if origin - 64 <= positions[r['pc']] < origin)
+            skip = {'pc': relay_pc, 'op': 'BR', 'arg': '', 'size': 2,
+                    'branch_target': chunk[index]['pc']}
+            relay = {'pc': relay_pc - 1, 'op': 'BR', 'arg': '', 'size': 2,
+                     'branch_target': distant['branch_target']}
+            distant['branch_target'] = relay['pc']
+            chunk[index:index] = [skip, relay]
+            relay_pc -= 2
+    records = [r for chunk in chunks for r in chunk]
     banks, used = {}, {b: 0x1000 for b in range(1, 5)}
     for chunk in chunks:
         size = sum(r['size'] + (4 if r['op'] == 'PI' else 3 if r['op'] == 'JMP' else 0)
                    for r in chunk)
-        if any(r['pc'] == syms['START'] for r in chunk):
-            size += 5
+        size += sum(entry_sizes.get(r['pc'], 0) for r in chunk)
         bank = next((b for b in used if used[b] + size <= 0x1500), None)
         if bank is None:
             raise SystemExit(f'Interpreter does not fit: chunk {chunk[0]["pc"]:04X}, {size} bytes')
@@ -133,13 +202,14 @@ def main():
         target = number(expr.replace('+H8000', ''), syms)
         if target not in callbacks:
             callbacks.append(target)
-    targets = [syms['ASORRY']] + callbacks + ['CON_INIT', 'CON_PUT', 'CON_NEWLINE', 'CON_BACK', 'CON_KEY', 'CON_TICK', syms['NEWT']]
+    targets = [syms['QSORRY']] + callbacks + ['CON_INIT', 'CON_PUT', 'CON_NEWLINE', 'CON_BACK', 'CON_KEY', 'CON_TICK', syms['NEWT'], 'CON_SERIAL_INIT', 'CON_SERIAL']
     targets = list(dict.fromkeys(targets))
+    # Saved software returns must use the bank gate even for same-bank calls.
     for r in records:
         if r['op'] not in {'PI', 'JMP'}:
             continue
         target = r['arg'] if r['arg'].startswith('CON_') else number(r['arg'], syms)
-        if isinstance(target, str) or target in banks and banks[target] != banks[r['pc']]:
+        if isinstance(target, str) or target in banks and (r['op'] == 'PI' or banks[target] != banks[r['pc']]):
             if target not in targets:
                 targets.append(target)
     if len(targets) > 256:
@@ -150,12 +220,10 @@ def main():
     for r in records:
         b = banks[r['pc']]
         addresses[r['pc']] = positions[b]
-        extra = 0
-        if r['pc'] == syms['START']:
-            extra += 5
+        extra = entry_sizes.get(r['pc'], 0)
         if r['op'] in {'PI', 'JMP'}:
             target = r['arg'] if r['arg'].startswith('CON_') else number(r['arg'], syms)
-            if isinstance(target, str) or target in banks and banks[target] != b:
+            if isinstance(target, str) or target in banks and (r['op'] == 'PI' or banks[target] != b):
                 extra += 4 if r['op'] == 'PI' else 3
         positions[b] += r['size'] + extra
     common = '        ORG $1700\n'
@@ -164,7 +232,7 @@ def main():
     for target in callbacks:
         size = 5 if ids[target] < 16 else 6
         if thunk_pc < 0x17D2 and thunk_pc + size > 0x17CC:
-            common += '        ORG $17CC\n        DC $60,$00,$E0,$FB,$01,$07\n        ORG $17D2\n'
+            common += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n        ORG $17D2\n'
             thunk_pc = 0x17D2
         thunk_addresses[target] = thunk_pc
         load = 'LIS' if ids[target] < 16 else 'LI'
@@ -173,7 +241,10 @@ def main():
     if thunk_pc > 0x1800:
         raise SystemExit('Computed dispatch thunks overflow common region')
     if thunk_pc <= 0x17CC:
-        common += '        ORG $17CC\n        DC $60,$00,$E0,$FB,$01,$07\n'
+        common += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n'
+    if thunk_pc > 0x17F8:
+        raise SystemExit('Dispatch thunks overlap cursor bitmap')
+    common += '        ORG $17F8\n        DC $F8,$F8\n'
     regs = list(map(str, range(12))) + ['KU', 'KL', 'QU', 'QL']
     (OUT / 'save_direct.inc').write_text(''.join(f'        LR A,{reg}\n        ST\n' for reg in regs), encoding='ascii')
     (OUT / 'restore_direct.inc').write_text(''.join(f'        LM\n        LR {reg},A\n' for reg in regs), encoding='ascii')
@@ -221,7 +292,7 @@ def main():
     draw = draw.replace('A1580', 'FONT').replace('A1740', 'ROWS').replace('A1578', 'MASKS')
     (OUT / 'drawchar.inc').write_text(draw + '\n', encoding='ascii')
     rows = display.ROWS
-    objects = ([0] + [p & 255 for p in rows] + [0] + [(p >> 8) | 0xE0 for p in rows] +
+    objects = ([0xF8] + [p & 255 for p in rows] + [0xF7] + [(p >> 8) | 0xE0 for p in rows] +
                [0x41] + [0x52] * 15 + [1] + [7] * 15 + [23] * 16 +
                [255] + [48 + 12*r for r in range(15)] + [255]*16 + [0x80] + list(range(1,16)))
     generated = data('OBJECTS', objects) + data('ROWS', original[0x740:0x75E])
@@ -229,6 +300,7 @@ def main():
     generated += data('INITIALY', [48 + 12*r for r in range(15)]) + data('ROWHIGHS', original[0x75E:0x76C])
     (OUT / 'console_data.inc').write_text(generated, encoding='ascii')
     (OUT / 'key_data.inc').write_text(data('KEYTABLE', raw[syms['VBCHARS']-0x1000:syms['VBCHARS']-0x1000+73]), encoding='ascii')
+    (OUT / 'serial_ids.inc').write_text(f'SERIAL_ID EQU {ids["CON_SERIAL"]}\n', encoding='ascii')
     assemble(dasm, ROOT / 'console.f8', console)
     cs = symbols(console.with_suffix('.sym'))
     (OUT / 'key_id.inc').write_text(f'TICK_ID EQU {ids["CON_TICK"]}\n', encoding='ascii')
@@ -239,7 +311,7 @@ def main():
             equates[name] = cs[name]
     table = bytearray()
     for target in targets:
-        bank, address = (6 if target == 'CON_KEY' else 5, cs[target]) if isinstance(target, str) else (banks[target], addresses[target])
+        bank, address = (6 if target in {'CON_KEY', 'CON_SERIAL_INIT', 'CON_SERIAL'} else 5, cs[target]) if isinstance(target, str) else (banks[target], addresses[target])
         table.extend([bank, address >> 8, address & 255, 0])
     (OUT / 'targets.inc').write_text(data('TARGETS', table), encoding='ascii')
     # Shared keyword and error data retain their original source definitions.
@@ -264,11 +336,10 @@ def main():
             op, arg = r['op'], r['arg']
             marker = f'AT{r["pc"]:04X}' if r['pc'] >= 0 else f'AT_EDIT{-r["pc"]}'
             lines.append(marker)
-            if r['pc'] == syms['START']:
-                lines += ['        DCI $3F1D', '        CLR', '        ST']
+            lines += entry_prefixes.get(r['pc'], [])
             if op in {'PI', 'JMP'}:
                 target = arg if arg.startswith('CON_') else number(arg, syms)
-                if isinstance(target, str) or target in banks and banks[target] != b:
+                if isinstance(target, str) or target in banks and (r['op'] == 'PI' or banks[target] != b):
                     gate = 'G_ENTRY' if op == 'PI' else 'G_JUMP'
                     lines += [f'        LI {ids[target]}',
                               '        LR 0,A', f'        {op} {gate}']
@@ -279,7 +350,10 @@ def main():
                     arg = f'${addresses[target]:04X}'
             elif op in branches:
                 parts = arg.split(',')
-                parts[-1] = f'${addresses[number(parts[-1], syms)]:04X}'
+                target = addresses[r['branch_target']]
+                if not -128 <= target - addresses[r['pc']] - 1 <= 127:
+                    raise SystemExit(f'Branch out of range: {marker}')
+                parts[-1] = f'${target:04X}'
                 arg = ','.join(parts)
             lines.append(f'        {op} {arg}')
         lines += ['        INCLUDE "shared.inc"', '        INCLUDE "common.inc"', '        ORG $17FF', '        DC $FF', '        END']
@@ -293,7 +367,20 @@ def main():
                 if linked_symbols[marker] != addresses[r['pc']]:
                     raise SystemExit(f'Instruction relocation mismatch: {marker}')
         images[b] = (OUT / f'bank-{b}.bin').read_bytes()
-    (OUT / 'boot_ids.inc').write_text(f'INIT_ID EQU {ids["CON_INIT"]}\nNEW_ID EQU {ids[syms["NEWT"]]}\n' + data('RUNTIME', rt), encoding='ascii')
+        for r in records:
+            if banks[r['pc']] == b and r['op'] in branches:
+                offset = addresses[r['branch_target']] - addresses[r['pc']] - 1
+                if images[b][addresses[r['pc']] - 0x1000 + 1] != offset & 255:
+                    raise SystemExit(f'Branch encoding mismatch: {r["pc"]}')
+    banner = (f'TINY BASIC ENHANCED {VERSION}\r'
+              f'{syms["TXTE"] - syms["TXTB"]} BYTES FREE').encode('ascii')
+    if any(len(line) > 24 for line in banner.split(b'\r')):
+        raise SystemExit('Startup banner exceeds display width')
+    (OUT / 'boot_ids.inc').write_text(
+        f'INIT_ID EQU {ids["CON_INIT"]}\nNEW_ID EQU {ids[syms["NEWT"]]}\n'
+        f'PUT_ID EQU {ids["CON_PUT"]}\nNEWLINE_ID EQU {ids["CON_NEWLINE"]}\n' +
+        f'SERIAL_INIT_ID EQU {ids["CON_SERIAL_INIT"]}\n' +
+        data('RUNTIME', rt) + data('BANNER', banner + b'\0'), encoding='ascii')
     assemble(dasm, ROOT / 'boot.f8', OUT / 'boot.bin')
     images[0] = (OUT / 'boot.bin').read_bytes()
     images[6] = (OUT / 'keyboard.bin').read_bytes()

@@ -1,0 +1,139 @@
+        ORG $1300
+CON_SERIAL_INIT
+        LR K,P
+        PI C_SAVE
+        DCI $3FFC
+        CLR
+        ST
+        LI >S_IRQ
+        OUTS 12
+        LI <S_IRQ
+        OUTS 13
+        LIS 1
+        OUTS 14
+        LI $40
+        OUTS 1
+        DCI S_SETUP
+        LIS 3
+        LR 5,A
+S_COMMAND
+        LM
+        LR 4,A
+        LIS 8
+        LR 6,A
+S_COMMAND_BIT
+        LR A,4
+        SR 4
+        SR 1
+        SR 1
+        SR 1
+        LR 2,A
+        LR A,4
+        SL 1
+        LR 4,A
+        PI S_BIT
+        LR A,0
+        CI 0
+        BZ S_DISABLE
+        DS 6
+        BNZ S_COMMAND_BIT
+        DS 5
+        BNZ S_COMMAND
+; Keep the final routing bit stable while the Expander samples it.
+        CLR
+        LR 1,A
+S_SETTLE
+        DS 1
+        BNZ S_SETTLE
+        LI $20
+        OUTS 1
+        DCI $0FDE
+        ST
+        DCI $3FFC
+        LIS 1
+        ST
+        BR S_DONE
+CON_SERIAL
+        LR K,P
+        PI C_SAVE
+        DCI $3FFC
+        LM
+        CI 0
+        BZ S_DONE
+        DCI $3E81
+        LM
+        LR 4,A
+        LIS 1
+        OUTS 14
+        CLR
+        LR 2,A
+        PI S_BIT
+        LR A,0
+        CI 0
+        BZ S_DISABLE
+        LIS 8
+        LR 6,A
+S_DATA
+        LIS 1
+        NS 4
+        LR 2,A
+        LR A,4
+        SR 1
+        LR 4,A
+        PI S_BIT
+        LR A,0
+        CI 0
+        BZ S_DISABLE
+        DS 6
+        BNZ S_DATA
+        LIS 2
+        LR 6,A
+S_STOP
+        LIS 1
+        LR 2,A
+        PI S_BIT
+        LR A,0
+        CI 0
+        BZ S_DISABLE
+        DS 6
+        BNZ S_STOP
+        BR S_DONE
+S_DISABLE
+        DCI $3FFC
+        CLR
+        ST
+        DCI $0FDE
+        ST
+        OUTS 1
+S_DONE  DI
+        CLR
+        OUTS 14
+        JMP C_RESTORE
+S_SETUP DC 4,2,3
+; The interrupt resumes the waiting caller directly, as in Timeshare.
+S_BIT   LR K,P
+        CLR
+        LR 0,A
+        LIS 15
+        LR 1,A
+        EI
+S_WAIT  DS 0
+        BNZ S_WAIT
+        DS 1
+        BNZ S_WAIT
+        DI
+        CLR
+        LR 0,A
+        PK
+        ORG $1680
+S_IRQ   CLR
+        OUTS 1
+        INS 1
+        NI $20
+        LR A,2
+        SL 4
+        SL 1
+        OUTS 1
+        LIS 1
+        LR 0,A
+        PK

@@ -75,8 +75,8 @@ G_STEMP LR A,I
         LM
         LR 4,A
         AI 3
-        CI 97
-        BC G_OVERFLOW
+        CI 96
+        BNC G_OVERFLOW
         DCI $3F1D
         ST
         DCI $3F1C
@@ -126,7 +126,7 @@ G_LOOKUP
         LR 5,A
         BR G_TARGET
 G_OVERFLOW
-; Target zero is the interpreter's SORRY path.
+; QSORRY saves the error pointer before entering the shared error handler.
         CLR
         DCI $3F00
         ST
