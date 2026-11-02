@@ -303,6 +303,7 @@ DRAWCHAR
         LR A,1
         INCLUDE "drawchar.inc"
         INCLUDE "console_data.inc"
+CONSOLE_END
         INCLUDE "common.inc"
         ORG $17FF
         DC $FF

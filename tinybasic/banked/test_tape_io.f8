@@ -1,0 +1,31 @@
+; Codec-only transport replacement. Production images use tape_io.f8.
+        PROCESSOR F8
+        ORG $1300
+        LR K,P
+        DCI $3F24
+        LM
+        OUTS 3
+        CI 0
+        BNZ TEST_READ
+        DCI $3EB8
+        LI 68
+        LR 1,A
+TEST_WRITE
+        LM
+        OUTS 4
+        DS 1
+        BNZ TEST_WRITE
+        CLR
+        PK
+TEST_READ
+        DCI $3EB8
+        LI 68
+        LR 1,A
+TEST_BYTE
+        INS 5
+        ST
+        DS 1
+        BNZ TEST_BYTE
+        CLR
+        PK
+        END

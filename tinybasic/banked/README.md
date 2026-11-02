@@ -15,14 +15,55 @@ the core's Tiny BASIC examples. Run focused native F8 checks with:
 sh tinybasic/banked/test_extensions.sh CORE_DIRECTORY RES1_ROM RES2_ROM
 ```
 
-TODO: SAVE and LOAD using the shared Information Manager/Money Minder tape
-protocol: host command descriptors, length-prefixed records, checksum, bounded
-waits and interrupt cleanup. SAVE must print TAPE OK only after successful
-completion. LOAD must check the record type, version, length, checksum and
-program structure before making loaded data executable. Relocate transfer
-buffers and scratch state outside BASIC's program, variables and bank runtime.
-Test blank/truncated/corrupt tapes, absent Expander firmware, retry exhaustion,
-and recovery at READY as well as successful round trips.
+SAVE and LOAD are direct commands. They save program text, including REM and
+DATA lines; numeric variables, strings and arrays are not saved. Load Expander
+firmware, mount a writable record tape and enter SAVE. After TAPE OK and the
+record deck becoming idle, mount that image for playback, rewind and enter
+LOAD. LIST and RUN check the restored program. Empty programs are supported.
+
+Both commands report TAPE OK on completion or TAPE ERROR on failure and return
+to READY. LOAD checks the record identifier, version, length, program boundary,
+offset, checksum and line structure. A failed LOAD clears the program boundary,
+including when earlier records have already overwritten program memory.
+SAVE leaves the program intact. The transfer has a bounded timeout and restores
+the keyboard/serial interrupt setup. Hardware recording contains a complete
+64-byte payload with a valid CRC. Successful completion reporting and playback
+acceptance remain pending; the core's Tape error notice also applies.
+
+Each record contains a big-endian length of 64, then `TB`, version 1, a zero
+reserved byte, the program end address, the chunk address (both big-endian),
+and 56 program bytes padded with zero. CRC-16/CCITT starts at zero and covers
+the length and payload; its low byte is written first. Program addresses are
+restricted to 3000-3BFF, with an exclusive end no greater than 3C00. Records
+must be consecutive and agree on the end address. This is a BASIC-specific
+format using the Information Manager/Money Minder transfer protocol.
+
+The transfer buffer occupies 3EB8-3EFB; state uses 3F24-3F2B. Tape operations
+preserve the interpreter registers in the console snapshot at 3FA0-3FD7.
+The record codec and byte interrupt are in banks 0 and 7, respectively.
+
+Prepare a separate codec-only image and run native tests:
+
+```sh
+python tinybasic/banked/prepare_tape_test.py --dasm tools/dasm.exe build/tinybasic/banked/tinybasic-tape-codec.test.bin
+sh tinybasic/banked/test_tape.sh CORE_DIRECTORY RES1_ROM RES2_ROM
+```
+
+The test transport exercises native SAVE/LOAD, checksums, multiple records,
+empty programs, corrupt data and malformed headers/programs. It does not test
+Expander firmware timing. A second test image shortens the production timeout
+to exercise missing-firmware error handling. Do not deploy `.test.bin` images.
+
+Test SAVE with the original Expander firmware and capture its waveform with:
+
+```sh
+sh tinybasic/banked/test_save.sh CORE_DIRECTORY RES1_ROM RES2_ROM EXPANDER_ROM
+```
+
+Logs, serial output and cassette edges are in `verilator/out/tinybasic-save`.
+
+TODO: Hardware round trips, blank/truncated/corrupt recordings, absent Expander
+firmware, serial output after transfer, and recovery at READY.
 
 VERI is secondary: validate a record without replacing the current program.
 COPY is optional: validate playback records before forwarding them to the
@@ -42,6 +83,7 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Output: `build/tinybasic/banked/tinybasic-24x15.bin`, 16 KiB.
+The build also writes `tinybasic-24x15.vbc` with the BASIC mapper selected.
 Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.
 Use BASIC profile 6 in VBC files, or
 **Mapper Fallback -> BASIC** for raw images, then reset.
@@ -100,7 +142,10 @@ sh tinybasic/banked/test_serial.sh CORE_DIRECTORY RES1_ROM RES2_ROM EXPANDER_ROM
 The builder verifies the preserved interpreter (`F3BFF3D3`) and Timeshare
 reference (`957D7246`), relocates branch-connected interpreter blocks,
 and checks every relocated instruction address. Keyword tables use common
-dispatch stubs; all eight banks have identical `1700-17FF` contents.
+dispatch stubs; all eight banks have identical `16D0-17FF` contents.
+The marker at ROM offset 06D0 declares keyboard ABI 1: bank 6 polls at 1009
+and reports key acceptance/release at 3FF9. The builder checks these hooks.
+Updated cores recognize this marker independently of the complete ROM CRC.
 The original interpreter source and baseline ROM remain unchanged.
 
 | Banks | Contents |

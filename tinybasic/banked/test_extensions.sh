@@ -15,7 +15,7 @@ work=out/tinybasic-extensions
 mkdir -p "$work"
 ghdl -a --std=08 --workdir="$work" \
     ../rtl/f8/base_pack.vhd ../rtl/f8/f8_pack.vhd ../rtl/uv202/uv202_pack.vhd \
-    ../rtl/f8/f8_cpu.vhd ../rtl/f8/f8_busif.vhd ../rtl/f3853.vhd \
+    ../rtl/f8/f8_cpu.vhd ../rtl/uv202/f8_busif.vhd ../rtl/f3853.vhd \
     ../rtl/f3870_timer.vhd ../rtl/expander1.vhd ../rtl/uv201/uv201_regs.vhd \
     ../rtl/buffered_bus.vhd ../rtl/cartridge_loader.vhd ../rtl/sys_bus.vhd \
     "$source_dir/test_boot.vhd"

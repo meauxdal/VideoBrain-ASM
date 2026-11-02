@@ -1,0 +1,280 @@
+; Information Manager 3CB5 byte transfer, with bounded foreground waits.
+        ORG $1300
+CON_TAPE_IO
+        LR K,P
+        DCI $3F26
+        LR A,KU
+        ST
+        LR A,KL
+        ST
+        DI
+        CLR
+        OUTS 14
+        PI T_RESET
+        LI >T_IRQ
+        OUTS 12
+        LI <T_IRQ
+        OUTS 13
+        LISU 4
+        LISL 6
+        CLR
+        LR I,A
+        LR (IS),A
+        DCI $3F24
+        LM
+        CI 0
+        BZ T_WRITE_COMMAND
+        DCI T_READ
+        BR T_COMMAND
+T_WRITE_COMMAND
+        DCI T_WRITE
+T_COMMAND
+        LR Q,DC
+        CLR
+        LR 0,A
+        LR 5,A
+        LR 3,A
+        LIS 4
+        LR 1,A
+        LI $40
+        OUTS 1
+        CLR
+        LR 8,A
+        LIS 1
+        OUTS 14
+        EI
+        PI T_WAIT
+        CI 0
+        BNZ T_IO_DONE
+        DI
+        CLR
+        OUTS 14
+        DCI $3F24
+        LM
+        LISU 4
+        LISL 7
+        LR (IS),A
+        LISL 6
+        CLR
+        LR (IS),A
+        DCI $3EB8
+        LR Q,DC
+        CLR
+        LR 0,A
+        LR 5,A
+        LR 3,A
+        LR 4,A
+        LI 68
+        LR 1,A
+        DCI $3F24
+        LM
+        CI 0
+        BZ T_DATA
+        DS 1
+        LIS 8
+        LR 3,A
+T_DATA  LIS 1
+        LR 8,A
+        OUTS 14
+        EI
+        PI T_WAIT
+T_IO_DONE
+        DI
+        LR 8,A
+        CLR
+        OUTS 14
+        PI T_RESET
+        DCI $3F26
+        LM
+        LR KU,A
+        LM
+        LR KL,A
+        LR A,8
+        PK
+; Serial mode exits when both host lines are held low for a UART bit period.
+T_RESET LR K,P
+        LI $60
+        OUTS 1
+        LI 16
+        LR 1,A
+        CLR
+        LR 0,A
+T_RESET_WAIT
+        DS 0
+        BNZ T_RESET_WAIT
+        DS 1
+        BNZ T_RESET_WAIT
+        PK
+T_WRITE DC 2,1,1,$28
+T_READ  DC 1,1,1,1
+
+T_WAIT  LR K,P
+        LISU 2
+        LISL 0
+        CLR
+        LR I,A
+        LR I,A
+        LIS 8
+        LR (IS),A
+T_WAIT_LOOP
+        CLR
+        AS 5
+        BZ T_WAIT_PROGRESS
+        LISU 4
+        LISL 6
+        LR A,(IS)
+        CI 0
+        BNZ T_TIMEOUT
+        BR T_COMPLETE
+T_WAIT_PROGRESS
+; Command bytes hand off immediately; record data waits for peripheral stop.
+        LR A,8
+        CI 0
+        BNZ T_WAIT_TICK
+        CLR
+        AS 0
+        AS 1
+        AS 3
+        BZ T_COMPLETE
+T_WAIT_TICK
+        LISU 2
+        LISL 0
+        DS I
+        BNZ T_WAIT_LOOP
+        DS I
+        BNZ T_WAIT_LOOP
+        DS (IS)
+        BNZ T_WAIT_LOOP
+T_TIMEOUT
+        LIS 1
+        PK
+T_COMPLETE
+        CLR
+        PK
+
+; R0:R1 counts bytes, R3 counts bits, R39 selects receive (1) or send (0).
+T_IRQ   LR 6,A
+        LR A,IS
+        LISU 4
+        LISL 0
+        LR I,A
+        LR A,9
+        LR I,A
+        LR 9,W
+        LR A,10
+        LR I,A
+        LR A,11
+        LR I,A
+        LR H,DC
+        LR A,10
+        LR I,A
+        LR A,11
+        LR (IS),A
+        CLR
+        LR 2,A
+        OUTS 1
+        NOP
+        NOP
+        NOP
+        INS 1
+T_IRQ_STATUS
+        LR 2,A
+        NI $20
+        BZ T_IRQ_READY
+        DS 5
+; Firmware stop: data low signals completion; clock low signals CRC failure.
+        LR A,2
+        NI $40
+        BNZ T_IRQ_FAILED
+; A stop is successful only after all requested bytes and bits transferred.
+        CLR
+        AS 0
+        AS 1
+        AS 3
+        BZ T_IRQ_STOP
+T_IRQ_FAILED
+        LISU 4
+        LISL 6
+        LIS 1
+        LR (IS),A
+T_IRQ_STOP
+        CLR
+        LR 0,A
+        LR 1,A
+        LR 3,A
+        BR T_IRQ_RETURN
+T_IRQ_READY
+        LISL 7
+        LIS 1
+        XS (IS)
+        BZ T_IRQ_READ
+        DS 3
+        BP T_IRQ_SEND
+        DS 1
+        BC T_IRQ_BYTE
+        DS 0
+        BNC T_IRQ_STOP
+T_IRQ_BYTE
+        LR DC,Q
+        LM
+        LR 4,A
+        LR Q,DC
+        LIS 7
+        LR 3,A
+T_IRQ_SEND
+        LR A,4
+        SR 1
+        SR 1
+        NI $20
+        OUTS 1
+        LR A,4
+        SL 1
+        LR 4,A
+        BR T_IRQ_RETURN
+T_IRQ_READ
+        LR A,4
+        SL 1
+        LR 4,A
+        INS 1
+        SR 4
+        SR 1
+        SR 1
+        NI 1
+        AS 4
+        LR 4,A
+        DS 3
+        BNZ T_IRQ_RETURN
+        LR DC,Q
+        LR A,4
+        ST
+        CLR
+        LR 4,A
+        LR Q,DC
+        DS 1
+        BC T_IRQ_NEXT
+        DS 0
+        BNC T_IRQ_STOP
+T_IRQ_NEXT
+        LIS 8
+        LR 3,A
+T_IRQ_RETURN
+        LISU 4
+        LISL 5
+        LR A,D
+        LR 11,A
+        LR A,D
+        LR 10,A
+        LR DC,H
+        LR A,D
+        LR 11,A
+        LR A,D
+        LR 10,A
+        LR W,9
+        LR A,D
+        LR 9,A
+        LR A,(IS)
+        LR IS,A
+        LR A,6
+        EI
+        POP
+TAPE_IO_END

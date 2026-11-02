@@ -4,13 +4,32 @@ import argparse
 from pathlib import Path
 import re
 import subprocess
+import struct
 import sys
+import uuid
 import zlib
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
 VERSION = '1.1'
+COMMON_START = 0x16D0
+KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
+
+
+def cartridge(rom):
+    chunks = [
+        (b'HEAD', struct.pack('<HHHH16sII', 1, 0, 6, 1,
+                             uuid.UUID('f1b99b2e-6b46-498c-83e9-ade8c5d89600').bytes, 11, 0)),
+        (b'NAME', f'Tiny BASIC Enhanced {VERSION}'.encode('ascii')),
+        (b'VERS', VERSION.encode('ascii')),
+        (b'SUPP', struct.pack('<II', 7, 0)),
+        (b'CRC ', struct.pack('<I', zlib.crc32(rom))),
+        (b'ROM ', rom),
+    ]
+    body = b'VBCR' + b''.join(tag + struct.pack('<I', len(value)) + value +
+                            bytes(len(value) & 1) for tag, value in chunks)
+    return b'RIFF' + struct.pack('<I', len(body)) + body
 
 
 def assemble(dasm, source, output):
@@ -239,6 +258,9 @@ def main():
     callbacks = []
     table_source = source.read_text().split('H8000\t\tEQU', 1)[1].split('\n', 1)[1].split('TTY0\t', 1)[0]
     table_source = relational_aliases(table_source)
+    table_source = table_source.replace('TAB2\t\tEQU',
+        '        DC "SAVE"\n        DC.W TB_SAVE+H8000\n'
+        '        DC "LOAD"\n        DC.W TB_LOAD+H8000\nTAB2\t\tEQU', 1)
     table_source = re.sub(r'(?=^\s*DC\.W\s+DEFLT\+H8000)',
         '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n', table_source,
         count=1, flags=re.M)
@@ -246,7 +268,7 @@ def main():
         target = number(expr.replace('+H8000', ''), syms)
         if target not in callbacks:
             callbacks.append(target)
-    targets = [syms['QSORRY']] + callbacks + ['CON_INIT', 'CON_PUT', 'CON_NEWLINE', 'CON_BACK', 'CON_KEY', 'CON_TICK', syms['NEWT'], 'CON_SERIAL_INIT', 'CON_SERIAL']
+    targets = [syms['QSORRY']] + callbacks + ['CON_INIT', 'CON_PUT', 'CON_NEWLINE', 'CON_BACK', 'CON_KEY', 'CON_TICK', syms['NEWT'], 'CON_SERIAL_INIT', 'CON_SERIAL', 'CON_TAPE_IO']
     targets = list(dict.fromkeys(targets))
     # Saved software returns must use the bank gate even for same-bank calls.
     for r in records:
@@ -270,8 +292,9 @@ def main():
             if isinstance(target, str) or target in banks and (r['op'] == 'PI' or banks[target] != b):
                 extra += 4 if r['op'] == 'PI' else 3
         positions[b] += r['size'] + extra
-    common = '        ORG $1700\n'
-    thunk_pc = 0x1700
+    common = f'        ORG ${COMMON_START:04X}\n'
+    common += data('KEYBOARD_ABI', KEYBOARD_ABI) + '        ORG $16E0\n'
+    thunk_pc = 0x16E0
     thunk_addresses = {}
     for target in callbacks:
         size = 5 if ids[target] < 16 else 6
@@ -347,27 +370,61 @@ def main():
     (OUT / 'serial_ids.inc').write_text(f'SERIAL_ID EQU {ids["CON_SERIAL"]}\n', encoding='ascii')
     assemble(dasm, ROOT / 'console.f8', console)
     cs = symbols(console.with_suffix('.sym'))
+    if cs['CONSOLE_END'] > COMMON_START:
+        raise SystemExit('Console overlaps common ROM')
     (OUT / 'key_id.inc').write_text(f'TICK_ID EQU {ids["CON_TICK"]}\n', encoding='ascii')
     assemble(dasm, ROOT / 'keyboard.f8', OUT / 'keyboard.bin')
     cs.update(symbols(OUT / 'keyboard.sym'))
+    keyboard = (OUT / 'keyboard.bin').read_bytes()
+    release = cs['C_RELEASE'] - 0x1000
+    accepted = cs['C_FRESH'] - 0x1000
+    if (cs['C_KEYLOOP'] != 0x1009 or keyboard[release:release + 4] != bytes.fromhex('2a 3f f9 17')
+            or keyboard[accepted:accepted + 5] != bytes.fromhex('2a 3f f9 48 17')):
+        raise SystemExit('Keyboard no longer matches the declared input ABI')
+    if cs['KEYBOARD_END'] > COMMON_START:
+        raise SystemExit('Keyboard overlaps common ROM')
+    (OUT / 'tape_ids.inc').write_text(
+        f'TAPE_IO_ID EQU {ids["CON_TAPE_IO"]}\nSERIAL_IRQ EQU ${cs["S_IRQ"]:04X}\n'
+        f'TAPE_SERIAL_ID EQU {ids["CON_SERIAL_INIT"]}\n',
+        encoding='ascii')
+    for unit in ('tape_core', 'tape_io'):
+        wrapper = OUT / f'assemble_{unit}.f8'
+        wrapper.write_text('        PROCESSOR F8\n        INCLUDE "runtime_equates.inc"\n'
+                           '        INCLUDE "tape_ids.inc"\n'
+                           f'        INCLUDE "{unit}.f8"\n        END\n', encoding='ascii')
+        assemble(dasm, wrapper, OUT / f'{unit}.bin')
+        unit_syms = symbols(OUT / f'{unit}.sym')
+        if unit_syms[f'{unit.upper()}_END'] > COMMON_START:
+            raise SystemExit(f'{unit} overlaps common ROM')
+        cs.update(unit_syms)
     for name in targets:
         if isinstance(name, str):
             equates[name] = cs[name]
     table = bytearray()
     for target in targets:
-        bank, address = (6 if target in {'CON_KEY', 'CON_SERIAL_INIT', 'CON_SERIAL'} else 5, cs[target]) if isinstance(target, str) else (banks[target], addresses[target])
+        if isinstance(target, str):
+            bank = (0 if target in {'CON_SAVE', 'CON_LOAD'} else 7 if target == 'CON_TAPE_IO'
+                    else 6 if target in {'CON_KEY', 'CON_SERIAL_INIT', 'CON_SERIAL'} else 5)
+            address = cs[target]
+        else:
+            bank, address = banks[target], addresses[target]
         table.extend([bank, address >> 8, address & 255, 0])
+    if len(table) > 0x300:
+        raise SystemExit('Transfer table overlaps tape I/O')
     (OUT / 'targets.inc').write_text(data('TARGETS', table), encoding='ascii')
     # Shared keyword and error data retain their original source definitions.
     shared = table_source.replace('\t\tEQU\t*', '')
     shared = re.sub(r'DC\.W\s+([^;\r\n]+)', lambda m: f'DC.W ${thunk_addresses[number(m[1].replace("+H8000", ""), syms)] | 0x8000:04X}', shared)
     shared = 'H8000 EQU $8000\n        ORG $1500\n' + shared
     shared += data('WHAT', b'WHAT\r') + data('HOW', b'HOW\r') + data('SORRY', b'SORRY\r')
+    shared += data('TAPE_OK', b'TAPE OK\r') + data('TAPE_ERROR', b'TAPE ERROR\r')
     (OUT / 'shared.inc').write_text(shared, encoding='ascii')
     # Resolve shared labels with a small standalone assembly.
     probe = OUT / 'shared.f8'
     probe.write_text('        PROCESSOR F8\n' + shared + '        END\n', encoding='ascii')
     assemble(dasm, probe, OUT / 'shared.bin')
+    if 0x1500 + (OUT / 'shared.bin').stat().st_size > COMMON_START:
+        raise SystemExit('Shared tables overlap common ROM')
     equates.update(symbols(OUT / 'shared.sym'))
     images = [None] * 8
     images[5] = console.read_bytes()
@@ -429,17 +486,21 @@ def main():
     images[0] = (OUT / 'boot.bin').read_bytes()
     images[6] = (OUT / 'keyboard.bin').read_bytes()
     dispatch = OUT / 'dispatch.f8'
-    dispatch.write_text('        PROCESSOR F8\n        INCLUDE "runtime_equates.inc"\n        ORG $1000\n        INCLUDE "targets.inc"\n        INCLUDE "common.inc"\n        ORG $17FF\n        DC $FF\n        END\n', encoding='ascii')
+    dispatch.write_text('        PROCESSOR F8\n        INCLUDE "runtime_equates.inc"\n        INCLUDE "tape_ids.inc"\n        ORG $1000\n        INCLUDE "targets.inc"\n        INCLUDE "tape_io.f8"\n        INCLUDE "common.inc"\n        ORG $17FF\n        DC $FF\n        END\n', encoding='ascii')
     assemble(dasm, dispatch, OUT / 'dispatch.bin')
     images[7] = (OUT / 'dispatch.bin').read_bytes()
     if any(len(image) != 2048 for image in images):
         raise SystemExit('Invalid bank size')
-    if any(image[0x700:] != images[0][0x700:] for image in images[1:]):
+    if any(image[COMMON_START - 0x1000:] != images[0][COMMON_START - 0x1000:]
+           for image in images[1:]):
         raise SystemExit('Common ROM region differs between banks')
     output = OUT / 'tinybasic-24x15.bin'
     output.write_bytes(b''.join(images))
+    mapped = output.with_suffix('.vbc')
+    mapped.write_bytes(cartridge(output.read_bytes()))
     print(f'Linked CRC32 {zlib.crc32(output.read_bytes()):08X}; runtime {len(rt)} bytes; {len(targets)} transfers')
     print(output)
+    print(mapped)
 
 
 if __name__ == '__main__':

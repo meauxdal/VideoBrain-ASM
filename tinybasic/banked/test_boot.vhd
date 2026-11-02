@@ -1,6 +1,7 @@
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
+USE std.textio.ALL;
 USE work.base_pack.ALL;
 USE work.f8_pack.ALL;
 
@@ -8,6 +9,12 @@ ENTITY test_boot IS
   GENERIC (image_file, res1_file, res2_file : string;
            expander_file : string := "";
            serial_file : string := "";
+           record_file : string := "";
+           check_serial : boolean := true;
+           trace_tape : boolean := false;
+           tape_status_pc, tape_failed_pc, tape_return_pc, tape_timeout_pc : natural := 0;
+           tape_caller_pc, tape_irq_return_pc, tape_delay_pc : natural := 0;
+           fast_tape_delay : boolean := false;
            fast_console : boolean := false;
            save_pc, restore_pc : natural := 0;
            keyloop_pc, put_pc, newline_pc : natural;
@@ -21,6 +28,11 @@ ENTITY test_boot IS
              "RUN" & character'val(13);
            expected_output : string := "";
            expected_background : integer := -1;
+           tape_codec_test : boolean := false;
+           tape_fault : natural := 0;
+           expected_tape_error : boolean := false;
+           expected_tape_ok : boolean := false;
+           expected_program_end : integer := -1;
            loop_iterations : natural := 0;
            require_sorry : boolean := false);
 END ENTITY;
@@ -64,10 +76,13 @@ ARCHITECTURE test OF test_boot IS
   SIGNAL serial_armed : boolean := false;
   SIGNAL serial_output : string(1 TO 2048);
   SIGNAL serial_length : natural := 0;
+  SIGNAL tape_byte : uv8 := x"00";
+  SIGNAL record_data, record_enable : std_logic;
 BEGIN
   clk <= NOT clk AFTER 5 ns;
   ce <= '1' WHEN count MOD 4 = 0 ELSE '0';
-  io_data <= smi_data WHEN io_addr >= 12 AND io_addr <= 15 ELSE
+  io_data <= tape_byte WHEN tape_codec_test AND io_addr = 5 ELSE
+    smi_data WHEN io_addr >= 12 AND io_addr <= 15 ELSE
     to_unsigned(key_value(commands(input_pos)), 8) WHEN input_pos <= commands'length ELSE x"00";
   pi_b_n <= po_b_n AND unsigned'('1' & exp_clock_n & exp_data_n & "11111");
   cpu : ENTITY work.f8_cpu PORT MAP (
@@ -93,7 +108,7 @@ BEGIN
     clk => clk, reset_na => reset_na,
     host_data_n => po_b_n(5), host_clock_n => po_b_n(6),
     data_n => exp_data_n, clock_n => exp_clock_n, interrupt_n => exp_irq_n,
-    record_data => OPEN, record_enable => OPEN, playback_enable => OPEN,
+    record_data => record_data, record_enable => record_enable, playback_enable => OPEN,
     modem_txd => modem_txd, printer_txd => printer_txd,
     dl_addr => dl_addr, dl_data => dl_data, dl_wr => dl_wr, dl_index => dl_index);
   memory : ENTITY work.sys_bus PORT MAP (
@@ -125,6 +140,9 @@ BEGIN
       WHILE NOT endfile(image) LOOP
         read(image, byte);
         value := character'pos(byte);
+        IF index = 2 AND fast_tape_delay AND n = 7*2048 + tape_delay_pc - 4096 THEN
+          value := 0;
+        END IF;
         -- Enter the cartridge directly; retain BIOS service routines.
         IF index = 0 AND n < 86 THEN
           IF n = 0 THEN value := 16#70#;
@@ -229,6 +247,20 @@ BEGIN
     END LOOP;
   END PROCESS;
 
+  PROCESS
+    FILE capture : text;
+    VARIABLE row : line;
+  BEGIN
+    IF record_file = "" THEN WAIT; END IF;
+    file_open(capture, record_file, write_mode);
+    LOOP
+      WAIT ON record_data, record_enable;
+      write(row, time'image(now) & "," & std_logic'image(record_data) &
+                 "," & std_logic'image(record_enable));
+      writeline(capture, row);
+    END LOOP;
+  END PROCESS;
+
   PROCESS(clk)
     TYPE ram_t IS ARRAY(0 TO 4095) OF uv8;
     VARIABLE ram : ram_t := (OTHERS => x"00");
@@ -242,6 +274,11 @@ BEGIN
     VARIABLE loop_depth : uv8 := x"00";
     VARIABLE serial_pos : natural;
     VARIABLE background, background_shadow, timeshare_background : uv8 := x"00";
+    TYPE tape_t IS ARRAY(0 TO 8191) OF uv8;
+    VARIABLE tape : tape_t := (OTHERS => x"00");
+    VARIABLE tape_written, tape_read : natural := 0;
+    VARIABLE tape_crc : unsigned(15 DOWNTO 0);
+    VARIABLE trace_tape_status : boolean := false;
     PROCEDURE append(value : natural) IS
     BEGIN
       output_len := output_len + 1;
@@ -271,6 +308,59 @@ BEGIN
       count <= count + 1;
       vpos <= to_unsigned((count / 8) MOD 262, 9);
       IF reset_na = '1' THEN
+        IF tape_codec_test THEN
+          IF io_wr = '1' AND io_addr = 4 THEN
+            ASSERT tape_written < tape'length REPORT "Test tape overflow" SEVERITY failure;
+            tape(tape_written) := io_wdata;
+            tape_written := tape_written + 1;
+          END IF;
+          IF io_wr = '1' AND io_addr = 3 AND io_wdata = 1 AND tape_read = 0 THEN
+            ASSERT tape_written >= 68 AND tape_written MOD 68 = 0
+              REPORT "Incomplete saved tape record" SEVERITY failure;
+            FOR block_index IN 0 TO tape_written / 68 - 1 LOOP
+              tape_crc := (OTHERS => '0');
+              FOR i IN block_index * 68 TO block_index * 68 + 65 LOOP
+                tape_crc := tape_crc XOR shift_left(resize(tape(i), 16), 8);
+                FOR bit_index IN 0 TO 7 LOOP
+                  IF tape_crc(15) = '1' THEN
+                    tape_crc := shift_left(tape_crc, 1) XOR x"1021";
+                  ELSE
+                    tape_crc := shift_left(tape_crc, 1);
+                  END IF;
+                END LOOP;
+              END LOOP;
+              ASSERT tape(block_index * 68 + 66) = tape_crc(7 DOWNTO 0) AND
+                tape(block_index * 68 + 67) = tape_crc(15 DOWNTO 8)
+                REPORT "Saved CRC differs from CRC-16/CCITT" SEVERITY failure;
+            END LOOP;
+            CASE tape_fault IS
+              WHEN 1 => tape(20) := tape(20) XOR x"01";
+              WHEN 2 => tape(2) := x"58";
+              WHEN 3 => tape(6) := x"3C"; tape(7) := x"01";
+              WHEN 4 => tape(10) := x"00"; tape(11) := x"00";
+              WHEN 5 => tape(9) := x"01";
+              WHEN OTHERS => NULL;
+            END CASE;
+            IF tape_fault >= 2 AND tape_fault <= 5 THEN
+              tape_crc := (OTHERS => '0');
+              FOR i IN 0 TO 65 LOOP
+                tape_crc := tape_crc XOR shift_left(resize(tape(i), 16), 8);
+                FOR bit_index IN 0 TO 7 LOOP
+                  IF tape_crc(15) = '1' THEN
+                    tape_crc := shift_left(tape_crc, 1) XOR x"1021";
+                  ELSE
+                    tape_crc := shift_left(tape_crc, 1);
+                  END IF;
+                END LOOP;
+              END LOOP;
+              tape(66) := tape_crc(7 DOWNTO 0);
+              tape(67) := tape_crc(15 DOWNTO 8);
+            END IF;
+          END IF;
+          IF io_rd = '1' AND io_addr = 5 THEN tape_read := tape_read + 1; END IF;
+          IF tape_read < tape_written THEN tape_byte <= tape(tape_read);
+          ELSE tape_byte <= x"00"; END IF;
+        END IF;
         IF io_rd = '1' AND io_addr = 2 AND input_pos <= commands'length THEN
           IF matrix_input THEN
             IF input_pos = 5 THEN
@@ -316,6 +406,26 @@ BEGIN
           END IF;
         END IF;
         IF ce = '1' AND phase = 1 AND romc = ROMC_00 THEN
+          IF trace_tape THEN
+            IF bank = 7 AND pc0 = tape_status_pc AND acc(5) = '1' THEN
+              trace_tape_status := true;
+              REPORT "Tape firmware stop pins " & work.base_pack.to_hstring(acc);
+            END IF;
+            IF trace_tape_status AND bank = 7 THEN
+              REPORT "Tape stop PC " & work.base_pack.to_hstring(pc0) &
+                " A " & work.base_pack.to_hstring(acc) &
+                " IS " & work.base_pack.to_hstring(resize(isar, 8));
+              IF pc0 = tape_irq_return_pc THEN trace_tape_status := false; END IF;
+            END IF;
+            IF bank = 7 AND (pc0 = tape_failed_pc OR pc0 = tape_return_pc OR pc0 = tape_timeout_pc) THEN
+              REPORT "Tape result PC " & work.base_pack.to_hstring(pc0) &
+                " A " & work.base_pack.to_hstring(acc) &
+                " IS " & work.base_pack.to_hstring(resize(isar, 8));
+            END IF;
+            IF bank = 0 AND pc0 = tape_caller_pc + 1 THEN
+              REPORT "Tape caller received " & work.base_pack.to_hstring(acc);
+            END IF;
+          END IF;
           IF trace_input AND input_pos > commands'length AND bank < 5 AND
              pc0 >= 16#1000# AND pc0 < 16#1800# THEN
             REPORT "CPU bank " & integer'image(bank) & " PC " & work.base_pack.to_hstring(pc0) &
@@ -338,7 +448,7 @@ BEGIN
             REPORT "Native F8 startup reached keyboard with READY and prompt";
             std.env.stop;
           ELSIF (inject_input OR matrix_input) AND bank = 6 AND pc0 = 16#1000# AND input_pos > commands'length THEN
-            IF expander_file /= "" THEN
+            IF expander_file /= "" AND check_serial THEN
               ASSERT serial_armed REPORT "Serial initialization failed" SEVERITY failure;
               serial_pos := 1;
               FOR i IN 1 TO output_len LOOP
@@ -357,6 +467,21 @@ BEGIN
               REPORT "Cursor bitmap pointer " & work.base_pack.to_hstring(objects(16#10#)) &
                 work.base_pack.to_hstring(objects(0)) SEVERITY failure;
             REPORT output(1 TO output_len);
+            IF tape_codec_test THEN
+              ASSERT tape_written > 0 AND tape_read > 0
+                REPORT "Tape round trip was not exercised" SEVERITY failure;
+            END IF;
+            IF expected_tape_error THEN
+              ASSERT contains("TAPE ERROR") REPORT "Tape error missing" SEVERITY failure;
+            END IF;
+            IF expected_tape_ok THEN
+              ASSERT contains("TAPE OK") AND NOT contains("TAPE ERROR")
+                REPORT "Tape save did not succeed" SEVERITY failure;
+            END IF;
+            IF expected_program_end >= 0 THEN
+              ASSERT to_integer(ram(16#FB6#)) * 256 + to_integer(ram(16#FB7#)) = expected_program_end
+                REPORT "Incorrect loaded program boundary" SEVERITY failure;
+            END IF;
             IF expected_background >= 0 THEN
               ASSERT background = expected_background AND
                 background_shadow = expected_background AND

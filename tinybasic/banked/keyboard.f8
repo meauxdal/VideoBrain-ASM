@@ -18,6 +18,7 @@ C_KEYLOOP
         LR 8,A
         CI 0
         BNZ C_KEYDOWN
+C_RELEASE
         DCI $3FF9
         ST
         BR C_KEYLOOP
@@ -144,6 +145,7 @@ C_EXIT  LISU 7
         PK
         INCLUDE "key_data.inc"
         INCLUDE "serial.f8"
+KEYBOARD_END
         INCLUDE "common.inc"
         ORG $17FF
         DC $FF

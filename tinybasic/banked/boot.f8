@@ -55,6 +55,8 @@ BANNER_DONE
         LR 0,A
         JMP G_JUMP
         INCLUDE "boot_ids.inc"
+        INCLUDE "tape_ids.inc"
+        INCLUDE "tape_core.f8"
         INCLUDE "common.inc"
         ORG $17FF
         DC $FF

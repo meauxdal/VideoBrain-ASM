@@ -1,0 +1,484 @@
+; Fixed 64-byte payloads: TB, version, reserved, end address, offset, 56 bytes.
+TBUF EQU $3EB8
+TMODE EQU $3F24
+TEND EQU $3F28
+TCUR EQU $3F2A
+        ORG $1200
+CON_SAVE
+        LR K,P
+        PI T_CONTEXT_SAVE
+        CLR
+        BR T_BEGIN
+CON_LOAD
+        LR K,P
+        PI T_CONTEXT_SAVE
+        LIS 1
+T_BEGIN DCI TMODE
+        ST
+        DCI TCUR
+        LI $30
+        ST
+        CLR
+        ST
+        DCI TMODE
+        LM
+        CI 0
+        BNZ T_LOAD_BEGIN
+        DCI $3FB6
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI TEND
+        LR A,8
+        ST
+        LR A,9
+        ST
+        PI T_VALIDATE
+        BR T_RECORD
+T_LOAD_BEGIN
+        DCI TEND
+        CLR
+        ST
+        ST
+T_RECORD
+        DCI TMODE
+        LM
+        CI 0
+        BNZ T_LOAD_RECORD
+        PI T_PACK
+        PI T_CRC
+        LR A,5
+        ST
+        LR A,6
+        ST
+        BR T_TRANSFER
+T_LOAD_RECORD
+; A truncated transfer must not validate stale bytes from the previous record.
+        DCI TBUF
+        CLR
+        LR 0,A
+        LI 68
+        LR 1,A
+T_ZERO  LR A,0
+        ST
+        DS 1
+        BNZ T_ZERO
+T_TRANSFER
+        LI TAPE_IO_ID
+        LR 0,A
+        PI G_ENTRY
+T_TRANSFER_RETURN
+        LR A,0
+        CI 0
+        BZ T_TRANSFER_OK
+        JMP T_BAD
+T_TRANSFER_OK
+        DCI TMODE
+        LM
+        CI 0
+        BZ T_PROGRESS
+        PI T_CRC
+        LM
+        XS 5
+        BNZ T_CRC_BAD
+        LM
+        XS 6
+        BZ T_CRC_OK
+T_CRC_BAD
+        JMP T_BAD
+T_CRC_OK
+        PI T_HEADER
+        PI T_UNPACK
+T_PROGRESS
+        DCI TCUR
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI TEND
+        LM
+        XS 8
+        BNZ T_RECORD
+        LM
+        XS 9
+        BNZ T_RECORD
+        DCI TMODE
+        LM
+        CI 0
+        BZ T_SUCCESS
+        PI T_VALIDATE
+        DCI TEND
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI $3FB6
+        LR A,8
+        ST
+        LR A,9
+        ST
+T_SUCCESS
+        CLR
+        BR T_RETURN
+T_BAD   DCI TMODE
+        LM
+        CI 0
+        BZ T_BAD_STATUS
+        DCI $3FB6
+        LI $30
+        ST
+        CLR
+        ST
+T_BAD_STATUS
+        LIS 1
+T_RETURN
+        DCI $3FFA
+        ST
+        DCI $3FFB
+        LIS 1
+        ST
+        DI
+        CLR
+        OUTS 14
+        LI >SERIAL_IRQ
+        OUTS 12
+        LI <SERIAL_IRQ
+        OUTS 13
+        DCI $3FFC
+        LM
+        CI 0
+        BZ T_IDLE
+        LI TAPE_SERIAL_ID
+        LR 0,A
+        PI G_ENTRY
+        JMP T_CONTEXT_RESTORE
+T_IDLE  OUTS 1
+        DCI $0FDE
+        ST
+        JMP T_CONTEXT_RESTORE
+
+T_PACK  LR K,P
+        DCI T_PREFIX
+        XDC
+        DCI TBUF
+        LIS 6
+        LR 0,A
+T_PREFIX_COPY
+        XDC
+        LM
+        XDC
+        ST
+        DS 0
+        BNZ T_PREFIX_COPY
+        DCI TEND
+        XDC
+        DCI TBUF+6
+        LIS 4
+        LR 0,A
+T_ADDRESS_COPY
+        XDC
+        LM
+        XDC
+        ST
+        DS 0
+        BNZ T_ADDRESS_COPY
+        DCI TEND
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI TCUR
+        LM
+        LR QU,A
+        LM
+        LR QL,A
+        LR DC,Q
+        XDC
+        DCI TBUF+10
+        LI 56
+        LR 0,A
+T_PACK_BYTE
+        XDC
+        LR H,DC
+        LR A,10
+        XS 8
+        BNZ T_PACK_READ
+        LR A,11
+        XS 9
+        BZ T_PACK_PAD
+T_PACK_READ
+        LM
+        BR T_PACK_STORE
+T_PACK_PAD
+        CLR
+T_PACK_STORE
+        XDC
+        ST
+        DS 0
+        BNZ T_PACK_BYTE
+        XDC
+        LR H,DC
+        BR T_STORE_CURSOR
+
+T_UNPACK
+        LR K,P
+        DCI TEND
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI TCUR
+        LM
+        LR QU,A
+        LM
+        LR QL,A
+        DCI TBUF+10
+        XDC
+        LR DC,Q
+        LI 56
+        LR 0,A
+T_UNPACK_BYTE
+        LR H,DC
+        LR A,10
+        XS 8
+        BNZ T_UNPACK_WRITE
+        LR A,11
+        XS 9
+        BZ T_STORE_CURSOR
+T_UNPACK_WRITE
+        XDC
+        LM
+        XDC
+        ST
+        DS 0
+        BNZ T_UNPACK_BYTE
+        LR H,DC
+T_STORE_CURSOR
+        DCI TCUR
+        LR A,10
+        ST
+        LR A,11
+        ST
+        PK
+T_PREFIX DC 0,64,"TB",1,0
+
+T_HEADER
+        LR K,P
+        DCI T_PREFIX
+        XDC
+        DCI TBUF
+        LIS 6
+        LR 0,A
+T_HEADER_BYTE
+        LM
+        XDC
+        CM
+        BNZ T_HEADER_BAD
+        XDC
+        DS 0
+        BNZ T_HEADER_BYTE
+        DCI TEND
+        LM
+        CI 0
+        BNZ T_HEADER_COMPARE
+        DCI TBUF+6
+        LM
+        CI $2F
+        BC T_HEADER_BAD
+        CI $3C
+        BNC T_HEADER_BAD
+        LR 8,A
+        LM
+        LR 9,A
+        LR A,8
+        CI $3C
+        BNZ T_HEADER_END_OK
+        LR A,9
+        CI 0
+        BNZ T_HEADER_BAD
+T_HEADER_END_OK
+        DCI TEND
+        LR A,8
+        ST
+        LR A,9
+        ST
+T_HEADER_COMPARE
+        DCI TEND
+        XDC
+        DCI TBUF+6
+        LIS 4
+        LR 0,A
+T_HEADER_ADDRESS
+        LM
+        XDC
+        CM
+        BNZ T_HEADER_BAD
+        XDC
+        DS 0
+        BNZ T_HEADER_ADDRESS
+        PK
+T_HEADER_BAD
+        JMP T_BAD
+
+; Information Manager 3D4A / Money Minder 1B72 CRC-16/CCITT, low byte first.
+T_CRC   LR K,P
+        CLR
+        LR 5,A
+        LR 6,A
+        DCI TBUF
+        LI 66
+        LR 0,A
+T_CRC_BYTE
+        LM
+        XS 6
+        LR 7,A
+        SR 4
+        XS 7
+        LR 7,A
+        SL 4
+        XS 5
+        LR 6,A
+        LR A,7
+        SR 1
+        SR 1
+        SR 1
+        XS 6
+        LR 6,A
+        LR A,7
+        SL 4
+        SL 1
+        XS 7
+        LR 5,A
+        DS 0
+        BNZ T_CRC_BYTE
+        PK
+
+T_VALIDATE
+        LR K,P
+        DCI TEND
+        LM
+        LR 8,A
+        CI $2F
+        BC T_INVALID
+        CI $3C
+        BNC T_INVALID
+        LM
+        LR 9,A
+        LR A,8
+        CI $3C
+        BNZ T_VALIDATE_START
+        LR A,9
+        CI 0
+        BNZ T_INVALID
+T_VALIDATE_START
+        DCI $3000
+T_LINE  LR H,DC
+        LR A,10
+        XS 8
+        BNZ T_LINE_HEADER
+        LR A,11
+        XS 9
+        BZ T_VALID
+T_LINE_HEADER
+        PI T_NEXT
+        CI $7F
+        BNC T_INVALID
+        LR 0,A
+        PI T_NEXT
+        CI 0
+        BNZ T_LINE_NONZERO
+        LR A,0
+        CI 0
+        BZ T_INVALID
+T_LINE_NONZERO
+        LI 71
+        LR 1,A
+T_LINE_TEXT
+        PI T_NEXT
+        CI 13
+        BZ T_LINE
+        CI 31
+        BC T_INVALID
+        CI 95
+        BNC T_INVALID
+        DS 1
+        BNZ T_LINE_TEXT
+T_INVALID
+        JMP T_BAD
+T_VALID PK
+T_NEXT  LR H,DC
+        LR A,10
+        XS 8
+        BNZ T_NEXT_BYTE
+        LR A,11
+        XS 9
+        BZ T_INVALID
+T_NEXT_BYTE
+        LM
+        POP
+
+T_CONTEXT_SAVE
+        LR A,IS
+        LISU 6
+        LISL 0
+        LR I,A
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        XDC
+        LR Q,DC
+        LR A,QU
+        LR I,A
+        LR A,QL
+        LR I,A
+        DCI $3FA0
+        INCLUDE "console_save.inc"
+        LISU 6
+        LISL 0
+T_CONTEXT_TEMP
+        LR A,I
+        ST
+        BR7 T_CONTEXT_TEMP
+        POP
+T_CONTEXT_RESTORE
+        DCI $3FA0
+        INCLUDE "console_restore.inc"
+        LISU 6
+        LISL 0
+T_CONTEXT_LOAD
+        LM
+        LR I,A
+        BR7 T_CONTEXT_LOAD
+        DCI $3FFA
+        LM
+        LR 8,A
+        LISL 5
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        XDC
+        LISL 3
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LR DC,Q
+        LISL 1
+        LR A,I
+        LR QU,A
+        LR A,(IS)
+        LR QL,A
+        LISU 7
+        LISL 7
+        LR A,8
+        PK
+TAPE_CORE_END

@@ -1,6 +1,10 @@
         PROCESSOR F8
         INCLUDE "baseline_equates.inc"
 ; Virtual addresses are relocated into interpreter banks by build.py.
+CON_SAVE EQU $5F20
+CON_LOAD EQU $5F23
+TAPE_OK EQU $5F00
+TAPE_ERROR EQU $5F10
         ORG $5000
 TB_COLOR
         PI EXPR
@@ -10,7 +14,7 @@ TB_COLOR
         CI 0
         BNZ TB_COLOR_BAD
         LR A,(IS)
-        CI 32
+        CI 31
         BNC TB_COLOR_BAD
         LR 1,A
         LR H,DC
@@ -24,4 +28,28 @@ TB_COLOR
         JMP FIN
 TB_COLOR_BAD
         JMP QHOW
+TB_SAVE
+        PI ENDCR
+        PI CON_SAVE
+        LR 8,A
+        JMP TB_TAPE_FINISH
+TB_LOAD
+        PI ENDCR
+        PI CON_LOAD
+        LR 8,A
+TB_TAPE_FINISH
+        LR A,8
+        CI 0
+        BZ TB_TAPE_OK
+        DCI TAPE_ERROR
+        BR TB_TAPE_MESSAGE
+TB_TAPE_OK
+        DCI TAPE_OK
+TB_TAPE_MESSAGE
+        LISU 2
+        LISL 0
+        CLR
+        LR 8,A
+        PI PRTSTG
+        JMP START
         END
