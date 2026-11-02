@@ -326,7 +326,7 @@ BEGIN
               REPORT "Cursor bitmap pointer overwritten during refresh" SEVERITY failure;
             ASSERT objects(16#30#) = 1 REPORT "Incorrect letter cursor height" SEVERITY failure;
             ASSERT contains("READY") REPORT "READY prompt missing" SEVERITY failure;
-            ASSERT contains("TINY BASIC ENHANCED 0.9" & character'val(13) & "3072 BYTES FREE")
+            ASSERT contains("TINY BASIC ENHANCED 1.0" & character'val(13) & "3072 BYTES FREE")
               REPORT "Startup memory banner missing" SEVERITY failure;
             ASSERT ram(16#FF0#) = 3 AND ram(16#FF1#) = 1
               REPORT "Incorrect input cursor" SEVERITY failure;

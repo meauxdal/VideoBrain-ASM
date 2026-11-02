@@ -1,4 +1,4 @@
-# Tiny BASIC Enhanced 0.9
+# Tiny BASIC Enhanced 1.0
 
 Build from the assembly repository root:
 
@@ -7,7 +7,7 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Output: `build/tinybasic/banked/tinybasic-24x15.bin`, 16 KiB.
-Current CRC32: `0B2DA4C0`. Use BASIC profile 6 in VBC files, or
+Current CRC32: `425E4F8E`. Use BASIC profile 6 in VBC files, or
 **Mapper Fallback -> BASIC** for raw images, then reset.
 The combined mapping probe (`5E00141E`) passes on hardware. Native F8
 simulation passes startup, character echo, NEXT, letter/symbol toggling,
@@ -32,8 +32,9 @@ regression passes; hardware captures confirm text output at 300 baud.
 
 Version 0.9 restores scratch bank 2 after a PRINT comma before evaluating
 the next item. Output leaves ISAR in bank 7, which the transfer runtime
-uses for temporary state. Native F8 PRINT regression and hardware validation
-are pending. Run numeric, mixed-output, layout and smoke regressions with:
+uses for temporary state. Native F8 numeric and mixed-output PRINT checks
+pass. Hardware confirms that the comma freeze is resolved. Layout and
+smoke acceptance remain pending. Run the language checks with:
 
 ```sh
 sh tinybasic/banked/test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM
@@ -41,6 +42,14 @@ sh tinybasic/banked/test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM
 
 The language-only PRINT checks skip drawing while retaining console
 register save/restore and its ISAR exit state.
+
+INPUT restores scratch bank 2 after reading the keyboard buffer, before
+evaluating the entered value. INPUT, expression INPUT and smoke regressions
+are pending. Run those cases with:
+
+```sh
+sh tinybasic/banked/test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM input
+```
 
 Run the native startup, serial transcript and mixed-PRINT checks with:
 

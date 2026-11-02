@@ -10,7 +10,7 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '0.9'
+VERSION = '1.0'
 
 
 def assemble(dasm, source, output):
@@ -60,6 +60,8 @@ def instruction(line):
 
 
 def main():
+    if not re.fullmatch(r'[0-9]\.[0-9]', VERSION):
+        raise SystemExit('Version must be three characters: digit.digit')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dasm', type=Path, required=True)
     args = parser.parse_args()
@@ -115,6 +117,13 @@ def main():
                      r['op'] == 'PI' and r['arg'] == 'FINISH']
     entry_prefixes[continuation] = ['        LISU 2']
     entry_sizes[continuation] = 1
+    # INPUT evaluates the keyboard buffer in the interpreter's scratch bank.
+    input_call, = [i for i, r in enumerate(records)
+                   if syms['IP3'] <= r['pc'] < syms['IPX'] and
+                   r['op'] == 'PI' and r['arg'] == 'GETLN']
+    input_resume = records[input_call + 1]['pc']
+    entry_prefixes[input_resume] = ['        LISU 2']
+    entry_sizes[input_resume] = 1
     # Replace the old packed cursor edit with the new console operation.
     index = next(i for i, r in enumerate(records) if r['pc'] == syms['GET3'] + 5)
     records[index+1:index+1] = [

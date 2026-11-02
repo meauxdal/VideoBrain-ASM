@@ -1,13 +1,18 @@
 #!/bin/sh
 set -eu
 
-if [ "$#" -ne 3 ]; then
-    echo 'Usage: test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM' >&2
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+    echo 'Usage: test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM [all|input]' >&2
     exit 2
 fi
 core=$(realpath "$1")
 res1=$(realpath "$2")
 res2=$(realpath "$3")
+case ${4:-all} in
+    all) cases='numeric mixed layout smoke input expression' ;;
+    input) cases='input smoke expression' ;;
+    *) echo 'Unknown test selection' >&2; exit 2 ;;
+esac
 source_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 build="$source_dir/../../build/tinybasic/banked"
 cd "$core/verilator"
@@ -26,12 +31,33 @@ run() {
         -gkeyloop_pc=4105 "-gput_pc=$((0x$(symbol CON_PUT)))" \
         "-gnewline_pc=$((0x$(symbol CON_NEWLINE)))" \
         "-gsave_pc=$((0x$(symbol C_SAVE)))" "-grestore_pc=$((0x$(symbol C_RESTORE)))" \
-        -gfast_console=true -ginject_input=true -gmax_clocks=25000000 \
+        -gfast_console=true -ginject_input=true -gmax_clocks=150000000 \
         "-gcommands=$1" "-gexpected_output=$2" --ieee-asserts=disable --assert-level=error
 }
-run 'PRINT 7,8~' '~     7     8~' > "$work/numeric.log" 2>&1
-run 'PRINT "TOTAL ",7+3~' '~TOTAL     10~' > "$work/mixed.log" 2>&1
-commands=$(tr '\n' '~' < "$core/software/3 Keyboard Entry (VBK)/Tiny BASIC/Examples/30-print-layout.txt" | tr -d '\r')
-run "$commands" '~ 7 8~AB~AB~    Y~DONE~' > "$work/layout.log" 2>&1
-commands=$(tr '\n' '~' < "$core/software/3 Keyboard Entry (VBK)/Tiny BASIC/Games/00-smoke-test.txt" | tr -d '\r')
-run "${commands}3~" '~TOTAL     10~     3~' > "$work/smoke.log" 2>&1
+result=0
+for name in $cases; do
+    case $name in
+        numeric) commands='PRINT 7,8~'; expected='~     7     8~' ;;
+        mixed) commands='PRINT "TOTAL ",7+3~'; expected='~TOTAL     10~' ;;
+        layout)
+            commands=$(tr '\n' '~' < "$core/software/3 Keyboard Entry (VBK)/Tiny BASIC/Examples/30-print-layout.txt" | tr -d '\r')
+            expected='~ 7 8~AB~AB~    Y~DONE~' ;;
+        smoke)
+            commands=$(tr '\n' '~' < "$core/software/3 Keyboard Entry (VBK)/Tiny BASIC/Games/00-smoke-test.txt" | tr -d '\r')
+            commands="${commands}3~"
+            expected='~TOTAL     10~     3~' ;;
+        input)
+            commands='NEW~10 INPUT B~20 PRINT B~30 PRINT 7+B~RUN~3~'
+            expected='~     3~    10~' ;;
+        expression)
+            commands=$(tr '\n' '~' < "$core/software/3 Keyboard Entry (VBK)/Tiny BASIC/Examples/33-input-expression.txt" | tr -d '\r')
+            expected='~    14~    28~' ;;
+    esac
+    if run "$commands" "$expected" > "$work/$name.log" 2>&1; then
+        echo "$name passed"
+    else
+        echo "$name failed"
+        result=1
+    fi
+done
+exit "$result"
