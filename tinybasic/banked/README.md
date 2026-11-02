@@ -1,4 +1,39 @@
-# Tiny BASIC Enhanced 1.0
+# Tiny BASIC Enhanced
+
+## 1.1 development
+
+The development build adds GE, GT, LE and LT as aliases for >=, >, <= and <.
+They use the existing expression precedence and comparison handlers. Symbol
+operators remain supported. `COLOR expression` sets the background to 0-31;
+out-of-range values report HOW. COLOR works directly and in stored programs.
+Native simulation and hardware acceptance are pending.
+
+Hardware checks: `34-relational-aliases.vbk` and `35-background-color.vbk` in
+the core's Tiny BASIC examples. Run focused native F8 checks with:
+
+```sh
+sh tinybasic/banked/test_extensions.sh CORE_DIRECTORY RES1_ROM RES2_ROM
+```
+
+TODO: SAVE and LOAD using the shared Information Manager/Money Minder tape
+protocol: host command descriptors, length-prefixed records, checksum, bounded
+waits and interrupt cleanup. SAVE must print TAPE OK only after successful
+completion. LOAD must check the record type, version, length, checksum and
+program structure before making loaded data executable. Relocate transfer
+buffers and scratch state outside BASIC's program, variables and bank runtime.
+Test blank/truncated/corrupt tapes, absent Expander firmware, retry exhaustion,
+and recovery at READY as well as successful round trips.
+
+VERI is secondary: validate a record without replacing the current program.
+COPY is optional: validate playback records before forwarding them to the
+record tape. BIOS clock commands are deferred; BASIC reuses the clock's scratch
+registers, so TIME/DATE need a separate preserved clock state.
+
+References: Information Manager `3BEE-3DD9` (record transfer and checksum),
+`3CB5` (byte interrupt); Money Minder `1AC5-1C88` and `1BB7`. Public source:
+[Sean Riddle's VideoBrain research](https://seanriddle.com/videobrain.html).
+
+## Build and 1.0 acceptance
 
 Build from the assembly repository root:
 
@@ -7,7 +42,8 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Output: `build/tinybasic/banked/tinybasic-24x15.bin`, 16 KiB.
-Current CRC32: `425E4F8E`. Use BASIC profile 6 in VBC files, or
+Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.
+Use BASIC profile 6 in VBC files, or
 **Mapper Fallback -> BASIC** for raw images, then reset.
 The combined mapping probe (`5E00141E`) passes on hardware. Native F8
 simulation passes startup, character echo, NEXT, letter/symbol toggling,
@@ -16,7 +52,11 @@ program entry/RUN (`OK`). MiSTer confirms the 24x15 display, keyboard editing,
 stored line entry, GOTO abbreviation (`G.`), RUN, and repeated string PRINT
 output in version 0.5. Version 0.6 is hardware-confirmed on DE10-Nano for
 sustained GOTO looping, recursive GOSUB exhaustion, and SORRY recovery.
-Broader language and memory-limit checks remain.
+Version 1.0 hardware acceptance confirms smoke, a complete Nim game,
+corrected inline IF, PRINT layout, array/string aliases, LIST/STOP, and
+expression INPUT. Lunar Lander reaches SAFE LANDING; Treasure Maze completes.
+Pig Dice reaches its seed prompt. Both serial sessions are clean with zero
+error counters. Boundary editing and memory-limit checks remain.
 
 Startup displays the Enhanced version and 3072 bytes free for programs and
 arrays. The count is derived from the interpreter's program-area boundaries;
@@ -34,7 +74,7 @@ Version 0.9 restores scratch bank 2 after a PRINT comma before evaluating
 the next item. Output leaves ISAR in bank 7, which the transfer runtime
 uses for temporary state. Native F8 numeric and mixed-output PRINT checks
 pass. Hardware confirms that the comma freeze is resolved. Layout and
-smoke acceptance remain pending. Run the language checks with:
+smoke acceptance pass in 1.0. Run the language checks with:
 
 ```sh
 sh tinybasic/banked/test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM
@@ -44,8 +84,8 @@ The language-only PRINT checks skip drawing while retaining console
 register save/restore and its ISAR exit state.
 
 INPUT restores scratch bank 2 after reading the keyboard buffer, before
-evaluating the entered value. INPUT, expression INPUT and smoke regressions
-are pending. Run those cases with:
+evaluating the entered value. INPUT, expression INPUT and smoke pass on 1.0
+hardware. Run those cases with:
 
 ```sh
 sh tinybasic/banked/test_print.sh CORE_DIRECTORY RES1_ROM RES2_ROM input

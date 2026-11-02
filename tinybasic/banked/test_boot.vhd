@@ -20,6 +20,7 @@ ENTITY test_boot IS
              "PRINT (2+3)*4" & character'val(13) & "10 PRINT ""OK""" & character'val(13) &
              "RUN" & character'val(13);
            expected_output : string := "";
+           expected_background : integer := -1;
            loop_iterations : natural := 0;
            require_sorry : boolean := false);
 END ENTITY;
@@ -240,6 +241,7 @@ BEGIN
     VARIABLE loop_count : natural := 0;
     VARIABLE loop_depth : uv8 := x"00";
     VARIABLE serial_pos : natural;
+    VARIABLE background, background_shadow, timeshare_background : uv8 := x"00";
     PROCEDURE append(value : natural) IS
     BEGIN
       output_len := output_len + 1;
@@ -282,6 +284,9 @@ BEGIN
           input_pos <= input_pos + 1;
         END IF;
         IF wr = '1' THEN
+          IF addr = 16#08F5# THEN background := wdata; END IF;
+          IF addr = 16#0FE9# THEN background_shadow := wdata; END IF;
+          IF addr = 16#0FCA# THEN timeshare_background := wdata; END IF;
           IF addr = 16#3FFC# AND wdata = 1 THEN serial_armed <= true; END IF;
           IF addr >= 16#0800# AND addr < 16#0890# THEN
             objects(to_integer(addr) - 16#0800#) := wdata;
@@ -326,7 +331,7 @@ BEGIN
               REPORT "Cursor bitmap pointer overwritten during refresh" SEVERITY failure;
             ASSERT objects(16#30#) = 1 REPORT "Incorrect letter cursor height" SEVERITY failure;
             ASSERT contains("READY") REPORT "READY prompt missing" SEVERITY failure;
-            ASSERT contains("TINY BASIC ENHANCED 1.0" & character'val(13) & "3072 BYTES FREE")
+              ASSERT contains("TINY BASIC ENHANCED 1.1" & character'val(13) & "3072 BYTES FREE")
               REPORT "Startup memory banner missing" SEVERITY failure;
             ASSERT ram(16#FF0#) = 3 AND ram(16#FF1#) = 1
               REPORT "Incorrect input cursor" SEVERITY failure;
@@ -352,6 +357,12 @@ BEGIN
               REPORT "Cursor bitmap pointer " & work.base_pack.to_hstring(objects(16#10#)) &
                 work.base_pack.to_hstring(objects(0)) SEVERITY failure;
             REPORT output(1 TO output_len);
+            IF expected_background >= 0 THEN
+              ASSERT background = expected_background AND
+                background_shadow = expected_background AND
+                timeshare_background = expected_background
+                REPORT "Background register or shadow differs" SEVERITY failure;
+            END IF;
             IF require_sorry THEN
               ASSERT contains("SORRY") REPORT "SORRY path was not exercised" SEVERITY failure;
             END IF;

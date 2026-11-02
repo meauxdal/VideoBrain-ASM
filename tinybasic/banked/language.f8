@@ -1,0 +1,27 @@
+        PROCESSOR F8
+        INCLUDE "baseline_equates.inc"
+; Virtual addresses are relocated into interpreter banks by build.py.
+        ORG $5000
+TB_COLOR
+        PI EXPR
+        LISU 2
+        LISL 0
+        LR A,I
+        CI 0
+        BNZ TB_COLOR_BAD
+        LR A,(IS)
+        CI 32
+        BNC TB_COLOR_BAD
+        LR 1,A
+        LR H,DC
+        DCI $08F5
+        ST
+        DCI $0FE9
+        ST
+        DCI $0FCA
+        ST
+        LR DC,H
+        JMP FIN
+TB_COLOR_BAD
+        JMP QHOW
+        END

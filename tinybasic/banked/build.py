@@ -10,7 +10,7 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '1.0'
+VERSION = '1.1'
 
 
 def assemble(dasm, source, output):
@@ -59,6 +59,14 @@ def instruction(line):
     return result.rstrip()
 
 
+def relational_aliases(table):
+    aliases = [('GE', 'XP11'), ('GT', 'XP13'), ('LE', 'XP14'), ('LT', 'XP16')]
+    entries = ''.join(f'        DC "{word}"\n        DC.W {target}+H8000\n'
+                      for word, target in aliases)
+    return re.sub(r'(^TAB8[^\n]*\n)', lambda m: m[0] + entries, table,
+                  count=1, flags=re.M)
+
+
 def main():
     if not re.fullmatch(r'[0-9]\.[0-9]', VERSION):
         raise SystemExit('Version must be three characters: digit.digit')
@@ -74,6 +82,11 @@ def main():
     if raw != (source.parent / 'tinybasic.bin').read_bytes() or zlib.crc32(raw) != 0xF3BFF3D3:
         raise SystemExit('Baseline mismatch')
     syms = symbols(baseline.with_suffix('.sym'))
+    (OUT / 'baseline_equates.inc').write_text(''.join(
+        f'{k} EQU ${v:04X}\n' for k, v in syms.items()
+        if re.fullmatch(r'[A-Za-z_]\w*', k)), encoding='ascii')
+    assemble(dasm, ROOT / 'language.f8', OUT / 'language.bin')
+    syms.update(symbols(OUT / 'language.sym'))
     # Statement transfers abandon native calls; BASIC retains its own stack.
     entry_prefixes = {
         syms['START']: ['        DCI $3F1D', '        CLR', '        ST'],
@@ -111,6 +124,24 @@ def main():
         size = 3 if op in {'PI', 'JMP', 'DCI'} else 2 if op in branches | {
             'LI', 'AI', 'NI', 'OI', 'XI', 'CI', 'IN', 'OUT'} else 1
         records.append({'pc': pc, 'op': op, 'arg': arg, 'size': size})
+    language_pcs = {}
+    active = False
+    for line in (OUT / 'language.lst').read_text().splitlines():
+        if line.startswith('------- FILE '):
+            active = line.split()[2].replace('\\', '/').endswith('language.f8')
+        elif active and (m := re.match(r'\s*(\d+)\s+([0-9a-f]{4})\b', line)):
+            language_pcs[int(m[1])] = int(m[2], 16)
+    for n, line in enumerate((ROOT / 'language.f8').read_text().splitlines(), 1):
+        text = instruction(line)
+        if not text or n not in language_pcs:
+            continue
+        m = re.match(r'^\s+(\w+)\s*(.*)', text)
+        if not m or m[1].upper() in {'PROCESSOR', 'INCLUDE', 'ORG', 'END'}:
+            continue
+        op, arg = m[1].upper(), m[2].strip()
+        size = 3 if op in {'PI', 'JMP', 'DCI'} else 2 if op in branches | {
+            'LI', 'AI', 'NI', 'OI', 'XI', 'CI', 'IN', 'OUT'} else 1
+        records.append({'pc': language_pcs[n], 'op': op, 'arg': arg, 'size': size})
     # Console output leaves ISAR in bank 7; the next PRINT item uses bank 2.
     continuation, = [r['pc'] for r in records
                      if syms['PR4'] <= r['pc'] < syms['PR5'] and
@@ -207,6 +238,10 @@ def main():
     # Collect dispatch targets before allocating final instruction addresses.
     callbacks = []
     table_source = source.read_text().split('H8000\t\tEQU', 1)[1].split('\n', 1)[1].split('TTY0\t', 1)[0]
+    table_source = relational_aliases(table_source)
+    table_source = re.sub(r'(?=^\s*DC\.W\s+DEFLT\+H8000)',
+        '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n', table_source,
+        count=1, flags=re.M)
     for expr in re.findall(r'DC\.W\s+([^;\r\n]+)', table_source):
         target = number(expr.replace('+H8000', ''), syms)
         if target not in callbacks:
