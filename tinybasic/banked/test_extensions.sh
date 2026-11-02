@@ -27,14 +27,36 @@ run() {
         "-gnewline_pc=$((0x$(symbol CON_NEWLINE)))" \
         "-gsave_pc=$((0x$(symbol C_SAVE)))" "-grestore_pc=$((0x$(symbol C_RESTORE)))" \
         "-gfast_console=$fast_console" -ginject_input=true -gmax_clocks=150000000 \
-        "-gexpected_text_color=$text_color" "-gcommands=$1" "-gexpected_output=$2" "-gexpected_background=$3" \
+        "-gexpected_text_color=$text_color" "-gexpected_how_count=$how_count" "-gcommands=$1" "-gexpected_output=$2" "-gexpected_background=$3" \
         --ieee-asserts=disable --assert-level=error
 }
 result=0
-for name in ${TBE_EXT_CASES:-aliases boundaries color color-abbreviation color-range text-color text-color-range}; do
+for name in ${TBE_EXT_CASES:-aliases boundaries color color-abbreviation color-range text-color text-color-range cls move move-scroll move-range}; do
     text_color=-1
+    how_count=-1
     fast_console=true
     case $name in
+        cls)
+            fast_console=false
+            commands='NEW~10 COLOR 4;TCOLOR 17~20 PRINT "OLD"~30 CLS~40 PRINT PEEK(6912),PEEK(3965),PEEK(4016),PEEK(4030)~50 PRINT "CLS OK"~RUN~'
+            expected='~     0     0    48   216~CLS OK~'
+            background=4
+            text_color=17 ;;
+        move)
+            fast_console=false
+            commands='NEW~10 CLS~20 MOVE 23,14~30 X=PEEK(16369);Y=PEEK(16370);R=PEEK(16368)~40 MOVE 0,0~50 PRINT X,Y,R~60 PRINT "MOVE OK"~RUN~'
+            expected='~    23     1    14~MOVE OK~'
+            background=-1 ;;
+        move-scroll)
+            fast_console=false
+            commands='NEW~10 FOR I=1 TO 20~20 PRINT I~30 NEXT I~40 MOVE 2+5,1+2~50 X=PEEK(16369);Y=PEEK(16370);R=PEEK(16368)~60 Z=PEEK(4016+R)~70 PRINT X,Y,Z~80 PRINT "SCROLL OK"~RUN~'
+            expected='     7    12    84~SCROLL OK~'
+            background=-1 ;;
+        move-range)
+            how_count=6
+            commands='MOVE -1,0~MOVE 24,0~MOVE 0,-1~MOVE 0,15~MOVE 256,0~MOVE 0,256~MOVE 1~PRINT "RECOVER"~'
+            expected='~RECOVER~'
+            background=-1 ;;
         aliases)
             commands=$(tr '\n' '~' < "$core/examples/tinybasic-examples/34-relational-aliases.txt" | tr -d '\r')
             expected='~     1     1     0~     1     0     0~     1     1     0~     1     0     0~     1     1     1     1~PASS~DONE~'
@@ -53,7 +75,7 @@ for name in ${TBE_EXT_CASES:-aliases boundaries color color-abbreviation color-r
             background=31 ;;
         text-color)
             fast_console=false
-            commands='NEW~TCOLOR 1~TCOL 10~TC. 24~10 TCOLOR 8+9~20 PRINT "TEXT COLOR OK"~RUN~PRINT "AFTER"~'
+            commands='NEW~TCOLOR 1~TC. 10~TC. 24~10 TCOLOR 8+9~20 PRINT "TEXT COLOR OK"~RUN~PRINT "AFTER"~'
             expected='~TEXT COLOR OK~'
             background=-1
             text_color=17 ;;

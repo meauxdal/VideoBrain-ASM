@@ -7,7 +7,7 @@ USE work.f8_pack.ALL;
 
 ENTITY test_boot IS
   GENERIC (image_file, res1_file, res2_file : string;
-           version : string := "1.3";
+           version : string := "1.4";
            expander_file : string := "";
            serial_file : string := "";
            record_file : string := "";
@@ -30,6 +30,7 @@ ENTITY test_boot IS
            expected_output : string := "";
            expected_background : integer := -1;
            expected_text_color : integer := -1;
+           expected_how_count : integer := -1;
            tape_codec_test : boolean := false;
            tape_fault : natural := 0;
            expected_tape_error : boolean := false;
@@ -280,6 +281,7 @@ BEGIN
     VARIABLE loop_count : natural := 0;
     VARIABLE loop_depth : uv8 := x"00";
     VARIABLE serial_pos : natural;
+    VARIABLE how_count : natural;
     VARIABLE background, background_shadow, timeshare_background : uv8 := x"00";
     TYPE tape_t IS ARRAY(0 TO 8191) OF uv8;
     VARIABLE tape : tape_t := (OTHERS => x"00");
@@ -509,6 +511,16 @@ BEGIN
               REPORT "Cursor bitmap pointer " & work.base_pack.to_hstring(objects(16#10#)) &
                 work.base_pack.to_hstring(objects(0)) SEVERITY failure;
             REPORT output(1 TO output_len);
+            IF expected_how_count >= 0 THEN
+              how_count := 0;
+              FOR i IN 1 TO output_len - 3 LOOP
+                IF output(i TO i + 3) = "HOW" & character'val(13) THEN
+                  how_count := how_count + 1;
+                END IF;
+              END LOOP;
+              ASSERT how_count = expected_how_count
+                REPORT "Incorrect number of coordinate errors" SEVERITY failure;
+            END IF;
             IF tape_codec_test THEN
               ASSERT tape_written > 0 AND tape_read > 0
                 REPORT "Tape round trip was not exercised" SEVERITY failure;

@@ -6,6 +6,7 @@ CON_LOAD EQU $5F23
 CON_COMP EQU $5F26
 CON_VERI EQU $5F29
 CON_DUPE EQU $5F2C
+CON_TICK EQU $5F2F
 TAPE_OK EQU $5F00
 TAPE_ERROR EQU $5F10
         ORG $5000
@@ -48,6 +49,124 @@ TB_TCOLOR
         JMP FIN
 TB_TCOLOR_BAD
         JMP QHOW
+TB_CLS
+        PI PUSHDC
+        LIS 15
+        LR 3,A
+        LIS 1
+        LR 4,A
+        LI 48
+        LR 2,A
+TB_CLS_ROW
+        DCI $0800
+        LR A,4
+        ADC
+        LM
+        LR 11,A
+        DCI $0810
+        LR A,4
+        ADC
+        LM
+        NI $1F
+        LR 10,A
+        LR DC,H
+        LI 126
+        LR 1,A
+        CLR
+TB_CLS_BYTES
+        ST
+        DS 1
+        BNZ TB_CLS_BYTES
+        DCI $0FAF
+        LR A,4
+        ADC
+        LR A,2
+        ST
+        AI 12
+        LR 2,A
+        LR A,4
+        INC
+        LR 4,A
+        DS 3
+        BNZ TB_CLS_ROW
+        DCI $3FF0
+        CLR
+        ST
+        ST
+        LIS 15
+        ST
+        LIS 12
+        ST
+        PI PULLDC
+        PI CON_TICK
+        LISU 2
+        JMP FIN
+TB_MOVE
+        PI EXPR
+        LISU 2
+        LISL 0
+        LR A,I
+        CI 0
+        BNZ TB_MOVE_BAD
+        LR A,(IS)
+        CI 23
+        BNC TB_MOVE_BAD
+        PI PUSH20
+        PI IGNBK
+        CI ',
+        BNZ TB_MOVE_SYNTAX
+        PI EXPR
+        LISU 2
+        LISL 0
+        LR A,I
+        CI 0
+        BNZ TB_MOVE_BAD
+        LR A,(IS)
+        CI 14
+        BNC TB_MOVE_BAD
+        LR 2,A
+        PI PULL20
+        LISL 1
+        LR A,(IS)
+        LR 1,A
+        PI PUSHDC
+        DCI $3FF1
+        LR A,1
+        ST
+        LR A,2
+        COM
+        AI 16
+        ST
+        LR A,2
+        SL 1
+        AS 2
+        SL 1
+        SL 1
+        AI 48
+        LR 2,A
+        DCI $0FB0
+        CLR
+        LR 3,A
+TB_MOVE_ROW
+        LM
+        XS 2
+        BZ TB_MOVE_FOUND
+        LR A,3
+        INC
+        LR 3,A
+        BR TB_MOVE_ROW
+TB_MOVE_FOUND
+        DCI $3FF0
+        LR A,3
+        ST
+        PI PULLDC
+        PI CON_TICK
+        LISU 2
+        JMP FIN
+TB_MOVE_BAD
+        JMP QHOW
+TB_MOVE_SYNTAX
+        JMP QWHAT
 TB_SAVE
         PI ENDCR
         PI CON_SAVE

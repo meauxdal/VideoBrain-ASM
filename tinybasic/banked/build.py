@@ -12,7 +12,7 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '1.3'
+VERSION = '1.4'
 RELEASE_DATE = '2026.11.02'
 COMMON_START = 0x16D0
 KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
@@ -61,6 +61,37 @@ def data(label, values):
     for i in range(0, len(values), 16):
         result += '        DC ' + ','.join(f'${v:02X}' for v in values[i:i+16]) + '\n'
     return result
+
+
+def command_stubs(callbacks, ids):
+    text = f'        ORG ${COMMON_START:04X}\n'
+    text += data('KEYBOARD_ABI', KEYBOARD_ABI) + '        ORG $16DA\n'
+    pc, addresses = 0x16DA, {}
+
+    def emit(code, size):
+        nonlocal text, pc
+        if pc < 0x17D2 and pc + size > 0x17CC:
+            text += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n        ORG $17D2\n'
+            pc = 0x17D2
+        address = pc
+        text += code
+        pc += size
+        return address
+
+    for start in range(0, len(callbacks), 20):
+        tail = f'COMMAND_TAIL_{start}'
+        for target in callbacks[start:start + 20]:
+            short = ids[target] < 16
+            addresses[target] = emit(
+                f'        {"LIS" if short else "LI"} {ids[target]}\n        BR {tail}\n',
+                3 if short else 4)
+        emit(f'{tail}\n        LR 0,A\n        JMP G_JUMP\n', 4)
+    if pc > 0x17F8:
+        raise SystemExit('Dispatch thunks overlap cursor bitmap')
+    if pc <= 0x17CC:
+        text += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n'
+    text += '        ORG $17F8\n        DC $F8,$F8\n'
+    return text, addresses, pc
 
 
 def instruction(line):
@@ -245,17 +276,6 @@ def main():
             chunk[index:index] = [skip, relay]
             relay_pc -= 2
     records = [r for chunk in chunks for r in chunk]
-    banks, used = {}, {b: 0x1000 for b in range(1, 5)}
-    for chunk in chunks:
-        size = sum(r['size'] + (4 if r['op'] == 'PI' else 3 if r['op'] == 'JMP' else 0)
-                   for r in chunk)
-        size += sum(entry_sizes.get(r['pc'], 0) for r in chunk)
-        bank = next((b for b in used if used[b] + size <= 0x1500), None)
-        if bank is None:
-            raise SystemExit(f'Interpreter does not fit: chunk {chunk[0]["pc"]:04X}, {size} bytes')
-        for r in chunk:
-            banks[r['pc']] = bank
-        used[bank] += size
     # Collect dispatch targets before allocating final instruction addresses.
     callbacks = []
     table_source = source.read_text().split('H8000\t\tEQU', 1)[1].split('\n', 1)[1].split('TTY0\t', 1)[0]
@@ -270,12 +290,33 @@ def main():
     table_source = re.sub(r'(?=^\s*DC\.W\s+DEFLT\+H8000)',
         '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n'
         '        DC "TCOLOR"\n        DC.W TB_TCOLOR+H8000\n'
-        '        DC "TCOL"\n        DC.W TB_TCOLOR+H8000\n', table_source,
+        '        DC "CLS"\n        DC.W TB_CLS+H8000\n'
+        '        DC "MOVE"\n        DC.W TB_MOVE+H8000\n', table_source,
         count=1, flags=re.M)
     for expr in re.findall(r'DC\.W\s+([^;\r\n]+)', table_source):
         target = number(expr.replace('+H8000', ''), syms)
         if target not in callbacks:
             callbacks.append(target)
+    shared_text = table_source.replace('\t\tEQU\t*', '')
+    shared_text += data('WHAT', b'WHAT\r') + data('HOW', b'HOW\r') + data('SORRY', b'SORRY\r')
+    shared_text += data('TAPE_OK', b'TAPE OK\r') + data('TAPE_ERROR', b'TAPE ERROR\r')
+    measure = OUT / 'shared_measure.f8'
+    measure.write_text('        PROCESSOR F8\n        ORG $1000\n' +
+                       re.sub(r'DC\.W\s+([^;\r\n]+)', 'DC.W $8000', shared_text) +
+                       '        END\n', encoding='ascii')
+    assemble(dasm, measure, OUT / 'shared_measure.bin')
+    table_start = COMMON_START - (OUT / 'shared_measure.bin').stat().st_size
+    banks, used = {}, {b: 0x1000 for b in range(1, 5)}
+    sizes = {chunk[0]['pc']: sum(r['size'] + (4 if r['op'] == 'PI' else 3 if r['op'] == 'JMP' else 0)
+                               + entry_sizes.get(r['pc'], 0) for r in chunk) for chunk in chunks}
+    for chunk in sorted(chunks, key=lambda c: (-sizes[c[0]['pc']], c[0]['pc'])):
+        size = sizes[chunk[0]['pc']]
+        bank = min(used, key=lambda b: (used[b], b))
+        if used[bank] + size > table_start:
+            raise SystemExit(f'Interpreter does not fit: chunk {chunk[0]["pc"]:04X}, {size} bytes')
+        for r in chunk:
+            banks[r['pc']] = bank
+        used[bank] += size
     targets = [syms['QSORRY']] + callbacks + ['CON_INIT', 'CON_PUT', 'CON_NEWLINE', 'CON_BACK', 'CON_KEY', 'CON_TICK', syms['NEWT'], 'CON_SERIAL_INIT', 'CON_SERIAL', 'CON_TAPE_IO']
     targets = list(dict.fromkeys(targets))
     # Saved software returns must use the bank gate even for same-bank calls.
@@ -300,26 +341,7 @@ def main():
             if isinstance(target, str) or target in banks and (r['op'] == 'PI' or banks[target] != b):
                 extra += 4 if r['op'] == 'PI' else 3
         positions[b] += r['size'] + extra
-    common = f'        ORG ${COMMON_START:04X}\n'
-    common += data('KEYBOARD_ABI', KEYBOARD_ABI) + '        ORG $16DA\n'
-    thunk_pc = 0x16DA
-    thunk_addresses = {}
-    for target in callbacks:
-        size = 5 if ids[target] < 16 else 6
-        if thunk_pc < 0x17D2 and thunk_pc + size > 0x17CC:
-            common += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n        ORG $17D2\n'
-            thunk_pc = 0x17D2
-        thunk_addresses[target] = thunk_pc
-        load = 'LIS' if ids[target] < 16 else 'LI'
-        common += f'        {load} {ids[target]}\n        LR 0,A\n        JMP G_JUMP\n'
-        thunk_pc += size
-    if thunk_pc > 0x1800:
-        raise SystemExit('Computed dispatch thunks overflow common region')
-    if thunk_pc <= 0x17CC:
-        common += '        ORG $17CC\n        DC $F8,$00,$F7,$FB,$01,$07\n'
-    if thunk_pc > 0x17F8:
-        raise SystemExit('Dispatch thunks overlap cursor bitmap')
-    common += '        ORG $17F8\n        DC $F8,$F8\n'
+    common, thunk_addresses, thunk_end = command_stubs(callbacks, ids)
     regs = list(map(str, range(12))) + ['KU', 'KL', 'QU', 'QL']
     (OUT / 'save_direct.inc').write_text(''.join(f'        LR A,{reg}\n        ST\n' for reg in regs), encoding='ascii')
     (OUT / 'restore_direct.inc').write_text(''.join(f'        LM\n        LR {reg},A\n' for reg in regs), encoding='ascii')
@@ -345,7 +367,10 @@ def main():
         text = ''
         for bank in range(6):
             text += f'        LISU {bank}\n        LISL 0\n'
-            text += f'        {load}\n        {store}\n' * 8
+            label = f'{name.split(".")[0].upper()}_{bank}'
+            text += f'{label}\n        {load}\n        {store}\n        BR7 {label}\n'
+            text += f'        {load.replace(",I", ",(IS)")}\n'
+            text += f'        {store.replace("I,A", "(IS),A")}\n'
         (OUT / name).write_text(text, encoding='ascii')
     sys.path.insert(0, str(ROOT.parent / 'timeshare'))
     import build_probe as display
@@ -374,7 +399,10 @@ def main():
     generated += data('MASKS', original[0x578:0x580]) + data('FONT', original[0x580:0x740])
     generated += data('INITIALY', [48 + 12*r for r in range(15)]) + data('ROWHIGHS', original[0x75E:0x76C])
     (OUT / 'console_data.inc').write_text(generated, encoding='ascii')
-    (OUT / 'key_data.inc').write_text(data('KEYTABLE', raw[syms['VBCHARS']-0x1000:syms['VBCHARS']-0x1000+73]), encoding='ascii')
+    keyboard_table = bytearray(raw[syms['VBCHARS']-0x1000:syms['VBCHARS']-0x1000+73])
+    for key, symbol in [('T', '<'), ('Y', '>')]:
+        keyboard_table[keyboard_table.index(ord(key)) + 1] = ord(symbol)
+    (OUT / 'key_data.inc').write_text(data('KEYTABLE', keyboard_table), encoding='ascii')
     (OUT / 'serial_ids.inc').write_text(f'SERIAL_ID EQU {ids["CON_SERIAL"]}\n', encoding='ascii')
     assemble(dasm, ROOT / 'console.f8', console)
     cs = symbols(console.with_suffix('.sym'))
@@ -421,17 +449,14 @@ def main():
         raise SystemExit('Transfer table overlaps tape I/O')
     (OUT / 'targets.inc').write_text(data('TARGETS', table), encoding='ascii')
     # Shared keyword and error data retain their original source definitions.
-    shared = table_source.replace('\t\tEQU\t*', '')
-    shared = re.sub(r'DC\.W\s+([^;\r\n]+)', lambda m: f'DC.W ${thunk_addresses[number(m[1].replace("+H8000", ""), syms)] | 0x8000:04X}', shared)
-    shared = 'H8000 EQU $8000\n        ORG $1500\n' + shared
-    shared += data('WHAT', b'WHAT\r') + data('HOW', b'HOW\r') + data('SORRY', b'SORRY\r')
-    shared += data('TAPE_OK', b'TAPE OK\r') + data('TAPE_ERROR', b'TAPE ERROR\r')
+    shared = re.sub(r'DC\.W\s+([^;\r\n]+)', lambda m: f'DC.W ${thunk_addresses[number(m[1].replace("+H8000", ""), syms)] | 0x8000:04X}', shared_text)
+    shared = f'H8000 EQU $8000\n        ORG ${table_start:04X}\n' + shared
     (OUT / 'shared.inc').write_text(shared, encoding='ascii')
     # Resolve shared labels with a small standalone assembly.
     probe = OUT / 'shared.f8'
     probe.write_text('        PROCESSOR F8\n' + shared + '        END\n', encoding='ascii')
     assemble(dasm, probe, OUT / 'shared.bin')
-    if 0x1500 + (OUT / 'shared.bin').stat().st_size > COMMON_START:
+    if table_start + (OUT / 'shared.bin').stat().st_size != COMMON_START:
         raise SystemExit('Shared tables overlap common ROM')
     equates.update(symbols(OUT / 'shared.sym'))
     images = [None] * 8
@@ -509,6 +534,14 @@ def main():
     output.write_bytes(b''.join(images))
     mapped = output.with_suffix('.vbc')
     mapped.write_bytes(cartridge(output.read_bytes()))
+    layout = ['Bank  Code end  Code limit  Contiguous free']
+    for bank in range(1, 5):
+        layout.append(f'{bank:4}  {positions[bank]:08X}  {table_start:08X}  {table_start - positions[bank]:15}')
+    layout += [f'Console free: {COMMON_START - cs["CONSOLE_END"]}',
+               f'Keyword table bytes per interpreter bank: {COMMON_START - table_start}',
+               f'Common dispatch growth: {0x17F8 - thunk_end - (6 if thunk_end <= 0x17CC else 0)}',
+               f'Bank transfer entries: {len(targets)}/192']
+    (OUT / 'rom-layout.txt').write_text('\n'.join(layout) + '\n', encoding='ascii')
     release_name = f'Tiny BASIC Enhanced v{VERSION} ({RELEASE_DATE}) (Elle Ball)'
     release_rom = OUT / (release_name + '.bin')
     release_vbc = OUT / (release_name + '.vbc')

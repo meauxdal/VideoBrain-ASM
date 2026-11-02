@@ -9,7 +9,8 @@ BUILD = Path(__file__).resolve().parents[2] / 'build/tinybasic/banked'
 
 
 def dispatch_register(image, command):
-    table = image[2048 + 0x500:2048 + 0x6E0]
+    start = symbols(BUILD / 'shared.sym')['TAB1'] - 0x1000
+    table = image[2048 + start:2048 + 0x6D0]
     index = table.index(command.encode('ascii')) + len(command)
     pc = int.from_bytes(table[index:index + 2], 'big') & 0x7FFF
     runtime = symbols(BUILD / 'boot.sym')['RUNTIME'] - 0x1000
@@ -33,6 +34,9 @@ def dispatch_register(image, command):
             pc += 1
         elif opcode == 0x50:
             register = accumulator
+        elif opcode == 0x90:
+            offset = byte(pc)
+            pc += offset if offset < 128 else offset - 256
         elif opcode == 0x29:
             # F8 JMP loads the destination high byte into A.
             accumulator = byte(pc)
@@ -43,6 +47,70 @@ def dispatch_register(image, command):
 
 
 class InstructionTests(unittest.TestCase):
+    @unittest.skipUnless((BUILD / 'console.bin').exists(), 'Assemble the cartridge first')
+    def test_console_snapshot_round_trip(self):
+        code = (BUILD / 'console.bin').read_bytes()
+        syms = symbols(BUILD / 'console.sym')
+        registers = [(i * 37 + 11) & 255 for i in range(64)]
+        original = registers.copy()
+        memory = {}
+
+        def execute(prefix):
+            pc, stop = syms[prefix + '_0'] - 2, syms[prefix + '_5'] + 6
+            accumulator, isar, dc = 0, 0, 0x3000
+            for _ in range(256):
+                if pc == stop:
+                    return dc
+                opcode = code[pc - 0x1000]
+                pc += 1
+                if 0x60 <= opcode <= 0x67:
+                    isar = (isar & 7) | ((opcode & 7) << 3)
+                elif 0x68 <= opcode <= 0x6F:
+                    isar = (isar & 56) | (opcode & 7)
+                elif opcode in (0x4C, 0x4D):
+                    accumulator = registers[isar]
+                    if opcode == 0x4D:
+                        isar = (isar & 56) | ((isar + 1) & 7)
+                elif opcode in (0x5C, 0x5D):
+                    registers[isar] = accumulator
+                    if opcode == 0x5D:
+                        isar = (isar & 56) | ((isar + 1) & 7)
+                elif opcode == 0x17:
+                    memory[dc] = accumulator
+                    dc += 1
+                elif opcode == 0x16:
+                    accumulator = memory[dc]
+                    dc += 1
+                elif opcode == 0x8F:
+                    offset = code[pc - 0x1000]
+                    if offset >= 128:
+                        offset -= 256
+                    pc = pc + offset if isar & 7 != 7 else pc + 1
+                else:
+                    self.fail(f'Unexpected snapshot opcode {opcode:02X}')
+            self.fail('Snapshot routine did not finish')
+
+        self.assertEqual(execute('CONSOLE_SAVE'), 0x3030)
+        self.assertEqual([memory[0x3000 + i] for i in range(48)], original[:48])
+        registers[:48] = [0] * 48
+        self.assertEqual(execute('CONSOLE_RESTORE'), 0x3030)
+        self.assertEqual(registers, original)
+
+    @unittest.skipUnless((BUILD / 'keyboard.bin').exists(), 'Assemble the cartridge first')
+    def test_keyboard_relational_symbols(self):
+        code = (BUILD / 'keyboard.bin').read_bytes()
+        start = symbols(BUILD / 'keyboard.sym')['KEYTABLE'] - 0x1000
+        table = code[start:start + 73]
+        for letter, symbol in [('T', '<'), ('Y', '>')]:
+            with self.subTest(letter=letter):
+                self.assertEqual(table[table.index(ord(letter)) + 1], ord(symbol))
+
+    @unittest.skipUnless((BUILD / 'shared.bin').exists(), 'Assemble the cartridge first')
+    def test_text_color_keyword(self):
+        table = (BUILD / 'shared.bin').read_bytes()
+        self.assertRegex(table, rb'TCOLOR[\x80-\xff]')
+        self.assertNotRegex(table, rb'TCOL[\x80-\xff]')
+
     @unittest.skipUnless((BUILD / 'tape_core.bin').exists(), 'Assemble the cartridge first')
     def test_tape_transfer_reads_banked_return_value(self):
         code = (BUILD / 'tape_core.bin').read_bytes()

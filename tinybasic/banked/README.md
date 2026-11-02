@@ -1,9 +1,21 @@
 # Tiny BASIC Enhanced
 
+## 1.4
+
+CLS clears the screen and homes the cursor without changing the program,
+variables, colors or SHIFT mode. MOVE column,row positions the cursor using
+zero-based character coordinates: columns 0-23, rows 0-14. Both coordinates
+accept expressions; out-of-range values report HOW. CL. and MOV. are the
+unambiguous abbreviations. Both commands work directly and in programs.
+They affect the screen; serial mirroring remains a plain text stream.
+
 ## 1.3
 
+SHIFT+T and SHIFT+Y enter < and >, using Timeshare positions with BASIC's
+SHIFT toggle. GE, GT, LE and LT remain supported.
+
 TCOLOR expression sets all displayed text to the direct UV201 color value
-0-31. TCOL is an alias; TC. uses the standard keyword abbreviation. Existing
+0-31. TC. uses the standard keyword abbreviation. Existing
 text changes color as well. The cursor retains its own color. Values outside
 0-31 report HOW. The color survives scrolling and console refresh; startup
 selects 23. Text color is stored at 3FFD. COLOR retains direct background values.
@@ -112,7 +124,7 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Release files under `build/tinybasic/banked` are named
-`Tiny BASIC Enhanced v1.3 (2026.11.02) (Elle Ball).bin` and `.vbc`.
+`Tiny BASIC Enhanced v1.4 (2026.11.02) (Elle Ball).bin` and `.vbc`.
 The VBC selects the BASIC mapper. The raw image is 16 KiB.
 The shorter `tinybasic-24x15` filenames are retained for the test scripts.
 Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.
@@ -179,13 +191,19 @@ and reports key acceptance/release at 3FF9. The builder checks these hooks.
 Updated cores recognize this marker independently of the complete ROM CRC.
 The original interpreter source and baseline ROM remain unchanged.
 
+Branch-connected blocks are packed by size across the interpreter banks.
+Keyword tables are placed immediately below common ROM. Command stubs share
+dispatch tails; console snapshots use register-copy loops. These loops and
+shared tails trade additional branches for ROM space. Each build writes
+`build/tinybasic/banked/rom-layout.txt` with code limits and remaining capacity.
+
 | Banks | Contents |
 | --- | --- |
-| 0 | Startup and RAM runtime image |
+| 0 | Startup, RAM runtime image and tape record handling |
 | 1-4 | Interpreter and repeated keyword/error tables |
 | 5 | Timeshare renderer, cursor, scrolling, and output operations |
 | 6 | BIOS keyboard scanning, BASIC character translation and serial output |
-| 7 | Bank transfer destinations |
+| 7 | Bank transfer destinations and tape byte I/O |
 
 | Workspace | Contents |
 | --- | --- |
