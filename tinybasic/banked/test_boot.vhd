@@ -7,6 +7,7 @@ USE work.f8_pack.ALL;
 
 ENTITY test_boot IS
   GENERIC (image_file, res1_file, res2_file : string;
+           version : string := "1.3";
            expander_file : string := "";
            serial_file : string := "";
            record_file : string := "";
@@ -28,11 +29,15 @@ ENTITY test_boot IS
              "RUN" & character'val(13);
            expected_output : string := "";
            expected_background : integer := -1;
+           expected_text_color : integer := -1;
            tape_codec_test : boolean := false;
            tape_fault : natural := 0;
            expected_tape_error : boolean := false;
            expected_tape_ok : boolean := false;
            expected_program_end : integer := -1;
+           preserve_tape_program : boolean := false;
+           expected_duplicate_bytes : integer := -1;
+           fail_duplicate_write : boolean := false;
            loop_iterations : natural := 0;
            require_sorry : boolean := false);
 END ENTITY;
@@ -77,11 +82,13 @@ ARCHITECTURE test OF test_boot IS
   SIGNAL serial_output : string(1 TO 2048);
   SIGNAL serial_length : natural := 0;
   SIGNAL tape_byte : uv8 := x"00";
+  SIGNAL duplicate_status : uv8 := x"00";
   SIGNAL record_data, record_enable : std_logic;
 BEGIN
   clk <= NOT clk AFTER 5 ns;
   ce <= '1' WHEN count MOD 4 = 0 ELSE '0';
-  io_data <= tape_byte WHEN tape_codec_test AND io_addr = 5 ELSE
+  io_data <= duplicate_status WHEN tape_codec_test AND io_addr = 6 ELSE
+    tape_byte WHEN tape_codec_test AND io_addr = 5 ELSE
     smi_data WHEN io_addr >= 12 AND io_addr <= 15 ELSE
     to_unsigned(key_value(commands(input_pos)), 8) WHEN input_pos <= commands'length ELSE x"00";
   pi_b_n <= po_b_n AND unsigned'('1' & exp_clock_n & exp_data_n & "11111");
@@ -276,7 +283,11 @@ BEGIN
     VARIABLE background, background_shadow, timeshare_background : uv8 := x"00";
     TYPE tape_t IS ARRAY(0 TO 8191) OF uv8;
     VARIABLE tape : tape_t := (OTHERS => x"00");
-    VARIABLE tape_written, tape_read : natural := 0;
+    VARIABLE tape_written, tape_read, duplicate_written : natural := 0;
+    VARIABLE fault_index : natural := 0;
+    VARIABLE program_snapshot : tape_t := (OTHERS => x"00");
+    VARIABLE program_saved : boolean := false;
+    VARIABLE program_end_snapshot : natural := 0;
     VARIABLE tape_crc : unsigned(15 DOWNTO 0);
     VARIABLE trace_tape_status : boolean := false;
     PROCEDURE append(value : natural) IS
@@ -309,12 +320,25 @@ BEGIN
       vpos <= to_unsigned((count / 8) MOD 262, 9);
       IF reset_na = '1' THEN
         IF tape_codec_test THEN
-          IF io_wr = '1' AND io_addr = 4 THEN
-            ASSERT tape_written < tape'length REPORT "Test tape overflow" SEVERITY failure;
-            tape(tape_written) := io_wdata;
-            tape_written := tape_written + 1;
+          IF preserve_tape_program AND NOT program_saved AND io_wr = '1' AND
+             io_addr = 3 AND io_wdata >= 2 THEN
+            FOR i IN 0 TO 16#BFF# LOOP program_snapshot(i) := ram(i); END LOOP;
+            program_end_snapshot := to_integer(ram(16#FB6#)) * 256 + to_integer(ram(16#FB7#));
+            program_saved := true;
           END IF;
-          IF io_wr = '1' AND io_addr = 3 AND io_wdata = 1 AND tape_read = 0 THEN
+          IF io_wr = '1' AND io_addr = 4 THEN
+            IF expected_duplicate_bytes /= -1 AND tape_read > 0 THEN
+              ASSERT duplicate_written < tape_written REPORT "Duplicate exceeds source" SEVERITY failure;
+              ASSERT io_wdata = tape(duplicate_written)
+                REPORT "Duplicate differs from source" SEVERITY failure;
+              duplicate_written := duplicate_written + 1;
+            ELSE
+              ASSERT tape_written < tape'length REPORT "Test tape overflow" SEVERITY failure;
+              tape(tape_written) := io_wdata;
+              tape_written := tape_written + 1;
+            END IF;
+          END IF;
+          IF io_wr = '1' AND io_addr = 3 AND io_wdata /= 0 AND tape_read = 0 THEN
             ASSERT tape_written >= 68 AND tape_written MOD 68 = 0
               REPORT "Incomplete saved tape record" SEVERITY failure;
             FOR block_index IN 0 TO tape_written / 68 - 1 LOOP
@@ -339,24 +363,42 @@ BEGIN
               WHEN 3 => tape(6) := x"3C"; tape(7) := x"01";
               WHEN 4 => tape(10) := x"00"; tape(11) := x"00";
               WHEN 5 => tape(9) := x"01";
+              WHEN 8 => tape(68 + 20) := tape(68 + 20) XOR x"01";
+              WHEN 6 =>
+                fault_index := to_integer(tape(6)) * 256 + to_integer(tape(7)) - 16#3000# - 1;
+                tape((fault_index / 56) * 68 + 10 + (fault_index MOD 56)) := x"58";
+              WHEN 7 =>
+                FOR block_index IN 0 TO tape_written / 68 - 1 LOOP
+                  tape(block_index * 68 + 6) := x"30";
+                  tape(block_index * 68 + 7) := x"4A";
+                  FOR byte_index IN 0 TO 55 LOOP
+                    tape(block_index * 68 + 10 + byte_index) := x"58";
+                  END LOOP;
+                END LOOP;
+                tape(10) := x"00"; tape(11) := x"0A";
+                tape(68 + 10 + 17) := x"0D";
               WHEN OTHERS => NULL;
             END CASE;
-            IF tape_fault >= 2 AND tape_fault <= 5 THEN
-              tape_crc := (OTHERS => '0');
-              FOR i IN 0 TO 65 LOOP
-                tape_crc := tape_crc XOR shift_left(resize(tape(i), 16), 8);
-                FOR bit_index IN 0 TO 7 LOOP
-                  IF tape_crc(15) = '1' THEN
-                    tape_crc := shift_left(tape_crc, 1) XOR x"1021";
-                  ELSE
-                    tape_crc := shift_left(tape_crc, 1);
-                  END IF;
+            IF tape_fault >= 2 AND tape_fault <= 7 THEN
+              FOR block_index IN 0 TO tape_written / 68 - 1 LOOP
+                tape_crc := (OTHERS => '0');
+                FOR i IN block_index * 68 TO block_index * 68 + 65 LOOP
+                  tape_crc := tape_crc XOR shift_left(resize(tape(i), 16), 8);
+                  FOR bit_index IN 0 TO 7 LOOP
+                    IF tape_crc(15) = '1' THEN
+                      tape_crc := shift_left(tape_crc, 1) XOR x"1021";
+                    ELSE
+                      tape_crc := shift_left(tape_crc, 1);
+                    END IF;
+                  END LOOP;
                 END LOOP;
+                tape(block_index * 68 + 66) := tape_crc(7 DOWNTO 0);
+                tape(block_index * 68 + 67) := tape_crc(15 DOWNTO 8);
               END LOOP;
-              tape(66) := tape_crc(7 DOWNTO 0);
-              tape(67) := tape_crc(15 DOWNTO 8);
             END IF;
           END IF;
+          IF fail_duplicate_write AND tape_read > 0 THEN duplicate_status <= x"01";
+          ELSE duplicate_status <= x"00"; END IF;
           IF io_rd = '1' AND io_addr = 5 THEN tape_read := tape_read + 1; END IF;
           IF tape_read < tape_written THEN tape_byte <= tape(tape_read);
           ELSE tape_byte <= x"00"; END IF;
@@ -441,7 +483,7 @@ BEGIN
               REPORT "Cursor bitmap pointer overwritten during refresh" SEVERITY failure;
             ASSERT objects(16#30#) = 1 REPORT "Incorrect letter cursor height" SEVERITY failure;
             ASSERT contains("READY") REPORT "READY prompt missing" SEVERITY failure;
-              ASSERT contains("TINY BASIC ENHANCED 1.1" & character'val(13) & "3072 BYTES FREE")
+              ASSERT contains("TINY BASIC ENHANCED " & version & character'val(13) & "3072 BYTES FREE")
               REPORT "Startup memory banner missing" SEVERITY failure;
             ASSERT ram(16#FF0#) = 3 AND ram(16#FF1#) = 1
               REPORT "Incorrect input cursor" SEVERITY failure;
@@ -471,6 +513,22 @@ BEGIN
               ASSERT tape_written > 0 AND tape_read > 0
                 REPORT "Tape round trip was not exercised" SEVERITY failure;
             END IF;
+            IF expected_duplicate_bytes = -2 THEN
+              ASSERT duplicate_written = tape_written
+                REPORT "Duplicate is incomplete" SEVERITY failure;
+            ELSIF expected_duplicate_bytes >= 0 THEN
+              ASSERT duplicate_written = expected_duplicate_bytes
+                REPORT "Incorrect duplicate length after failure" SEVERITY failure;
+            END IF;
+            IF preserve_tape_program THEN
+              ASSERT program_saved REPORT "Tape preservation check was not exercised" SEVERITY failure;
+              FOR i IN 0 TO 16#BFF# LOOP
+                ASSERT ram(i) = program_snapshot(i)
+                  REPORT "Tape command changed program memory" SEVERITY failure;
+              END LOOP;
+              ASSERT to_integer(ram(16#FB6#)) * 256 + to_integer(ram(16#FB7#)) = program_end_snapshot
+                REPORT "Tape command changed program boundary" SEVERITY failure;
+            END IF;
             IF expected_tape_error THEN
               ASSERT contains("TAPE ERROR") REPORT "Tape error missing" SEVERITY failure;
             END IF;
@@ -487,6 +545,17 @@ BEGIN
                 background_shadow = expected_background AND
                 timeshare_background = expected_background
                 REPORT "Background register or shadow differs" SEVERITY failure;
+            END IF;
+            IF expected_text_color >= 0 THEN
+              ASSERT to_integer(ram(16#FFD#)) = expected_text_color
+                REPORT "Incorrect text color state" SEVERITY failure;
+              FOR row IN 1 TO 15 LOOP
+                ASSERT to_integer(objects(16#10# + row)(7 DOWNTO 5)) =
+                  ((expected_text_color MOD 2) * 4 + ((expected_text_color / 2) MOD 2) * 2 +
+                   ((expected_text_color / 4) MOD 2)) AND
+                  to_integer(objects(16#20# + row)(6 DOWNTO 5)) = expected_text_color / 8
+                  REPORT "Incorrect text row color" SEVERITY failure;
+              END LOOP;
             END IF;
             IF require_sorry THEN
               ASSERT contains("SORRY") REPORT "SORRY path was not exercised" SEVERITY failure;

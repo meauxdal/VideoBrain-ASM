@@ -51,6 +51,10 @@ T_COMMAND
         OUTS 14
         DCI $3F24
         LM
+        CI 0
+        BZ T_IO_MODE
+        LIS 1
+T_IO_MODE
         LISU 4
         LISL 7
         LR (IS),A

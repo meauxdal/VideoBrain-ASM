@@ -22,6 +22,7 @@ ghdl -a --std=08 --workdir="$work" \
     "$source_dir/test_boot.vhd"
 symbol() { awk -v name="$1" '$1 == name {print $2}' "$build/console.sym"; }
 tape_symbol() { awk -v name="$2" '$1 == name {print $2}' "$build/$1.sym"; }
+commands=${TBE_SAVE_COMMANDS:-'NEW~10 PRINT "SAVED"~SAVE~PRINT "AFTER SAVE"~'}
 ghdl -r --std=08 --workdir="$work" test_boot \
     "-gimage_file=$build/tinybasic-24x15.bin" "-gres1_file=$res1" "-gres2_file=$res2" \
     "-gexpander_file=$expander" "-grecord_file=$work/record.csv" \
@@ -40,6 +41,6 @@ ghdl -r --std=08 --workdir="$work" test_boot \
     "-gnewline_pc=$((0x$(symbol CON_NEWLINE)))" \
     "-gsave_pc=$((0x$(symbol C_SAVE)))" "-grestore_pc=$((0x$(symbol C_RESTORE)))" \
     -ginject_input=true -gmax_clocks=1500000000 -gexpected_tape_ok=true \
-    '-gcommands=NEW~10 PRINT "SAVED"~SAVE~PRINT "AFTER SAVE"~' \
+    "-gcommands=$commands" \
     '-gexpected_output=~AFTER SAVE~' --ieee-asserts=disable --assert-level=error \
     > "$work/save.log" 2>&1

@@ -74,6 +74,123 @@ class InstructionTests(unittest.TestCase):
                 expected = syms['T_TRANSFER_OK'] if returned == 0 else syms['T_BAD']
                 self.assertEqual(pc, expected)
 
+    @unittest.skipUnless((BUILD / 'tape_core.bin').exists(), 'Assemble the cartridge first')
+    def test_dupe_restores_mode_after_record_write(self):
+        code = (BUILD / 'tape_core.bin').read_bytes()
+        syms = symbols(BUILD / 'tape_core.sym')
+        for status in (0, 1):
+            with self.subTest(status=status):
+                pc, accumulator, dc, zero = syms['T_DUPE_WRITE'], 0, 0, False
+                registers = [0] * 16
+                memory = {syms['TMODE']: 4}
+                for _ in range(32):
+                    if pc in (syms['T_PROGRESS'], syms['T_BAD']):
+                        break
+                    opcode = code[pc - 0x1200]
+                    pc += 1
+                    if opcode == 0x2A:
+                        dc = int.from_bytes(code[pc - 0x1200:pc - 0x1200 + 2], 'big')
+                        pc += 2
+                    elif opcode == 0x17:
+                        memory[dc] = accumulator
+                        dc += 1
+                    elif 0x70 <= opcode <= 0x7F:
+                        accumulator = opcode & 15
+                    elif opcode == 0x20:
+                        accumulator = code[pc - 0x1200]
+                        pc += 1
+                    elif 0x40 <= opcode <= 0x4B:
+                        accumulator = registers[opcode & 15]
+                    elif 0x50 <= opcode <= 0x5B:
+                        registers[opcode & 15] = accumulator
+                    elif opcode == 0x28:
+                        self.assertEqual(memory[syms['TMODE']], 0)
+                        registers[0] = status
+                        accumulator = 0xA5
+                        pc += 2
+                    elif opcode == 0x25:
+                        zero = accumulator == code[pc - 0x1200]
+                        pc += 1
+                    elif opcode == 0x84:
+                        offset = code[pc - 0x1200]
+                        if offset >= 128:
+                            offset -= 256
+                        pc = pc + offset if zero else pc + 1
+                    elif opcode == 0x29:
+                        pc = int.from_bytes(code[pc - 0x1200:pc - 0x1200 + 2], 'big')
+                        accumulator = pc >> 8
+                    else:
+                        self.fail(f'Unexpected duplicate opcode {opcode:02X}')
+                self.assertEqual(memory[syms['TMODE']], 4)
+                self.assertEqual(pc, syms['T_PROGRESS'] if status == 0 else syms['T_BAD'])
+
+    @unittest.skipUnless((BUILD / 'console.bin').exists(), 'Assemble the cartridge first')
+    def test_text_color_preserves_object_geometry(self):
+        code = (BUILD / 'console.bin').read_bytes()
+        syms = symbols(BUILD / 'console.sym')
+        for color in range(32):
+            with self.subTest(color=color):
+                memory = {address: (address * 13) & 255 for address in range(0x800, 0x880)}
+                before = memory.copy()
+                memory[0x3FFD] = color
+                registers = [0] * 16
+                pc, dc, alternate, accumulator, zero = syms['C_TEXT_COLOR'], 0, 0, 0, False
+                for _ in range(400):
+                    opcode = code[pc - 0x1000]
+                    pc += 1
+                    if opcode == 0x0C:
+                        break
+                    if opcode == 0x08:
+                        continue
+                    if opcode == 0x2A:
+                        dc = int.from_bytes(code[pc - 0x1000:pc - 0x1000 + 2], 'big')
+                        pc += 2
+                    elif opcode == 0x16:
+                        accumulator = code[dc - 0x1000] if 0x1000 <= dc < 0x1800 else memory[dc]
+                        dc += 1
+                    elif opcode == 0x17:
+                        memory[dc] = accumulator
+                        dc += 1
+                    elif opcode == 0x2C:
+                        dc, alternate = alternate, dc
+                    elif opcode == 0x8E:
+                        dc += accumulator
+                    elif opcode == 0x21:
+                        accumulator &= code[pc - 0x1000]
+                        pc += 1
+                    elif opcode == 0x13:
+                        accumulator = (accumulator << 1) & 255
+                    elif 0x40 <= opcode <= 0x4B:
+                        accumulator = registers[opcode & 15]
+                    elif 0x50 <= opcode <= 0x5B:
+                        registers[opcode & 15] = accumulator
+                    elif 0x70 <= opcode <= 0x7F:
+                        accumulator = opcode & 15
+                    elif 0xE0 <= opcode <= 0xEB:
+                        accumulator ^= registers[opcode & 15]
+                    elif 0x30 <= opcode <= 0x3B:
+                        register = opcode & 15
+                        registers[register] = (registers[register] - 1) & 255
+                        zero = registers[register] == 0
+                    elif opcode == 0x94:
+                        offset = code[pc - 0x1000]
+                        if offset >= 128:
+                            offset -= 256
+                        pc = pc + offset if not zero else pc + 1
+                    else:
+                        self.fail(f'Unexpected text color opcode {opcode:02X}')
+                else:
+                    self.fail('Text color routine did not return')
+                hue = ((color & 1) << 7) | ((color & 2) << 5) | ((color & 4) << 3)
+                for address, value in before.items():
+                    if 0x811 <= address <= 0x81F:
+                        expected = (value & 31) | hue
+                    elif 0x821 <= address <= 0x82F:
+                        expected = (value & 0x9F) | ((color & 24) << 2)
+                    else:
+                        expected = value
+                    self.assertEqual(memory[address], expected, f'{address:04X}')
+
     @unittest.skipUnless((BUILD / 'language.bin').exists(), 'Assemble the cartridge first')
     def test_tape_command_reports_returned_status(self):
         code = (BUILD / 'language.bin').read_bytes()
@@ -88,7 +205,7 @@ class InstructionTests(unittest.TestCase):
                     target = int.from_bytes(code[pc - 0x5000:pc - 0x5000 + 2], 'big')
                     pc += 2
                     if opcode == 0x28:
-                        accumulator = status if target in (syms['CON_SAVE'], syms['CON_LOAD']) else 0
+                        accumulator = status if target in (syms['CON_SAVE'], syms['CON_LOAD'], syms['CON_COMP'], syms['CON_VERI'], syms['CON_DUPE']) else 0
                     elif opcode == 0x29:
                         accumulator = target >> 8
                         pc = target
@@ -110,7 +227,7 @@ class InstructionTests(unittest.TestCase):
                     self.fail(f'Unexpected tape command opcode {opcode:02X}')
             self.fail('Tape command did not select a message')
 
-        for command in ('TB_SAVE', 'TB_LOAD'):
+        for command in ('TB_SAVE', 'TB_LOAD', 'TB_COMP', 'TB_VERI', 'TB_DUPE'):
             for status, expected in ((0, 'TAPE_OK'), (1, 'TAPE_ERROR')):
                 with self.subTest(command=command, status=status):
                     self.assertEqual(message(command, status), syms[expected])

@@ -9,9 +9,9 @@ core=$(realpath "$1")
 res1=$(realpath "$2")
 res2=$(realpath "$3")
 source_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-build="$source_dir/../../build/tinybasic/banked"
+build=${TBE_EXT_BUILD:-"$source_dir/../../build/tinybasic/banked"}
 cd "$core/verilator"
-work=out/tinybasic-extensions
+work=${TBE_EXT_WORK:-out/tinybasic-extensions}
 mkdir -p "$work"
 ghdl -a --std=08 --workdir="$work" \
     ../rtl/f8/base_pack.vhd ../rtl/f8/f8_pack.vhd ../rtl/uv202/uv202_pack.vhd \
@@ -26,12 +26,14 @@ run() {
         -gkeyloop_pc=4105 "-gput_pc=$((0x$(symbol CON_PUT)))" \
         "-gnewline_pc=$((0x$(symbol CON_NEWLINE)))" \
         "-gsave_pc=$((0x$(symbol C_SAVE)))" "-grestore_pc=$((0x$(symbol C_RESTORE)))" \
-        -gfast_console=true -ginject_input=true -gmax_clocks=150000000 \
-        "-gcommands=$1" "-gexpected_output=$2" "-gexpected_background=$3" \
+        "-gfast_console=$fast_console" -ginject_input=true -gmax_clocks=150000000 \
+        "-gexpected_text_color=$text_color" "-gcommands=$1" "-gexpected_output=$2" "-gexpected_background=$3" \
         --ieee-asserts=disable --assert-level=error
 }
 result=0
-for name in aliases boundaries color color-range; do
+for name in ${TBE_EXT_CASES:-aliases boundaries color color-abbreviation color-range text-color text-color-range}; do
+    text_color=-1
+    fast_console=true
     case $name in
         aliases)
             commands=$(tr '\n' '~' < "$core/examples/tinybasic-examples/34-relational-aliases.txt" | tr -d '\r')
@@ -42,9 +44,35 @@ for name in aliases boundaries color color-range; do
             expected='~     1     1~     1     1~     1     1~     1     1~'
             background=-1 ;;
         color)
-            commands='NEW~10 COLOR 2+2~20 PRINT "COLOR OK"~30 COLOR 31;PRINT "DONE"~RUN~'
+            commands='NEW~10 C. 2+2~20 PRINT "COLOR OK"~30 COLOR 31;PRINT "DONE"~RUN~'
             expected='~COLOR OK~DONE~'
             background=31 ;;
+        color-abbreviation)
+            commands='C. 31~PRINT "COLOR OK"~'
+            expected='~COLOR OK~'
+            background=31 ;;
+        text-color)
+            fast_console=false
+            commands='NEW~TCOLOR 1~TCOL 10~TC. 24~10 TCOLOR 8+9~20 PRINT "TEXT COLOR OK"~RUN~PRINT "AFTER"~'
+            expected='~TEXT COLOR OK~'
+            background=-1
+            text_color=17 ;;
+        text-color-range)
+            fast_console=false
+            commands='TCOLOR 31~TCOLOR -1~TCOLOR 32~TCOLOR 256~PRINT "RECOVER"~'
+            expected='~RECOVER~'
+            background=-1
+            text_color=31 ;;
+        color-pass|text-rainbow|text-intensities|color-combinations|color-scroll)
+            fast_console=false
+            case $name in
+                color-pass) file=38-color-pass; expected='~PASS~'; background=2; text_color=31 ;;
+                text-rainbow) file=39-text-rainbow; expected='~RAINBOW DONE~'; background=0; text_color=31 ;;
+                text-intensities) file=40-text-intensities; expected='~32 CODES DONE~'; background=0; text_color=31 ;;
+                color-combinations) file=41-color-combinations; expected='~COMBINATIONS DONE~'; background=0; text_color=31 ;;
+                color-scroll) file=42-color-scroll; expected='~SCROLL DONE~'; background=2; text_color=31 ;;
+            esac
+            commands=$(tr '\n' '~' < "$core/examples/tinybasic-examples/$file.txt" | tr -d '\r') ;;
         color-range)
             commands='COLOR 4~COLOR -1~COLOR 32~COLOR 256~PRINT "RECOVER"~'
             expected='~RECOVER~'

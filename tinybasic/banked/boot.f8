@@ -3,7 +3,7 @@
         INCLUDE "runtime_equates.inc"
         ORG $1000
         DC $AA,$55,0
-        DC __,_T,_I,_N,_Y,__,_B,_A,_S,_I,_C,__,_2,_4, __
+        INCLUDE "boot_title.inc"
         DI
         DCI RUNTIME
         XDC

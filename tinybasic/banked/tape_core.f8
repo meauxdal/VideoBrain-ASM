@@ -3,6 +3,8 @@ TBUF EQU $3EB8
 TMODE EQU $3F24
 TEND EQU $3F28
 TCUR EQU $3F2A
+TSTATE EQU $3F2C
+TLINEHI EQU $3F2D
         ORG $1200
 CON_SAVE
         LR K,P
@@ -13,6 +15,21 @@ CON_LOAD
         LR K,P
         PI T_CONTEXT_SAVE
         LIS 1
+        BR T_BEGIN
+CON_COMP
+        LR K,P
+        PI T_CONTEXT_SAVE
+        LIS 2
+        BR T_BEGIN
+CON_VERI
+        LR K,P
+        PI T_CONTEXT_SAVE
+        LIS 3
+        BR T_BEGIN
+CON_DUPE
+        LR K,P
+        PI T_CONTEXT_SAVE
+        LIS 4
 T_BEGIN DCI TMODE
         ST
         DCI TCUR
@@ -23,7 +40,10 @@ T_BEGIN DCI TMODE
         DCI TMODE
         LM
         CI 0
+        BZ T_SAVE_BEGIN
+        CI 2
         BNZ T_LOAD_BEGIN
+T_SAVE_BEGIN
         DCI $3FB6
         LM
         LR 8,A
@@ -37,6 +57,9 @@ T_BEGIN DCI TMODE
         PI T_VALIDATE
         BR T_RECORD
 T_LOAD_BEGIN
+        DCI TSTATE
+        CLR
+        ST
         DCI TEND
         CLR
         ST
@@ -90,6 +113,43 @@ T_CRC_BAD
 T_CRC_OK
         PI T_HEADER
         PI T_UNPACK
+        DCI TMODE
+        LM
+        CI 4
+        BNZ T_PROGRESS
+        DCI TCUR
+        LM
+        LR 8,A
+        LM
+        LR 9,A
+        DCI TEND
+        LM
+        XS 8
+        BNZ T_DUPE_WRITE
+        LM
+        XS 9
+        BNZ T_DUPE_WRITE
+        DCI TSTATE
+        LM
+        CI 0
+        BZ T_DUPE_WRITE
+        JMP T_BAD
+T_DUPE_WRITE
+        DCI TMODE
+        CLR
+        ST
+        LI TAPE_IO_ID
+        LR 0,A
+        PI G_ENTRY
+        LR A,0
+        LR 8,A
+        DCI TMODE
+        LIS 4
+        ST
+        LR A,8
+        CI 0
+        BZ T_PROGRESS
+        JMP T_BAD
 T_PROGRESS
         DCI TCUR
         LM
@@ -107,6 +167,16 @@ T_PROGRESS
         LM
         CI 0
         BZ T_SUCCESS
+        CI 2
+        BZ T_SUCCESS
+        CI 1
+        BZ T_LOAD_FINISH
+        DCI TSTATE
+        LM
+        CI 0
+        BZ T_SUCCESS
+        JMP T_BAD
+T_LOAD_FINISH
         PI T_VALIDATE
         DCI TEND
         LM
@@ -123,8 +193,8 @@ T_SUCCESS
         BR T_RETURN
 T_BAD   DCI TMODE
         LM
-        CI 0
-        BZ T_BAD_STATUS
+        CI 1
+        BNZ T_BAD_STATUS
         DCI $3FB6
         LI $30
         ST
@@ -236,6 +306,10 @@ T_UNPACK
         DCI TBUF+10
         XDC
         LR DC,Q
+        DCI TMODE
+        LM
+        LR 4,A
+        LR DC,Q
         LI 56
         LR 0,A
 T_UNPACK_BYTE
@@ -250,7 +324,24 @@ T_UNPACK_WRITE
         XDC
         LM
         XDC
+        LR 1,A
+        LR A,4
+        CI 2
+        BZ T_UNPACK_COMPARE
+        CI 1
+        BNZ T_UNPACK_VERIFY
+        LR A,1
         ST
+        BR T_UNPACK_NEXT
+T_UNPACK_COMPARE
+        LM
+        XS 1
+        BZ T_UNPACK_NEXT
+        JMP T_BAD
+T_UNPACK_VERIFY
+        LM
+        PI T_VERIFY_BYTE
+T_UNPACK_NEXT
         DS 0
         BNZ T_UNPACK_BYTE
         LR H,DC
@@ -262,6 +353,57 @@ T_STORE_CURSOR
         ST
         PK
 T_PREFIX DC 0,64,"TB",1,0
+
+; Stream the same line checks as T_VALIDATE without writing program memory.
+T_VERIFY_BYTE
+        LR Q,DC
+        DCI TSTATE
+        LM
+        LR 2,A
+        CI 0
+        BZ T_VERIFY_HIGH
+        CI 1
+        BZ T_VERIFY_LOW
+        LR A,1
+        CI 13
+        BZ T_VERIFY_EOL
+        CI 31
+        BC T_VERIFY_BAD
+        CI 95
+        BNC T_VERIFY_BAD
+        DS 2
+        LR A,2
+        CI 1
+        BZ T_VERIFY_BAD
+        BR T_VERIFY_STATE
+T_VERIFY_HIGH
+        LR A,1
+        CI $7F
+        BNC T_VERIFY_BAD
+        DCI TLINEHI
+        ST
+        LIS 1
+        BR T_VERIFY_STATE
+T_VERIFY_LOW
+        DCI TLINEHI
+        LM
+        XS 1
+        BNZ T_VERIFY_NONZERO
+        LR A,1
+        CI 0
+        BZ T_VERIFY_BAD
+T_VERIFY_NONZERO
+        LI 72
+        BR T_VERIFY_STATE
+T_VERIFY_EOL
+        CLR
+T_VERIFY_STATE
+        DCI TSTATE
+        ST
+        LR DC,Q
+        POP
+T_VERIFY_BAD
+        JMP T_BAD
 
 T_HEADER
         LR K,P

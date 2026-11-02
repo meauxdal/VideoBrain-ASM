@@ -12,7 +12,8 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '1.1'
+VERSION = '1.3'
+RELEASE_DATE = '2026.11.02'
 COMMON_START = 0x16D0
 KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
 
@@ -20,7 +21,8 @@ KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
 def cartridge(rom):
     chunks = [
         (b'HEAD', struct.pack('<HHHH16sII', 1, 0, 6, 1,
-                             uuid.UUID('f1b99b2e-6b46-498c-83e9-ade8c5d89600').bytes, 11, 0)),
+                             uuid.UUID('f1b99b2e-6b46-498c-83e9-ade8c5d89600').bytes,
+                             int(VERSION.replace('.', '')), 0)),
         (b'NAME', f'Tiny BASIC Enhanced {VERSION}'.encode('ascii')),
         (b'VERS', VERSION.encode('ascii')),
         (b'SUPP', struct.pack('<II', 7, 0)),
@@ -259,10 +261,16 @@ def main():
     table_source = source.read_text().split('H8000\t\tEQU', 1)[1].split('\n', 1)[1].split('TTY0\t', 1)[0]
     table_source = relational_aliases(table_source)
     table_source = table_source.replace('TAB2\t\tEQU',
+        '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n'
         '        DC "SAVE"\n        DC.W TB_SAVE+H8000\n'
-        '        DC "LOAD"\n        DC.W TB_LOAD+H8000\nTAB2\t\tEQU', 1)
+        '        DC "LOAD"\n        DC.W TB_LOAD+H8000\n'
+        '        DC "COMP"\n        DC.W TB_COMP+H8000\n'
+        '        DC "VERI"\n        DC.W TB_VERI+H8000\n'
+        '        DC "DUPE"\n        DC.W TB_DUPE+H8000\nTAB2\t\tEQU', 1)
     table_source = re.sub(r'(?=^\s*DC\.W\s+DEFLT\+H8000)',
-        '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n', table_source,
+        '        DC "COLOR"\n        DC.W TB_COLOR+H8000\n'
+        '        DC "TCOLOR"\n        DC.W TB_TCOLOR+H8000\n'
+        '        DC "TCOL"\n        DC.W TB_TCOLOR+H8000\n', table_source,
         count=1, flags=re.M)
     for expr in re.findall(r'DC\.W\s+([^;\r\n]+)', table_source):
         target = number(expr.replace('+H8000', ''), syms)
@@ -293,8 +301,8 @@ def main():
                 extra += 4 if r['op'] == 'PI' else 3
         positions[b] += r['size'] + extra
     common = f'        ORG ${COMMON_START:04X}\n'
-    common += data('KEYBOARD_ABI', KEYBOARD_ABI) + '        ORG $16E0\n'
-    thunk_pc = 0x16E0
+    common += data('KEYBOARD_ABI', KEYBOARD_ABI) + '        ORG $16DA\n'
+    thunk_pc = 0x16DA
     thunk_addresses = {}
     for target in callbacks:
         size = 5 if ids[target] < 16 else 6
@@ -403,7 +411,7 @@ def main():
     table = bytearray()
     for target in targets:
         if isinstance(target, str):
-            bank = (0 if target in {'CON_SAVE', 'CON_LOAD'} else 7 if target == 'CON_TAPE_IO'
+            bank = (0 if target in {'CON_SAVE', 'CON_LOAD', 'CON_COMP', 'CON_VERI', 'CON_DUPE'} else 7 if target == 'CON_TAPE_IO'
                     else 6 if target in {'CON_KEY', 'CON_SERIAL_INIT', 'CON_SERIAL'} else 5)
             address = cs[target]
         else:
@@ -482,6 +490,9 @@ def main():
         f'PUT_ID EQU {ids["CON_PUT"]}\nNEWLINE_ID EQU {ids["CON_NEWLINE"]}\n' +
         f'SERIAL_INIT_ID EQU {ids["CON_SERIAL_INIT"]}\n' +
         data('RUNTIME', rt) + data('BANNER', banner + b'\0'), encoding='ascii')
+    (OUT / 'boot_title.inc').write_text(
+        '        DC __,_T,_I,_N,_Y,__,_B,_A,_S,_I,_C,__,'
+        f'_{VERSION[0]},_PERIOD,_{VERSION[2]}\n', encoding='ascii')
     assemble(dasm, ROOT / 'boot.f8', OUT / 'boot.bin')
     images[0] = (OUT / 'boot.bin').read_bytes()
     images[6] = (OUT / 'keyboard.bin').read_bytes()
@@ -498,9 +509,14 @@ def main():
     output.write_bytes(b''.join(images))
     mapped = output.with_suffix('.vbc')
     mapped.write_bytes(cartridge(output.read_bytes()))
+    release_name = f'Tiny BASIC Enhanced v{VERSION} ({RELEASE_DATE}) (Elle Ball)'
+    release_rom = OUT / (release_name + '.bin')
+    release_vbc = OUT / (release_name + '.vbc')
+    release_rom.write_bytes(output.read_bytes())
+    release_vbc.write_bytes(mapped.read_bytes())
     print(f'Linked CRC32 {zlib.crc32(output.read_bytes()):08X}; runtime {len(rt)} bytes; {len(targets)} transfers')
-    print(output)
-    print(mapped)
+    print(release_rom)
+    print(release_vbc)
 
 
 if __name__ == '__main__':

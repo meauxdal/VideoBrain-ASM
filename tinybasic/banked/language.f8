@@ -3,6 +3,9 @@
 ; Virtual addresses are relocated into interpreter banks by build.py.
 CON_SAVE EQU $5F20
 CON_LOAD EQU $5F23
+CON_COMP EQU $5F26
+CON_VERI EQU $5F29
+CON_DUPE EQU $5F2C
 TAPE_OK EQU $5F00
 TAPE_ERROR EQU $5F10
         ORG $5000
@@ -28,6 +31,23 @@ TB_COLOR
         JMP FIN
 TB_COLOR_BAD
         JMP QHOW
+TB_TCOLOR
+        PI EXPR
+        LISU 2
+        LISL 0
+        LR A,I
+        CI 0
+        BNZ TB_TCOLOR_BAD
+        LR A,(IS)
+        CI 31
+        BNC TB_TCOLOR_BAD
+        LR H,DC
+        DCI $3FFD
+        ST
+        LR DC,H
+        JMP FIN
+TB_TCOLOR_BAD
+        JMP QHOW
 TB_SAVE
         PI ENDCR
         PI CON_SAVE
@@ -36,6 +56,21 @@ TB_SAVE
 TB_LOAD
         PI ENDCR
         PI CON_LOAD
+        LR 8,A
+        JMP TB_TAPE_FINISH
+TB_COMP
+        PI ENDCR
+        PI CON_COMP
+        LR 8,A
+        JMP TB_TAPE_FINISH
+TB_VERI
+        PI ENDCR
+        PI CON_VERI
+        LR 8,A
+        JMP TB_TAPE_FINISH
+TB_DUPE
+        PI ENDCR
+        PI CON_DUPE
         LR 8,A
 TB_TAPE_FINISH
         LR A,8

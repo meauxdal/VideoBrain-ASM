@@ -5,6 +5,9 @@
 CON_INIT
         LR K,P
         PI C_SAVE
+        DCI $3FFD
+        LI 23
+        ST
         CLR
         OUTS 0
         OUTS 1
@@ -212,6 +215,7 @@ C_REFRESH
         PI C_LOAD
         PI $4501
         PI A13c0
+        PI C_TEXT_COLOR
         PI C_STORE
         DCI $0FE2
         LM
@@ -229,6 +233,51 @@ C_WAIT  DCI $08FB
         LR A,(IS)
         LR KL,A
         PK
+C_TEXT_COLOR
+        LR K,P
+        DCI $3FFD
+        LM
+        LR 1,A
+        NI 7
+        DCI C_HUES
+        ADC
+        LM
+        LR 2,A
+        LR A,1
+        NI 24
+        SL 1
+        SL 1
+        LR 3,A
+        DCI $0811
+        XDC
+        DCI $0811
+        LIS 15
+        LR 1,A
+C_TEXT_HUE
+        XDC
+        LM
+        NI $1F
+        XS 2
+        XDC
+        ST
+        DS 1
+        BNZ C_TEXT_HUE
+        DCI $0821
+        XDC
+        DCI $0821
+        LIS 15
+        LR 1,A
+C_TEXT_INTENSITY
+        XDC
+        LM
+        NI $9F
+        XS 3
+        XDC
+        ST
+        DS 1
+        BNZ C_TEXT_INTENSITY
+        PK
+C_HUES DC $00,$80,$40,$C0,$20,$A0,$60,$E0
 C_SAVE  LR A,IS
         LISU 6
         LISL 0

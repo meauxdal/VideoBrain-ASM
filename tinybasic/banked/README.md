@@ -1,12 +1,43 @@
 # Tiny BASIC Enhanced
 
-## 1.1 development
+## 1.3
 
-The development build adds GE, GT, LE and LT as aliases for >=, >, <= and <.
+TCOLOR expression sets all displayed text to the direct UV201 color value
+0-31. TCOL is an alias; TC. uses the standard keyword abbreviation. Existing
+text changes color as well. The cursor retains its own color. Values outside
+0-31 report HOW. The color survives scrolling and console refresh; startup
+selects 23. Text color is stored at 3FFD. COLOR retains direct background values.
+
+
+VERI reads and validates a tape without changing the current program, following
+APL/S's command meaning. COMP also requires the tape program to match the
+current program byte for byte, including its length. Rewind playback before
+each command. Both report TAPE OK or TAPE ERROR and preserve program memory
+and its boundary on success and failure. Like SAVE and LOAD, they are direct
+commands and require Expander firmware.
+
+VERI checks record headers, CRCs, consecutive offsets, the program boundary
+and line structure across record boundaries. COMP checks the same record
+headers and CRCs, then compares program bytes with memory.
+
+DUPE copies the next saved Tiny BASIC program from playback to record,
+without changing the program in memory. Mount different source and writable
+destination images. Rewind playback and, to replace the destination, rewind
+record before DUPE. Validated records are forwarded unchanged, including
+padding and CRC. TAPE OK means the complete program was copied; TAPE ERROR
+may leave a partial destination. Wait for the record deck to become idle
+before unmounting. This copies BASIC records, not arbitrary cartridge tapes
+or the original waveform timing.
+
+## 1.2
+
+GE, GT, LE and LT are aliases for >=, >, <= and <.
 They use the existing expression precedence and comparison handlers. Symbol
 operators remain supported. `COLOR expression` sets the background to 0-31;
 out-of-range values report HOW. COLOR works directly and in stored programs.
-Native simulation and hardware acceptance are pending.
+Native single- and multi-record SAVE/LOAD round trips pass. Hardware confirms
+VBK entry, SAVE, core reload, playback-only mounting, LOAD, LIST and RUN for a
+39-byte INPUT program in one record. The payload CRC is valid (`729E`).
 
 Hardware checks: `34-relational-aliases.vbk` and `35-background-color.vbk` in
 the core's Tiny BASIC examples. Run focused native F8 checks with:
@@ -26,9 +57,7 @@ to READY. LOAD checks the record identifier, version, length, program boundary,
 offset, checksum and line structure. A failed LOAD clears the program boundary,
 including when earlier records have already overwritten program memory.
 SAVE leaves the program intact. The transfer has a bounded timeout and restores
-the keyboard/serial interrupt setup. Hardware recording contains a complete
-64-byte payload with a valid CRC. Successful completion reporting and playback
-acceptance remain pending; the core's Tape error notice also applies.
+the keyboard/serial interrupt setup. The core's Tape error notice also applies.
 
 Each record contains a big-endian length of 64, then `TB`, version 1, a zero
 reserved byte, the program end address, the chunk address (both big-endian),
@@ -38,7 +67,7 @@ restricted to 3000-3BFF, with an exclusive end no greater than 3C00. Records
 must be consecutive and agree on the end address. This is a BASIC-specific
 format using the Information Manager/Money Minder transfer protocol.
 
-The transfer buffer occupies 3EB8-3EFB; state uses 3F24-3F2B. Tape operations
+The transfer buffer occupies 3EB8-3EFB; state uses 3F24-3F2D. Tape operations
 preserve the interpreter registers in the console snapshot at 3FA0-3FD7.
 The record codec and byte interrupt are in banks 0 and 7, respectively.
 
@@ -50,7 +79,8 @@ sh tinybasic/banked/test_tape.sh CORE_DIRECTORY RES1_ROM RES2_ROM
 ```
 
 The test transport exercises native SAVE/LOAD, checksums, multiple records,
-empty programs, corrupt data and malformed headers/programs. It does not test
+empty programs, corrupt data and malformed headers/programs. VERI and COMP
+cases also check that all program memory and its boundary remain unchanged. It does not test
 Expander firmware timing. A second test image shortens the production timeout
 to exercise missing-firmware error handling. Do not deploy `.test.bin` images.
 
@@ -62,17 +92,16 @@ sh tinybasic/banked/test_save.sh CORE_DIRECTORY RES1_ROM RES2_ROM EXPANDER_ROM
 
 Logs, serial output and cassette edges are in `verilator/out/tinybasic-save`.
 
-TODO: Hardware round trips, blank/truncated/corrupt recordings, absent Expander
+TODO: Multi-record hardware round trips, blank/truncated/corrupt recordings, absent Expander
 firmware, serial output after transfer, and recovery at READY.
 
-VERI is secondary: validate a record without replacing the current program.
-COPY is optional: validate playback records before forwarding them to the
-record tape. BIOS clock commands are deferred; BASIC reuses the clock's scratch
+BIOS clock commands are deferred; BASIC reuses the clock's scratch
 registers, so TIME/DATE need a separate preserved clock state.
 
 References: Information Manager `3BEE-3DD9` (record transfer and checksum),
-`3CB5` (byte interrupt); Money Minder `1AC5-1C88` and `1BB7`. Public source:
-[Sean Riddle's VideoBrain research](https://seanriddle.com/videobrain.html).
+`3CB5` (byte interrupt); Money Minder `1AC5-1C88` and `1BB7`. Public sources:
+[Sean Riddle's VideoBrain research](https://seanriddle.com/videobrain.html);
+[APL/S guide](https://orphanedgames.com/videobrain/manuals/APL-S/APL-S-The_Computational_Language_%28197x%29%28Tri-Fold_Guide%29%28Umtech_VideoBrain_Family_Computer%29.pdf).
 
 ## Build and 1.0 acceptance
 
@@ -82,8 +111,10 @@ Build from the assembly repository root:
 python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
-Output: `build/tinybasic/banked/tinybasic-24x15.bin`, 16 KiB.
-The build also writes `tinybasic-24x15.vbc` with the BASIC mapper selected.
+Release files under `build/tinybasic/banked` are named
+`Tiny BASIC Enhanced v1.3 (2026.11.02) (Elle Ball).bin` and `.vbc`.
+The VBC selects the BASIC mapper. The raw image is 16 KiB.
+The shorter `tinybasic-24x15` filenames are retained for the test scripts.
 Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.
 Use BASIC profile 6 in VBC files, or
 **Mapper Fallback -> BASIC** for raw images, then reset.

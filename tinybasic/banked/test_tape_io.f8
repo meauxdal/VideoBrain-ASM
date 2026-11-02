@@ -15,7 +15,7 @@ TEST_WRITE
         OUTS 4
         DS 1
         BNZ TEST_WRITE
-        CLR
+        INS 6
         PK
 TEST_READ
         DCI $3EB8
