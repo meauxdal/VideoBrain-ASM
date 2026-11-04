@@ -29,7 +29,7 @@ ghdl -r --std=08 --workdir="$work" test_boot \
     "-gserial_file=$work/serial.bin" \
     "-gtrace_tape=${TBE_SAVE_TRACE:-false}" \
     "-gfast_console=${TBE_SAVE_FAST:-false}" "-gcheck_serial=${TBE_SAVE_SERIAL:-true}" \
-    "-gfast_tape_delay=${TBE_SAVE_FAST:-false}" \
+    "-gfast_tape_delay=${TBE_SAVE_FAST_TAPE_DELAY:-${TBE_SAVE_FAST:-false}}" \
     "-gtape_status_pc=$((0x$(tape_symbol tape_io T_IRQ_STATUS)))" \
     "-gtape_failed_pc=$((0x$(tape_symbol tape_io T_IRQ_FAILED)))" \
     "-gtape_return_pc=$((0x$(tape_symbol tape_io T_IO_DONE)))" \

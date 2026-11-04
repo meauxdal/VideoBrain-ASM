@@ -3673,7 +3673,7 @@ L3C8A:
 ; Four-byte peripheral transfer descriptor.
 3C9B: 01 01 01 01             DB   H'01',H'01',H'01',H'01'
 
-; Unreferenced entry: port status and register/flag restoration.
+; Transfer completion interrupt; vector installed by 3DB9.
 L3C9F:
 3C9F: 56                      LR   R6,A
 3CA0: 49                      LR   A,J

@@ -95,7 +95,19 @@ T_TRANSFER_RETURN
         LR A,0
         CI 0
         BZ T_TRANSFER_OK
-        JMP T_BAD
+        LR 8,A
+        DCI TMODE
+        LM
+        CI 1
+        BNZ T_TRANSFER_STATUS
+        DCI $3FB6
+        LI $30
+        ST
+        CLR
+        ST
+T_TRANSFER_STATUS
+        LR A,8
+        JMP T_RETURN
 T_TRANSFER_OK
         DCI TMODE
         LM
@@ -159,10 +171,14 @@ T_PROGRESS
         DCI TEND
         LM
         XS 8
-        BNZ T_RECORD
+        BZ T_PROGRESS_LOW
+        JMP T_RECORD
+T_PROGRESS_LOW
         LM
         XS 9
-        BNZ T_RECORD
+        BZ T_PROGRESS_DONE
+        JMP T_RECORD
+T_PROGRESS_DONE
         DCI TMODE
         LM
         CI 0

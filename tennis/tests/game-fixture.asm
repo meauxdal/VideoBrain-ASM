@@ -1,0 +1,7 @@
+        processor f8
+        org $1000
+        include "paddles.asm"
+        include "rally.asm"
+        include "rally-state.asm"
+        include "game.asm"
+        include "scores.asm"

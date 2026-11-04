@@ -4,6 +4,8 @@ Annotated disassembly and analysis tools for VideoBrain software.
 
 ## Tiny BASIC
 
+[Enhanced development status and tape troubleshooting](TINYBASIC-PROGRESS.md).
+
 [Preserved tested baseline and Timeshare display work](tinybasic/README.md).
 The phase 1 source rebuilds byte-for-byte to CRC32 F3BFF3D3. The separate
 24x15 display probe passes on MiSTer with the Timeshare mapper.

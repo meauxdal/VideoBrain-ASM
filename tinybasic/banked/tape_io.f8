@@ -45,7 +45,10 @@ T_COMMAND
         EI
         PI T_WAIT
         CI 0
-        BNZ T_IO_DONE
+        BZ T_COMMAND_OK
+        LIS 2
+        BR T_IO_DONE
+T_COMMAND_OK
         DI
         CLR
         OUTS 14
@@ -82,12 +85,27 @@ T_DATA  LIS 1
         OUTS 14
         EI
         PI T_WAIT
+        CI 0
+        BZ T_DATA_OK
+        LIS 3
+        BR T_IO_DONE
+T_DATA_OK
+        PI T_FINISH
+        CI 0
+        BZ T_IO_DONE
+        LIS 4
 T_IO_DONE
         DI
         LR 8,A
         CLR
         OUTS 14
+        LR A,8
+        CI 0
+        BNZ T_IO_ABORT
+        BR T_IO_RESTORE
+T_IO_ABORT
         PI T_RESET
+T_IO_RESTORE
         DCI $3F26
         LM
         LR KU,A
@@ -123,18 +141,8 @@ T_WAIT  LR K,P
 T_WAIT_LOOP
         CLR
         AS 5
-        BZ T_WAIT_PROGRESS
-        LISU 4
-        LISL 6
-        LR A,(IS)
-        CI 0
         BNZ T_TIMEOUT
-        BR T_COMPLETE
 T_WAIT_PROGRESS
-; Command bytes hand off immediately; record data waits for peripheral stop.
-        LR A,8
-        CI 0
-        BNZ T_WAIT_TICK
         CLR
         AS 0
         AS 1
@@ -182,25 +190,11 @@ T_IRQ   LR 6,A
         NOP
         INS 1
 T_IRQ_STATUS
-        LR 2,A
         NI $20
         BZ T_IRQ_READY
-        DS 5
-; Firmware stop: data low signals completion; clock low signals CRC failure.
-        LR A,2
-        NI $40
-        BNZ T_IRQ_FAILED
-; A stop is successful only after all requested bytes and bits transferred.
-        CLR
-        AS 0
-        AS 1
-        AS 3
-        BZ T_IRQ_STOP
+T_IRQ_STATUS_STOP
 T_IRQ_FAILED
-        LISU 4
-        LISL 6
-        LIS 1
-        LR (IS),A
+        DS 5
 T_IRQ_STOP
         CLR
         LR 0,A
@@ -280,5 +274,77 @@ T_IRQ_RETURN
         LR IS,A
         LR A,6
         EI
+        POP
+
+; Information Manager 3DB9 / Money Minder 1C68 completion phase.
+T_FINISH
+        LR K,P
+        DI
+        CLR
+        OUTS 14
+        LI >T_STOP_IRQ
+        OUTS 12
+        LI <T_STOP_IRQ
+        OUTS 13
+        LIS 10
+        LR 0,A
+        LR 1,A
+        LISU 2
+        LISL 0
+        CLR
+        LR I,A
+        LR I,A
+        LIS 8
+        LR (IS),A
+        LIS 1
+        OUTS 14
+        EI
+T_STOP_WAIT
+        LR A,0
+        CI 1
+        BNZ T_STOP_TICK
+        LR A,1
+        CI 1
+        BNZ T_STOP_TICK
+        CLR
+        AS 5
+        BNZ T_FINISH_BAD
+        PK
+T_STOP_TICK
+        LISU 2
+        LISL 0
+        DS I
+        BNZ T_STOP_WAIT
+        DS I
+        BNZ T_STOP_WAIT
+        DS (IS)
+        BNZ T_STOP_WAIT
+T_FINISH_BAD
+        LIS 1
+        PK
+
+; Keep the original completion ISR instruction sequence and external vector bit.
+        ORG $1580
+T_STOP_IRQ
+        LR 6,A
+        LR A,9
+        LR 4,A
+        LR 9,W
+        CLR
+        OUTS 1
+        INS 1
+        CI $20
+        BZ T_STOP_RETURN
+        DS 5
+T_STOP_RETURN
+        LR W,9
+        LR A,4
+        LR 9,A
+        LIS 1
+        LR 0,A
+        LR 1,A
+        DI
+        LR 9,W
+        LR A,6
         POP
 TAPE_IO_END

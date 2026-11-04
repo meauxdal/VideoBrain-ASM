@@ -7,7 +7,7 @@ USE work.f8_pack.ALL;
 
 ENTITY test_boot IS
   GENERIC (image_file, res1_file, res2_file : string;
-           version : string := "1.4";
+           version : string := "1.9";
            expander_file : string := "";
            serial_file : string := "";
            record_file : string := "";

@@ -12,8 +12,8 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '1.4'
-RELEASE_DATE = '2026.11.02'
+VERSION = '1.9'
+RELEASE_DATE = '2026.11.03'
 COMMON_START = 0x16D0
 KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
 
@@ -300,6 +300,9 @@ def main():
     shared_text = table_source.replace('\t\tEQU\t*', '')
     shared_text += data('WHAT', b'WHAT\r') + data('HOW', b'HOW\r') + data('SORRY', b'SORRY\r')
     shared_text += data('TAPE_OK', b'TAPE OK\r') + data('TAPE_ERROR', b'TAPE ERROR\r')
+    shared_text += data('TAPE_COMMAND_ERROR', b'TAPE CMD ERROR\r')
+    shared_text += data('TAPE_DATA_ERROR', b'TAPE DATA ERROR\r')
+    shared_text += data('TAPE_FINISH_ERROR', b'TAPE END ERROR\r')
     measure = OUT / 'shared_measure.f8'
     measure.write_text('        PROCESSOR F8\n        ORG $1000\n' +
                        re.sub(r'DC\.W\s+([^;\r\n]+)', 'DC.W $8000', shared_text) +

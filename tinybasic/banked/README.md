@@ -1,5 +1,38 @@
 # Tiny BASIC Enhanced
 
+## 1.9
+
+The required host-line reset before a tape command is restored. Transport
+failures now report command, data or final-completion phase on screen, so a
+remaining hardware failure identifies its exact boundary. Hardware confirms a
+complete two-record SAVE with valid CRCs; restart/LOAD remains pending.
+
+## 1.8
+
+Tape transfer setup and completion now follow the working Information Manager
+and Money Minder lifecycle directly. Stops during byte transfer are failures;
+the dedicated completion interrupt handles the final status and releases the
+host lines. Extra reset and success-release pulses were removed. Hardware
+confirmation failed: recording never started on a fresh blank image.
+
+## 1.7
+
+The tape byte interrupt used one Expander status snapshot for both stop and
+completion status. Hardware still stopped after the first valid record.
+
+## 1.6
+
+An already received stop retains its transfer status during completion handoff.
+This corrects a path that rejected a clean stop after writing a valid record.
+Hardware testing still stopped after one valid record because the completion
+status was sampled twice. See [current progress](../../TINYBASIC-PROGRESS.md).
+
+## 1.5
+
+Tape transfers wait separately for byte completion and peripheral stop.
+The completion interrupt uses the Information Manager/Money Minder handler.
+Normal completion releases the host lines; failed transfers reset them.
+
 ## 1.4
 
 CLS clears the screen and homes the cursor without changing the program,
@@ -104,6 +137,10 @@ sh tinybasic/banked/test_save.sh CORE_DIRECTORY RES1_ROM RES2_ROM EXPANDER_ROM
 
 Logs, serial output and cassette edges are in `verilator/out/tinybasic-save`.
 
+`TBE_SAVE_FAST=true` skips console drawing and shortens the tape startup delay.
+Set `TBE_SAVE_FAST_TAPE_DELAY=false` to retain the production tape delay while
+skipping drawing. These native tests do not model UV202 CPU bus stalls.
+
 TODO: Multi-record hardware round trips, blank/truncated/corrupt recordings, absent Expander
 firmware, serial output after transfer, and recovery at READY.
 
@@ -124,7 +161,7 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Release files under `build/tinybasic/banked` are named
-`Tiny BASIC Enhanced v1.4 (2026.11.02) (Elle Ball).bin` and `.vbc`.
+`Tiny BASIC Enhanced v1.9 (2026.11.03) (Elle Ball).bin` and `.vbc`.
 The VBC selects the BASIC mapper. The raw image is 16 KiB.
 The shorter `tinybasic-24x15` filenames are retained for the test scripts.
 Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.

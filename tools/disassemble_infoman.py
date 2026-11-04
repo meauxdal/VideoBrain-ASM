@@ -109,7 +109,7 @@ NOTES = {
     0x3BE2: "Write zero-length output end marker; EDIT uses this on EXIT after copying remaining input.",
     0x3C32: "Four-byte peripheral transfer descriptor.",
     0x3C9B: "Four-byte peripheral transfer descriptor.",
-    0x3C9F: "Unreferenced entry: port status and register/flag restoration.",
+    0x3C9F: "Transfer completion interrupt; vector installed by 3DB9.",
     0x3CB5: "Interrupt-driven byte transfer through host port 1.",
     0x3D25: "Compute two-byte checksum over a length-prefixed block.",
     0x3DEC: "Send eight bits, MSB first, via timed callback 3E17.",

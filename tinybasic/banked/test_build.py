@@ -115,32 +115,53 @@ class InstructionTests(unittest.TestCase):
     def test_tape_transfer_reads_banked_return_value(self):
         code = (BUILD / 'tape_core.bin').read_bytes()
         syms = symbols(BUILD / 'tape_core.sym')
-        for returned in (0, 1):
+        for returned in range(5):
             with self.subTest(returned=returned):
                 pc = syms['T_TRANSFER_RETURN']
-                accumulator, zero = pc >> 8, False
-                for _ in range(8):
-                    if pc in (syms['T_TRANSFER_OK'], syms['T_BAD']):
+                accumulator, saved, dc, zero = pc >> 8, 0, 0, False
+                memory = {syms['TMODE']: 0}
+                for _ in range(24):
+                    if pc in (syms['T_TRANSFER_OK'], syms['T_RETURN']):
                         break
                     opcode = code[pc - 0x1200]
                     pc += 1
                     if opcode == 0x40:
                         accumulator = returned
+                    elif opcode == 0x48:
+                        accumulator = saved
+                    elif opcode == 0x58:
+                        saved = accumulator
+                    elif opcode == 0x2A:
+                        dc = int.from_bytes(code[pc - 0x1200:pc - 0x1200 + 2], 'big')
+                        pc += 2
+                    elif opcode == 0x16:
+                        accumulator = memory.get(dc, 0)
+                        dc += 1
+                    elif opcode == 0x17:
+                        memory[dc] = accumulator
+                        dc += 1
+                    elif opcode == 0x20:
+                        accumulator = code[pc - 0x1200]
+                        pc += 1
+                    elif opcode == 0x70:
+                        accumulator = 0
                     elif opcode == 0x25:
                         zero = accumulator == code[pc - 0x1200]
                         pc += 1
-                    elif opcode == 0x84:
+                    elif opcode in (0x84, 0x90, 0x94):
                         offset = code[pc - 0x1200]
                         if offset >= 128:
                             offset -= 256
-                        pc = pc + offset if zero else pc + 1
+                        taken = opcode == 0x90 or (zero if opcode == 0x84 else not zero)
+                        pc = pc + offset if taken else pc + 1
                     elif opcode == 0x29:
                         pc = int.from_bytes(code[pc - 0x1200:pc - 0x1200 + 2], 'big')
-                        accumulator = pc >> 8
                     else:
                         self.fail(f'Unexpected transfer return opcode {opcode:02X}')
-                expected = syms['T_TRANSFER_OK'] if returned == 0 else syms['T_BAD']
+                expected = syms['T_TRANSFER_OK'] if returned == 0 else syms['T_RETURN']
                 self.assertEqual(pc, expected)
+                if returned:
+                    self.assertEqual(accumulator, returned)
 
     @unittest.skipUnless((BUILD / 'tape_core.bin').exists(), 'Assemble the cartridge first')
     def test_dupe_restores_mode_after_record_write(self):
@@ -296,7 +317,9 @@ class InstructionTests(unittest.TestCase):
             self.fail('Tape command did not select a message')
 
         for command in ('TB_SAVE', 'TB_LOAD', 'TB_COMP', 'TB_VERI', 'TB_DUPE'):
-            for status, expected in ((0, 'TAPE_OK'), (1, 'TAPE_ERROR')):
+            for status, expected in ((0, 'TAPE_OK'), (1, 'TAPE_ERROR'),
+                                     (2, 'TAPE_COMMAND_ERROR'), (3, 'TAPE_DATA_ERROR'),
+                                     (4, 'TAPE_FINISH_ERROR')):
                 with self.subTest(command=command, status=status):
                     self.assertEqual(message(command, status), syms[expected])
 
@@ -327,11 +350,11 @@ class InstructionTests(unittest.TestCase):
                 register = opcode & 15
                 registers[register] = (registers[register] - 1) & 255
                 zero = registers[register] == 0
-            elif opcode == 0x94:
+            elif opcode in (0x90, 0x94):
                 offset = code[pc - 0x1300]
                 if offset >= 128:
                     offset -= 256
-                pc = pc + 1 if zero else pc + offset
+                pc = pc + offset if opcode == 0x90 or not zero else pc + 1
             elif opcode == 0x0C:
                 self.assertIsNotNone(hold_start)
                 self.assertGreaterEqual(cycles - hold_start, 2 * 1789772 / 300)
@@ -348,16 +371,21 @@ class InstructionTests(unittest.TestCase):
 
         def execute(start, registers, accumulator, stop=None):
             pc, isar, zero = syms[start], 0, False
+            pins = accumulator
             for _ in range(128):
                 if stop and pc == syms[stop]:
                     return accumulator
                 opcode = code[pc - 0x1300]
                 pc += 1
-                if opcode == 0x08:
+                if opcode in (0x08, 0x1A, 0x1D, 0x1E):
                     continue
-                if opcode == 0x0C:
+                if opcode in (0x0C, 0x1C):
                     return accumulator
-                if 0x60 <= opcode <= 0x67:
+                if opcode == 0xA1:
+                    accumulator = pins
+                elif opcode == 0xB1:
+                    self.assertEqual(accumulator, 0)
+                elif 0x60 <= opcode <= 0x67:
                     isar = (opcode & 7) * 8 + (isar & 7)
                 elif 0x68 <= opcode <= 0x6F:
                     isar = (isar & 56) + (opcode & 7)
@@ -377,6 +405,11 @@ class InstructionTests(unittest.TestCase):
                     register = opcode & 15
                     registers[register] = (registers[register] - 1) & 255
                     zero = registers[register] == 0
+                elif opcode in (0x3C, 0x3D):
+                    registers[isar] = (registers[isar] - 1) & 255
+                    zero = registers[isar] == 0
+                    if opcode == 0x3D:
+                        isar = (isar & 56) + ((isar + 1) & 7)
                 elif 0xC0 <= opcode <= 0xCB:
                     accumulator = (accumulator + registers[opcode & 15]) & 255
                     zero = accumulator == 0
@@ -398,14 +431,59 @@ class InstructionTests(unittest.TestCase):
                     self.fail(f'Unexpected status-path opcode {opcode:02X}')
             self.fail('Status path did not return')
 
-        # Original firmware drives data low on stop, and clock low on CRC error.
-        for status, remaining, bits, expected in [(0x20, 0, 0, 0), (0x60, 0, 0, 1),
+        # A stop during byte transfer is an error. The separate completion ISR
+        # distinguishes the clean final stop from a peripheral failure.
+        for status, remaining, bits, expected in [(0x20, 0, 0, 1), (0x60, 0, 0, 1),
                                                    (0x20, 1, 0, 1), (0x20, 0, 1, 1)]:
             with self.subTest(status=status, remaining=remaining, bits=bits):
                 registers = [0] * 64
                 registers[1], registers[3], registers[8] = remaining, bits, 1
                 execute('T_IRQ_STATUS', registers, status, 'T_IRQ_RETURN')
                 self.assertEqual(execute('T_WAIT', registers, 0), expected)
+
+        # Byte completion hands off to the original completion interrupt.
+        registers = [0] * 64
+        registers[8] = 1
+        self.assertEqual(execute('T_WAIT', registers, 0), 0)
+        for status in (0x00, 0x20, 0x60):
+            with self.subTest(completion_status=status):
+                registers = [0] * 64
+                registers[0] = registers[1] = 10
+                execute('T_STOP_IRQ', registers, status)
+                self.assertEqual(registers[0:2], [1, 1])
+                self.assertEqual(registers[5], 0 if status == 0x20 else 255)
+                self.assertEqual(execute('T_STOP_WAIT', registers, 0), int(status != 0x20))
+
+        registers = [0] * 64
+        registers[0] = registers[1] = 10
+        registers[16:19] = [1, 1, 1]
+        self.assertEqual(execute('T_STOP_TICK', registers, 0), 1)
+
+        # The 3853 forces bit 7 of an external interrupt vector high.
+        self.assertTrue(syms['T_IRQ'] & 0x80)
+        self.assertTrue(syms['T_STOP_IRQ'] & 0x80)
+
+    @unittest.skipUnless((BUILD / 'tape_io.bin').exists(), 'Assemble the cartridge first')
+    def test_tape_completion_matches_original_cartridges(self):
+        code = (BUILD / 'tape_io.bin').read_bytes()
+        syms = symbols(BUILD / 'tape_io.sym')
+        root = Path(__file__).resolve().parents[2]
+        info = {}
+        for line in (root / 'infoman/infoman.lst').read_text().splitlines():
+            match = re.match(r'([0-9A-F]{4}):\s+((?:[0-9A-F]{2} +)+)', line)
+            if match:
+                for offset, byte in enumerate(bytes.fromhex(match[2])):
+                    info[int(match[1], 16) + offset] = byte
+        money = {}
+        for line in (root / 'asm-collection/Money_Minder_vb1000mm.asm').read_text().splitlines():
+            match = re.search(r'; ([0-9a-f]{4}) ((?:[0-9a-f]{2} ?)+)', line)
+            if match:
+                for offset, byte in enumerate(bytes.fromhex(match[2])):
+                    money[int(match[1], 16) + offset] = byte
+        expected = bytes(info[address] for address in range(0x3C9F, 0x3CB5))
+        self.assertEqual(expected, bytes(money[address] for address in range(0x1BA1, 0x1BB7)))
+        start = syms['T_STOP_IRQ'] - 0x1300
+        self.assertEqual(code[start:start + len(expected)], expected)
 
     @unittest.skipUnless((BUILD / 'tinybasic-24x15.bin').exists(), 'Assemble the cartridge first')
     def test_commands_preserve_dispatch_id_across_jump(self):

@@ -1,0 +1,126 @@
+[
+  {
+    "Name": "PatentBL",
+    "Address": "12DD",
+    "Bytes": 6,
+    "SHA256": "6e309359448addee1d9bc01ef75f9d0a95ce95a127d798956696ca1502ebff49",
+    "Missing": []
+  },
+  {
+    "Name": "PatentBR",
+    "Address": "12E3",
+    "Bytes": 6,
+    "SHA256": "bbea3b495c43dfb5ca957384a10a3f66eeab681772e03b32d57c929a065c7a20",
+    "Missing": []
+  },
+  {
+    "Name": "PatentNL",
+    "Address": "1469",
+    "Bytes": 60,
+    "SHA256": "62b0de421294c164123eb7b5030efe9f004e54655cac6bfcaf117e2c4751a5dc",
+    "Missing": []
+  },
+  {
+    "Name": "PatentNR",
+    "Address": "14A5",
+    "Bytes": 60,
+    "SHA256": "0fae79691f3ecf6555f8e5e0346ddaea0c60d33a153d57b0a8457763246b927b",
+    "Missing": []
+  },
+  {
+    "Name": "PatentCB",
+    "Address": "14E1",
+    "Bytes": 4,
+    "SHA256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e",
+    "Missing": []
+  },
+  {
+    "Name": "PatentLB1O",
+    "Address": "14E5",
+    "Bytes": 64,
+    "SHA256": "c455f0bf734f2beb8bc467ea9164af553c0a431f56b925ff8db0e3409e32087e",
+    "Missing": []
+  },
+  {
+    "Name": "PatentLB1E",
+    "Address": "1525",
+    "Bytes": 64,
+    "SHA256": "4666d34b8dc4310df176ed947f265dddaa67765f2c1bc25b42be4d7cd0dac331",
+    "Missing": []
+  },
+  {
+    "Name": "PatentLB2O",
+    "Address": "1565",
+    "Bytes": 64,
+    "SHA256": "82736637cb86583faf3826b3386ac630b942cea7d8b7e6bd5c0eef4545b1be34",
+    "Missing": [
+      "158D",
+      "158E"
+    ]
+  },
+  {
+    "Name": "PatentLB2E",
+    "Address": "15A5",
+    "Bytes": 64,
+    "SHA256": "d7a0e092813470ff5f410275170838d810f8e682e68069d1abe61bf19be7ae86",
+    "Missing": []
+  },
+  {
+    "Name": "PatentRB1O",
+    "Address": "15E5",
+    "Bytes": 64,
+    "SHA256": "83db14163d6c626af83c586eb4784817bc80d8ab0fa602dd4ca344f904d08816",
+    "Missing": []
+  },
+  {
+    "Name": "PatentRB1E",
+    "Address": "1625",
+    "Bytes": 64,
+    "SHA256": "c53fdca1283df16f730ee17110410c25ddf2f705a2cfd812e9170eb9d6c2f9a7",
+    "Missing": []
+  },
+  {
+    "Name": "PatentRB2O",
+    "Address": "1665",
+    "Bytes": 64,
+    "SHA256": "00477267a483eed346c2dd131b4be69c4698ae3091a4c7794a29f070c883a333",
+    "Missing": []
+  },
+  {
+    "Name": "PatentRB2E",
+    "Address": "16A5",
+    "Bytes": 64,
+    "SHA256": "b7591cc929d15d86b632df0e9d561cd72f9b1ff58cf3d98bf6dcba7b1780dbb4",
+    "Missing": []
+  },
+  {
+    "Name": "PatentCR1O",
+    "Address": "16E5",
+    "Bytes": 12,
+    "SHA256": "66cc47de0261e796b764020f2f01be137c92e9aabfdcb9e522ce1c3386a563db",
+    "Missing": []
+  },
+  {
+    "Name": "PatentCR1E",
+    "Address": "16F1",
+    "Bytes": 12,
+    "SHA256": "4d181cdfb128429f960de8670f365c03c5e5c862c5aeb580e99063de9ab365c6",
+    "Missing": []
+  },
+  {
+    "Name": "PatentCR2O",
+    "Address": "16FD",
+    "Bytes": 12,
+    "SHA256": "44ed624f878be788a06105ac879ccc7f96f6fc10234571e202d94357ee5ab0dd",
+    "Missing": []
+  },
+  {
+    "Name": "PatentCR2E",
+    "Address": "1709",
+    "Bytes": 12,
+    "SHA256": "a5346d7254e5990ee44b583e78d9584868f296127e96ff77c189a970fe0f169c",
+    "Missing": [
+      "170B"
+    ]
+  }
+]
