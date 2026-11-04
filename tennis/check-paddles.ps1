@@ -1,10 +1,12 @@
 param(
-    [Parameter(Mandatory = $true)][string]$Dasm
+    [Parameter(Mandatory = $true)][string]$Dasm,
+    [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
-$output = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'local/tennis-adaptation'
+$output = Join-Path $root 'local/tennis-adaptation'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $binary = Join-Path $output 'paddles-unit.bin'

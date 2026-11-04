@@ -26,10 +26,15 @@ Patent addresses below use e5frog's reconstructed cartridge layout.
 object mapping, asset disagreements, and assembly batches. Hardware checks
 are planned at integrated milestones; they are not required after each edit.
 
+Run these commands from the VideoBrain-ASM repository root. Scripts use the
+sibling VideoBrain_MiSTer checkout for reference ROMs and
+`local/tennis-adaptation/` outputs. Pass `-CoreRoot <path>` for another
+checkout location.
+
 ## Combined candidate
 
 ```powershell
-.\adaptations\tennis\check-candidate.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-candidate.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 This assembles `tennis-adaptation.bin` under `local/tennis-adaptation/`,
@@ -74,7 +79,7 @@ and returns with interrupts disabled for remaining scene writes. The
 candidate replaces the old collision dispatch and its record 22/23 consumers.
 
 ```powershell
-.\adaptations\tennis\check-paddles.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-paddles.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 This assembles an isolated fixture and executes 1,458 instruction-level
@@ -85,7 +90,7 @@ or the integrated game. Timestamped stdout/stderr logs are saved alongside
 the other local outputs. `paddles-unit.bin` is a test fixture, not a cartridge.
 
 ```powershell
-.\adaptations\tennis\check-controls.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-controls.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 This verifies all 223 retained capture bytes, 256 conversion inputs and
@@ -104,7 +109,7 @@ after retirement of the retail movement/serve/collision consumers.
 The candidate calls this replacement path.
 
 ```powershell
-.\adaptations\tennis\check-rally.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-rally.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 The isolated fixture checks 12,570 arithmetic/collision cases, both serve
@@ -121,7 +126,7 @@ The replacement state uses $0CE0-$0CF4 after retirement of old retail policy.
 The candidate calls the same game/score routines as the isolated fixture.
 
 ```powershell
-.\adaptations\tennis\check-game.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-game.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 Checks execute 7,420 controller frames, including both complete retrievals,
@@ -132,7 +137,7 @@ Integrated display/input timing validation remains pending.
 ## Scene and display checks
 
 ```powershell
-.\adaptations\tennis\check-scene.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\check-scene.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 Checks cover 17 selected assets, all ball-X selection values, 228 full scene
@@ -147,7 +152,7 @@ update. Odd/even BIOS transfers use separate shadow sets.
 From the repository root, with DASM F8 support:
 
 ```powershell
-.\adaptations\tennis\build.ps1 -Dasm <path-to-dasm.exe>
+.\tennis\build.ps1 -Dasm <path-to-dasm.exe>
 ```
 
 Outputs go to `local/tennis-adaptation/`, with timestamped assembly stdout,

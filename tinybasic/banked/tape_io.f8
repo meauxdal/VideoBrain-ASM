@@ -80,6 +80,8 @@ T_IO_MODE
         DS 1
         LIS 8
         LR 3,A
+        LIS 1
+        LR 2,A
 T_DATA  LIS 1
         LR 8,A
         OUTS 14
@@ -142,6 +144,26 @@ T_WAIT_LOOP
         CLR
         AS 5
         BNZ T_TIMEOUT
+        LR A,8
+        CI 0
+        BZ T_WAIT_PROGRESS
+        LISU 4
+        LISL 7
+        LR A,(IS)
+        CI 1
+        BNZ T_WAIT_PROGRESS
+        LR A,2
+        CI 0
+        BNZ T_WAIT_PROGRESS
+        LIS 1
+        LR 2,A
+        LISU 2
+        LISL 0
+        CLR
+        LR I,A
+        LR I,A
+        LIS 8
+        LR (IS),A
 T_WAIT_PROGRESS
         CLR
         AS 0

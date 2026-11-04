@@ -1,11 +1,12 @@
 param(
-    [Parameter(Mandatory = $true)][string]$Dasm
+    [Parameter(Mandatory = $true)][string]$Dasm,
+    [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
 $source = Join-Path $PSScriptRoot 'tennis.asm'
-$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $output = Join-Path $root 'local/tennis-adaptation'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'

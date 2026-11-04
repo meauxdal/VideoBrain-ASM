@@ -1,10 +1,12 @@
 param(
     [Parameter(Mandatory = $true)][string]$RetailRom,
     [Parameter(Mandatory = $true)][string]$PatentArchive,
-    [Parameter(Mandatory = $true)][string]$AdamArchive
+    [Parameter(Mandatory = $true)][string]$AdamArchive,
+    [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath $CoreRoot).Path
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Read-Entry($Archive, [string]$Name) {
@@ -100,7 +102,7 @@ $missing = @(
     [regex]::Matches($adamSource, 'Missing line in assembly listing \(\$([0-9a-f]{4})\)', 'IgnoreCase') |
         ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } | Sort-Object -Unique
 )
-$output = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'local/tennis-adaptation'
+$output = Join-Path $root 'local/tennis-adaptation'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $report = Join-Path $output ('assets-{0}.json' -f (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 [ordered]@{

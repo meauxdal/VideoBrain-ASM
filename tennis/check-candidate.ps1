@@ -1,10 +1,12 @@
 param(
-    [Parameter(Mandatory = $true)][string]$Dasm
+    [Parameter(Mandatory = $true)][string]$Dasm,
+    [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
-$output = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'local/tennis-adaptation'
+$output = Join-Path $root 'local/tennis-adaptation'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $binary = Join-Path $output 'tennis-adaptation.bin'
@@ -17,8 +19,8 @@ $checkErrors = Join-Path $output "candidate-check-$stamp.err"
     "-I$PSScriptRoot" "-o$binary" "-s$symbols" `
     "-l$(Join-Path $output 'candidate.lst')" '-R' 1> $assemblyLog 2> $assemblyErrors
 if ($LASTEXITCODE -ne 0) { throw "Assembly failed: $assemblyLog; $assemblyErrors" }
-$retail = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'software/1 Cartridges/Tennis (EN03) (USA) (1978.11.07).bin'
-$bios = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'software/0 BIOS/VideoBrain - RES1 (USA).bin'
+$retail = Join-Path $root 'software/1 Cartridges/Tennis (EN03) (USA) (1978.11.07).bin'
+$bios = Join-Path $root 'software/0 BIOS/VideoBrain - RES1 (USA).bin'
 & node (Join-Path $PSScriptRoot 'tests/check-candidate.cjs') $binary $symbols $retail $bios 1> $checkLog 2> $checkErrors
 if ($LASTEXITCODE -ne 0) { throw "Candidate checks failed: $checkLog; $checkErrors" }
 Get-Content -LiteralPath $checkLog

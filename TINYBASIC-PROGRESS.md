@@ -1,12 +1,12 @@
 # Tiny BASIC Enhanced progress
 
-Updated: 2026-11-03. Current version: 1.9. SAVE confirmed; round trip pending.
+Updated: 2026-11-04. Current version: 1.9. SAVE confirmed; LOAD fails.
 
 ## Resume here
 
-The active problem is SAVE/LOAD reliability, with two reported symptoms:
-SAVE does not write all records, and TBE reports TAPE ERROR even when the
-record it wrote is valid. Do not treat a valid first record as a complete SAVE.
+The active problem is LOAD failure and loss of serial output afterward.
+Version 1.9 completes a two-record SAVE. LOAD returns to READY, but the loaded
+program fails its smoke check and serial output stops at the LOAD command.
 
 Use the working cartridge ASM as the reference. Compare setup, byte transfer,
 completion and cleanup before introducing new diagnostics. No simulations or
@@ -14,6 +14,19 @@ full Quartus builds are requested. Keep assembly checks separate from hardware
 results; prior native checks passed while hardware still failed.
 
 ## Latest hardware evidence
+
+On November 4, version 1.9 with Expander autoload enabled produced serial
+output after reset. Loading a rewound diagnostic tape stopped serial output
+at `READY)LOAD`. The screen returned to READY after `SMOKE CHECK FAIL`;
+this was not a persistent CPU hang. The diagnostic reported:
+
+- Program end: actual 12288 (3000 hex), expected 12420 (3084 hex).
+- Sum: actual 25, expected 232. Roll: actual 35, expected 113.
+
+The cleared program boundary is consistent with LOAD's failure path. The
+final screen does not retain the tape-phase error. The user subsequently
+confirmed `PRINT PEEK(16380)` returns 0 after failed LOAD, before reset:
+serial is disabled. The earlier reading of 1 was after reset.
 
 The paired 1.6 tape and printer capture supplied on November 3 contains:
 
@@ -100,7 +113,7 @@ Release: `Tiny BASIC Enhanced v1.9 (2026.11.03) (Elle Ball).vbc`.
 ROM CRC32: CEB0CDEA. Assembly and all 16 static tests passed. The generated main
 assembly listings contain no errors. No simulation was
 run for this fix. Hardware confirms multi-record SAVE, serial `TAPE OK`, return
-to `READY`, and complete image data. Restart/LOAD remains pending.
+to `READY`, and complete image data. The November 4 LOAD check failed as above.
 
 The failed 1.8 artifact has ROM CRC32 C9BCBADE. The failed 1.7 artifact has ROM
 CRC32 0C74E17D. The failed 1.6 artifact has ROM
@@ -108,12 +121,18 @@ CRC32 A7921899. The prior development artifact was labeled 1.5, ROM CRC32
 30EAC01D; it was the first artifact containing the 1.6 handoff change, but its
 version label was wrong. Static checks passed for each candidate.
 
-## Next hardware check
+## Next step
 
-1. Reload the core, mount the saved image for playback, rewind, LOAD, LIST and RUN.
-   Expect all five lines, TAPE PASS, and values 7 and 9.
-2. Confirm VERI and COMP after rewinding playback. Check failure reporting and
-   return to READY using a blank or damaged tape.
+Compare LOAD setup, receive, completion, abort and cleanup directly against
+the working cartridge and Expander ASM. The user stopped the additional-probe
+approach; do not request another PEEK or introduce speculative diagnostics.
+
+`T_RETURN` calls `CON_SERIAL_INIT`, which clears 3FFC and only sets it after
+all three setup bytes succeed. Setup and subsequent character-transmit
+timeouts both disable serial, so the observed zero does not identify which
+failed. Identify a concrete divergence from the working ASM before patching.
+Existing codec tests replace the tape transport; the firmware SAVE test does
+not supply playback input, so neither establishes production LOAD recovery.
 
 Update this file with the exact version, ROM CRC, observed result and remaining
 failure after each hardware report. Preserve the distinction between source

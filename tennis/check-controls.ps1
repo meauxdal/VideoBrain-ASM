@@ -1,10 +1,11 @@
 param(
-    [Parameter(Mandatory = $true)][string]$Dasm
+    [Parameter(Mandatory = $true)][string]$Dasm,
+    [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
-$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $output = Join-Path $root 'local/tennis-adaptation'
 $retail = Join-Path $root 'software/1 Cartridges/Tennis (EN03) (USA) (1978.11.07).bin'
 if ((Get-FileHash -LiteralPath $retail -Algorithm SHA256).Hash.ToLowerInvariant() -ne
