@@ -11,6 +11,7 @@ ENTITY test_boot IS
            expander_file : string := "";
            serial_file : string := "";
            record_file : string := "";
+           playback_file : string := "";
            check_serial : boolean := true;
            trace_tape : boolean := false;
            tape_status_pc, tape_failed_pc, tape_return_pc, tape_timeout_pc : natural := 0;
@@ -84,7 +85,8 @@ ARCHITECTURE test OF test_boot IS
   SIGNAL serial_length : natural := 0;
   SIGNAL tape_byte : uv8 := x"00";
   SIGNAL duplicate_status : uv8 := x"00";
-  SIGNAL record_data, record_enable : std_logic;
+  SIGNAL record_data, record_enable, playback_enable : std_logic;
+  SIGNAL playback_data : std_logic := '1';
 BEGIN
   clk <= NOT clk AFTER 5 ns;
   ce <= '1' WHEN count MOD 4 = 0 ELSE '0';
@@ -116,7 +118,8 @@ BEGIN
     clk => clk, reset_na => reset_na,
     host_data_n => po_b_n(5), host_clock_n => po_b_n(6),
     data_n => exp_data_n, clock_n => exp_clock_n, interrupt_n => exp_irq_n,
-    record_data => record_data, record_enable => record_enable, playback_enable => OPEN,
+    record_data => record_data, record_enable => record_enable,
+    playback_data => playback_data, playback_enable => playback_enable,
     modem_txd => modem_txd, printer_txd => printer_txd,
     dl_addr => dl_addr, dl_data => dl_data, dl_wr => dl_wr, dl_index => dl_index);
   memory : ENTITY work.sys_bus PORT MAP (
@@ -132,6 +135,41 @@ BEGIN
     dl_addr => dl_addr, dl_data => dl_data, dl_wr => dl_wr, dl_index => dl_index,
     unknown_cart_profile => x"06", apl_hold => OPEN, apl_available => OPEN,
     music_available => OPEN, apl_load_error => OPEN);
+
+  PROCESS
+    TYPE binary_file IS FILE OF character;
+    FILE tape : binary_file;
+    VARIABLE value : character;
+    VARIABLE word : unsigned(31 DOWNTO 0);
+    VARIABLE runs : unsigned(31 DOWNTO 0) := (OTHERS => '0');
+    VARIABLE remaining, started : time;
+  BEGIN
+    IF playback_file = "" THEN WAIT; END IF;
+    file_open(tape, playback_file, read_mode);
+    FOR i IN 0 TO 511 LOOP
+      read(tape, value);
+      IF i >= 8 AND i < 12 THEN
+        runs(8*(i-8)+7 DOWNTO 8*(i-8)) := to_unsigned(character'pos(value), 8);
+      END IF;
+    END LOOP;
+    FOR run IN 1 TO to_integer(runs) LOOP
+      FOR i IN 0 TO 3 LOOP
+        read(tape, value);
+        word(8*i+7 DOWNTO 8*i) := to_unsigned(character'pos(value), 8);
+      END LOOP;
+      IF word(31) = '1' THEN playback_data <= '1'; ELSE playback_data <= '0'; END IF;
+      remaining := to_integer(word(30 DOWNTO 0)) * 48780 ps;
+      WHILE remaining > 0 ns LOOP
+        IF playback_enable /= '1' THEN WAIT UNTIL playback_enable = '1'; END IF;
+        started := now;
+        WAIT ON playback_enable FOR remaining;
+        remaining := remaining - (now - started);
+      END LOOP;
+    END LOOP;
+    file_close(tape);
+    playback_data <= '1';
+    WAIT;
+  END PROCESS;
 
   PROCESS
     TYPE binary_file IS FILE OF character;
