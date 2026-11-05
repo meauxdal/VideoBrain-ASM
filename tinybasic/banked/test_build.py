@@ -1,8 +1,9 @@
 import unittest
 from pathlib import Path
 import re
+import tempfile
 
-from build import instruction, relational_aliases, symbols
+from build import check_release_version, instruction, relational_aliases, symbols
 
 
 BUILD = Path(__file__).resolve().parents[2] / 'build/tinybasic/banked'
@@ -512,6 +513,33 @@ class InstructionTests(unittest.TestCase):
             with self.subTest(alias=alias):
                 self.assertEqual(entries[alias], entries[symbol])
         self.assertTrue(table.index('"LT"') < table.index('XP17+H8000'))
+
+
+class ReleaseVersionTests(unittest.TestCase):
+    def test_identical_rebuild_allowed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            (path / 'Tiny BASIC Enhanced v2.0 (2026.11.04) (Elle Ball).bin').write_bytes(b'rom')
+            (path / 'Tiny BASIC Enhanced v2.0 (2026.11.04) (Elle Ball).vbc').write_bytes(b'vbc')
+            check_release_version(path, '2.0', b'rom', b'vbc')
+
+    def test_changed_release_requires_new_version(self):
+        for suffix in ('.bin', '.vbc'):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)
+                release = path / ('Tiny BASIC Enhanced v2.0 (2026.11.03) (Elle Ball)' + suffix)
+                release.write_bytes(b'old')
+                with self.assertRaisesRegex(SystemExit, 'bump VERSION'):
+                    check_release_version(path, '2.0', b'rom', b'vbc')
+                self.assertEqual(release.read_bytes(), b'old')
+
+    def test_other_versions_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            release = path / 'Tiny BASIC Enhanced v1.9 (2026.11.03) (Elle Ball).bin'
+            release.write_bytes(b'old')
+            check_release_version(path, '2.0', b'rom', b'vbc')
+            self.assertEqual(release.read_bytes(), b'old')
 
 
 if __name__ == '__main__':

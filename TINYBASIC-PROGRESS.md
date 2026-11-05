@@ -1,12 +1,19 @@
 # Tiny BASIC Enhanced progress
 
-Updated: 2026-11-04. Current version: 1.9. SAVE confirmed; LOAD fails.
+Updated: 2026-11-04. Current candidate: 2.0. Hardware LOAD/LIST/RUN and serial pass.
 
 ## Resume here
 
-The active problem is LOAD failure and loss of serial output afterward.
-Version 1.9 completes a two-record SAVE. LOAD returns to READY, but the loaded
-program fails its smoke check and serial output stops at the LOAD command.
+Version 2.0 reports TAPE OK after LOAD, lists all eight program lines and runs
+correctly on hardware. The terminal transcript confirms continued serial
+output through LOAD, LIST, RUN, INPUT and the final READY prompt.
+Version 1.9 completed a two-record SAVE but a prior LOAD failed its smoke check
+and stopped serial output.
+
+Version 2.0 labels the receive-timeout change previously built under 1.9
+(6C5DD5B6). The user has not identified which 1.9 build failed LOAD. Do not
+reuse a version for changed candidates; the builder now rejects conflicting
+release contents.
 
 Use the working cartridge ASM as the reference. Compare setup, byte transfer,
 completion and cleanup before introducing new diagnostics. No simulations or
@@ -14,6 +21,15 @@ full Quartus builds are requested. Keep assembly checks separate from hardware
 results; prior native checks passed while hardware still failed.
 
 ## Latest hardware evidence
+
+On November 4, the user reported TAPE OK on the first 2.0 LOAD and supplied
+a capture-card screenshot, then a complete terminal transcript. LIST shows
+all eight lines, 10-80. RUN prints IF OK, skips IF FAILED, accepts B:3, prints
+TOTAL 10 and integer division result 3, then returns to READY. Serial remains
+active throughout. This confirms a successful LOAD/LIST/RUN and serial return
+for this program. The user also confirms multiple successful LOADs, serial
+remaining active and segmented LIST commands working. Failure recovery remains
+unverified.
 
 On November 4, version 1.9 with Expander autoload enabled produced serial
 output after reset. Loading a rewound diagnostic tape stopped serial output
@@ -108,9 +124,22 @@ change the hardware result. Version 1.8 regressed before recording began.
 ## Current build and validation
 
 Build with `python tinybasic/banked/build.py --dasm tools/dasm.exe`.
-Release: `Tiny BASIC Enhanced v1.9 (2026.11.03) (Elle Ball).vbc`.
+Candidate: `Tiny BASIC Enhanced v2.0 (2026.11.04) (Elle Ball).vbc`.
 
-ROM CRC32: CEB0CDEA. Assembly and all 16 static tests passed. The generated main
+ROM CRC32: 4ACC6012. Full Python/DASM assembly passed in under one second.
+Three version-guard tests passed: identical rebuild, changed BIN/VBC across
+dates rejected, and other versions preserved. No simulation or instruction
+execution substitutes were run. Hardware LOAD/LIST/RUN and continued serial
+output pass as above; broader tape acceptance remains pending.
+
+Source review: the read descriptor, receive bit sequence, 68-byte countdown
+and dedicated completion ISR agree with Information Manager/Money Minder.
+The receive-timeout refresh follows their activity-based waits. This does
+not establish safe abort: Expander tape decode at 0337-03B5 does not check
+the serial-mode host reset at 0480-0491. Recovery after a receive timeout
+remains unresolved. No transport ASM was changed in this pass.
+
+Hardware-confirmed 1.9 ROM CRC32: CEB0CDEA. Assembly and all 16 static tests passed. The generated main
 assembly listings contain no errors. No simulation was
 run for this fix. Hardware confirms multi-record SAVE, serial `TAPE OK`, return
 to `READY`, and complete image data. The November 4 LOAD check failed as above.
@@ -123,9 +152,20 @@ version label was wrong. Static checks passed for each candidate.
 
 ## Next step
 
-Compare LOAD setup, receive, completion, abort and cleanup directly against
-the working cartridge and Expander ASM. The user stopped the additional-probe
-approach; do not request another PEEK or introduce speculative diagnostics.
+Hardware VERI, COMP (match and mismatch), and DUPE/copy reload remain pending.
+Core examples 49-52 provide staged VBK4 checks using the existing 36/37
+SAVE/LOAD fixture. Also pending: the existing smoke check after LOAD, blank or
+damaged tape rejection, empty programs and missing-Expander/error recovery.
+If a transfer fails, retain its exact tape
+message and trace that phase against the working cartridge and Expander ASM.
+Do not request another PEEK or add probes.
+
+## Deferred scope decision
+
+Named SAVE/LOAD and TLIST tape cataloguing are a future option, not approved
+implementation scope or a 2.0 acceptance requirement. A design would need
+program names/boundaries, sequential scanning and compatibility with existing
+unnamed tapes. No tape-format or command changes are made for this plan.
 
 `T_RETURN` calls `CON_SERIAL_INIT`, which clears 3FFC and only sets it after
 all three setup bytes succeed. Setup and subsequent character-transmit

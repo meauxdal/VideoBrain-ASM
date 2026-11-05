@@ -45,6 +45,7 @@ ENTITY test_boot IS
 END ENTITY;
 
 ARCHITECTURE test OF test_boot IS
+  CONSTANT clock_period : time := 10 ns;
   SIGNAL clk : std_logic := '0';
   SIGNAL ce : std_logic;
   SIGNAL reset_na : std_logic := '0';
@@ -88,7 +89,7 @@ ARCHITECTURE test OF test_boot IS
   SIGNAL record_data, record_enable, playback_enable : std_logic;
   SIGNAL playback_data : std_logic := '1';
 BEGIN
-  clk <= NOT clk AFTER 5 ns;
+  clk <= NOT clk AFTER clock_period / 2;
   ce <= '1' WHEN count MOD 4 = 0 ELSE '0';
   io_data <= duplicate_status WHEN tape_codec_test AND io_addr = 6 ELSE
     tape_byte WHEN tape_codec_test AND io_addr = 5 ELSE
@@ -158,7 +159,8 @@ BEGIN
         word(8*i+7 DOWNTO 8*i) := to_unsigned(character'pos(value), 8);
       END LOOP;
       IF word(31) = '1' THEN playback_data <= '1'; ELSE playback_data <= '0'; END IF;
-      remaining := to_integer(word(30 DOWNTO 0)) * 48780 ps;
+      -- VBT ticks use the same master clock as the accelerated Expander.
+      remaining := to_integer(word(30 DOWNTO 0)) * clock_period;
       WHILE remaining > 0 ns LOOP
         IF playback_enable /= '1' THEN WAIT UNTIL playback_enable = '1'; END IF;
         started := now;

@@ -12,8 +12,8 @@ import zlib
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
 OUT = REPO / 'build/tinybasic/banked'
-VERSION = '1.9'
-RELEASE_DATE = '2026.11.03'
+VERSION = '2.0'
+RELEASE_DATE = '2026.11.04'
 COMMON_START = 0x16D0
 KEYBOARD_ABI = bytes.fromhex('56 42 4B 01 06 10 09 3F F9')
 
@@ -32,6 +32,13 @@ def cartridge(rom):
     body = b'VBCR' + b''.join(tag + struct.pack('<I', len(value)) + value +
                             bytes(len(value) & 1) for tag, value in chunks)
     return b'RIFF' + struct.pack('<I', len(body)) + body
+
+
+def check_release_version(directory, version, rom, mapped):
+    expected = {'.bin': rom, '.vbc': mapped}
+    for path in directory.glob(f'Tiny BASIC Enhanced v{version} (*'):
+        if path.suffix in expected and path.read_bytes() != expected[path.suffix]:
+            raise SystemExit(f'Version {version} already has different contents: {path.name}; bump VERSION')
 
 
 def assemble(dasm, source, output):
@@ -533,10 +540,13 @@ def main():
     if any(image[COMMON_START - 0x1000:] != images[0][COMMON_START - 0x1000:]
            for image in images[1:]):
         raise SystemExit('Common ROM region differs between banks')
+    rom = b''.join(images)
+    vbc = cartridge(rom)
+    check_release_version(OUT, VERSION, rom, vbc)
     output = OUT / 'tinybasic-24x15.bin'
-    output.write_bytes(b''.join(images))
+    output.write_bytes(rom)
     mapped = output.with_suffix('.vbc')
-    mapped.write_bytes(cartridge(output.read_bytes()))
+    mapped.write_bytes(vbc)
     layout = ['Bank  Code end  Code limit  Contiguous free']
     for bank in range(1, 5):
         layout.append(f'{bank:4}  {positions[bank]:08X}  {table_start:08X}  {table_start - positions[bank]:15}')

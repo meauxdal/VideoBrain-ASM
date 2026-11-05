@@ -1,5 +1,19 @@
 # Tiny BASIC Enhanced
 
+## 2.0 candidate
+
+Receive waits refresh their timeout on tape interrupt activity, following
+Money Minder. SAVE code is unchanged from the latest 1.9 development build.
+ROM CRC32: `4ACC6012`. Assembly passes. Hardware confirms LOAD reporting
+TAPE OK, a complete eight-line LIST and correct RUN with INPUT, IF, arithmetic
+and return to READY. Serial output continues throughout. The user also
+confirms multiple successful LOADs and segmented LIST commands. Failure
+recovery remains unverified.
+
+Every changed candidate must use a new version. The builder refuses to
+replace an existing version's release files with different contents, even
+when the release date changes. Identical rebuilds are permitted.
+
 ## 1.9
 
 The required host-line reset before a tape command is restored. Transport
@@ -161,7 +175,7 @@ python tinybasic/banked/build.py --dasm tools/dasm.exe
 ```
 
 Release files under `build/tinybasic/banked` are named
-`Tiny BASIC Enhanced v1.9 (2026.11.03) (Elle Ball).bin` and `.vbc`.
+`Tiny BASIC Enhanced v2.0 (2026.11.04) (Elle Ball).bin` and `.vbc`.
 The VBC selects the BASIC mapper. The raw image is 16 KiB.
 The shorter `tinybasic-24x15` filenames are retained for the test scripts.
 Released 1.0 CRC32: `425E4F8E`. Development builds print their CRC32.
