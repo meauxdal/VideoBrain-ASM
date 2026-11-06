@@ -8,7 +8,7 @@ function execute(rom, symbols, label, inputs, options = {}) {
   for (const [address, value] of Object.entries(options.memory || {})) mem[Number(address)] = value;
   const regs = new Uint8Array(64).fill(0x5a);
   inputs.forEach((value, index) => { regs[index] = value; });
-  const writes = [];
+  const writes = [], ports = [];
   let pc = symbols[label], pc1 = 0xffff, a = inputs[0], dc = 0, dc1 = 0, is = 0, w = options.status || 0;
   const calls = [], stack = [];
   if (options.j !== undefined) regs[9] = options.j;
@@ -82,6 +82,8 @@ function execute(rom, symbols, label, inputs, options = {}) {
       if (!(w & (op & 7))) pc = base + (offset < 128 ? offset : offset - 256);
     } else switch (op) {
       case 0x08: setK(pc1); break;
+      case 0x1c: pc = pc1; break;
+      case 0xb0: case 0xb1: ports.push([op & 1, a]); break;
       case 0x0a: a = is; break;
       case 0x0b: is = a & 63; break;
       case 0x10: dc = (regs[10] << 8) | regs[11]; break;
@@ -89,7 +91,7 @@ function execute(rom, symbols, label, inputs, options = {}) {
         pc = getK();
         if (pc !== 0xffff) break;
         assert.equal(stack.length, 0, 'balanced BIOS K stack');
-        return { a, regs, mem, writes, calls, w, steps: steps + 1 };
+        return { a, regs, mem, writes, calls, ports, w, steps: steps + 1 };
       case 0x12: a >>= 1; flags(a); break;
       case 0x13: a = (a << 1) & 255; flags(a); break;
       case 0x14: a >>= 4; flags(a); break;

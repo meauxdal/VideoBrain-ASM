@@ -89,7 +89,6 @@ PatentCartridgeFrame:
 ; The stock capture path retains calibration and command/freeze sequencing.
 ; Output/interrupt timing of the combined frame still needs integrated validation.
 ; TODO: profile the 52-to-164 compute deadline, including capture and bus stalls.
-; TODO: connect patent sound events through the retained machine services.
 PatentFrameCompute:
         lr K,P
         pi $40a9
@@ -110,6 +109,22 @@ PatentFrameCompute:
         pi PatentFrameButtons
         lr 0,A
         pi PatentGameStep
+        ; Retail tones: paddle hit 15 lines/edge, wall 8 (see sound.asm).
+        ni PATENT_EVENT_PADDLE+PATENT_EVENT_WALL
+        bz PatentFrameQuiet
+        ci PATENT_EVENT_WALL
+        li 256-14
+        lr 6,A
+        lis 10
+        lr 5,A
+        bnz PatentFrameTone
+        li 256-7
+        lr 6,A
+        li 18
+        lr 5,A
+PatentFrameTone:
+        pi PatentSoundStart
+PatentFrameQuiet:
         pi PatentSceneUpdate
         pi $40bc
         di
@@ -122,18 +137,22 @@ PatentFrameButtons:
         ins 1
         pk
 
-; R1 = target scanline. The scheduler calls this with no live R3 value.
+; R1 = target scanline. The scheduler calls this with no live R2-R5 value.
 ; Enter a fresh rising window if already late; an IRQ may span the target.
+; Sound edges are produced here, while the frame is otherwise idle.
 PatentFrameWaitLine:
         lr K,P
-        lr A,1
         ei
 PatentFrameWaitWrap:
+        pi PatentSoundService
+        lr A,1
         dci $08fb
         cm
         bz PatentFrameWaitDone
         bc PatentFrameWaitWrap
 PatentFrameWaitLoop:
+        pi PatentSoundService
+        lr A,1
         dci $08fb
         cm
         bnc PatentFrameWaitLoop
@@ -161,14 +180,16 @@ PatentFrameEnable:
 
         include "paddles.asm"
         include "controls.asm"
+        ; Placed here so the vector keeps bit 7 set (checked at the end).
+        include "stock-interrupt.asm"
         include "rally.asm"
         include "rally-state.asm"
         include "game.asm"
         include "scores.asm"
-        include "stock-interrupt.asm"
         include "scene.asm"
         include "display.asm"
         include "stock-input.asm"
+        include "sound.asm"
 
 ; Field events continue while the main loop waits or runs across fields.
 ; The stock wrapper preserves the interrupted machine state around this leaf.

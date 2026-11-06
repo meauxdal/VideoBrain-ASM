@@ -21,13 +21,6 @@
     "Missing": []
   },
   {
-    "Name": "PatentNR",
-    "Address": "14A5",
-    "Bytes": 60,
-    "SHA256": "0fae79691f3ecf6555f8e5e0346ddaea0c60d33a153d57b0a8457763246b927b",
-    "Missing": []
-  },
-  {
     "Name": "PatentCB",
     "Address": "14E1",
     "Bytes": 4,

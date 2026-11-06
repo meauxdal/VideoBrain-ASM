@@ -62,7 +62,8 @@ function initial() {
   return expected;
 }
 
-let frameChecks = 0;
+let frameChecks = 0, footsteps = 0;
+const sound = symbols.PATENT_SOUND;
 function step(previous, buttons, leftY = 148, rightY = 148) {
   const memory = {};
   previous.forEach((value, index) => { memory[base + index] = value; });
@@ -78,6 +79,13 @@ function step(previous, buttons, leftY = 148, rightY = 148) {
     const side = next[0] < 94 ? 0 : 1;
     const direct = execute(rom, symbols, 'PatentPaddleUpdate', [side, side ? rightY : leftY, 0]);
     for (const address of direct.writes) { allowed.add(address); assert.equal(result.mem[address], direct.mem[address]); }
+  }
+  if (result.writes.includes(sound)) {
+    // Ball-boy step: four edges, half-period from the new Y as in retail $176D.
+    for (let i = 0; i < 3; i++) allowed.add(sound + i);
+    assert.equal(result.mem[sound], 4);
+    assert.equal(result.mem[sound + 2], ~(next[symbols.PATENT_GAME_BOY_Y - base] >> 2) & 255);
+    footsteps++;
   }
   for (const address of result.writes) assert(allowed.has(address), `unexpected write ${address.toString(16)}`);
   frameChecks++;
@@ -176,4 +184,6 @@ console.log('Score display: 96 side/value/status cases, both fields, colors, bou
 console.log('Serve: both 134-frame retrievals, seven-frame animation, delivery and exit coordinates.');
 console.log('Buttons: wrong-side presses, held/both buttons, delayed paddle contact and valid restart.');
 console.log(`Controller: ${frameChecks} assembled frames, including two natural 15-point games and restarts.`);
+assert(footsteps > 0, 'ball-boy walks must queue footsteps');
+console.log(`Sound: ${footsteps} ball-boy footsteps queued.`);
 console.log('BIOS K-stack calls are boundary stubs; live display/input scheduling remains untested.');

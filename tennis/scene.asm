@@ -244,15 +244,7 @@ PatentSceneNetLoop:
         sl 1
         sl 1
         sl 1
-        lr 1,A
-        dci PATENT_SCENE_SELECTION
-        lm
-        ni 2
-        lis 0
-        bz PatentSceneNetOffset
-        li 24
-PatentSceneNetOffset:
-        as 1
+        ; Both net sides draw the same pixels ($03 at X 91 = $c0 at X 97).
         dci PatentSceneNets
         adc
         pi PatentSceneWriteObject
@@ -401,9 +393,6 @@ PatentSceneNets:
         db 60,$41,97,84,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
         db 60,$41,97,144,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
         db 60,$41,97,204,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
-        db 60,$41,91,84,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
-        db 60,$41,91,144,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
-        db 60,$41,91,204,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
 PatentSceneBoys:
         db 32,$42,0,0,<PatentLB1O,>PatentLB1O+$e0,<PatentLB1E,>PatentLB1E+$e0
         db 32,$42,0,0,<PatentLB2O,>PatentLB2O+$e0,<PatentLB2E,>PatentLB2E+$e0

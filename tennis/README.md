@@ -50,7 +50,8 @@ frames. The candidate uses the Standard mapper. Capture and BIOS K-stack
 calls use boundary stubs. The field-service checks execute the supplied
 RES1 BIOS transfer routine for both parities. They do not validate cold
 startup, scanline deadlines, bus arbitration or interrupt execution.
-Sound is not connected.
+Sound (sound.asm): paddle hit, wall and ball-boy footstep tones after retail
+$148F, played as non-blocking edges while the frame scheduler idles.
 
 The field-service candidate V4 is packaged as `tennis-adaptation-v4.vbc`
 with the Standard mapper and Tennis timing preset. It is separate from the

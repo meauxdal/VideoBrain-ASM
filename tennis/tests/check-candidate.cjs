@@ -82,9 +82,11 @@ for (const parity of [0, 128]) {
     }
   }
 }
+const sound = symbols.PATENT_SOUND;
 for (const lines of [[170, 171, 52, 56], [170, 171, 52, 60], [52, 60], [56]]) {
   let waits = 0;
   const waited = execute(rom, symbols, 'PatentFrameWaitLine', [0, 56], {
+    memory: { [sound]: 0 },
     observe: context => {
       if (![symbols.PatentFrameWaitWrap, symbols.PatentFrameWaitLoop].includes(context.pc)) return;
       assert.equal(context.w & 16, 16, 'raster IRQs must run during a missed-scanline wait');
@@ -94,6 +96,32 @@ for (const lines of [[170, 171, 52, 56], [170, 171, 52, 60], [52, 60], [56]]) {
   });
   assert.equal(waits, lines.length);
   assert.equal(waited.w & 16, 0);
+  assert.deepEqual(waited.ports, [], 'silent waits must not touch the speaker');
+}
+{
+  // A queued paddle-hit tone: 10 edges, one per 15 lines, while idling 170 -> 56.
+  const lines = [];
+  for (let line = 170; line < 256; line++) lines.push(line);
+  for (let line = 0; line <= 56; line++) lines.push(line);
+  let waits = 0, edgeLines = [];
+  const waited = execute(rom, symbols, 'PatentFrameWaitLine', [0, 56], {
+    memory: { [sound]: 10, [sound + 1]: 0, [sound + 2]: 256 - 14 },
+    stepLimit: 20000,
+    observe: context => {
+      if ([symbols.PatentFrameWaitWrap, symbols.PatentFrameWaitLoop].includes(context.pc)) {
+        context.mem[0x8fb] = lines[waits++];
+      }
+      if (context.pc === symbols.PatentSoundLevel) edgeLines.push(context.mem[0x8fb]);
+    },
+  });
+  assert.equal(waits, lines.length);
+  assert.equal(waited.mem[sound], 0);
+  assert.deepEqual(edgeLines, [170, 185, 200, 215, 230, 245, 4, 19, 34, 49]);
+  assert.equal(waited.ports.length, 30);
+  for (let edge = 0; edge < 10; edge++) {
+    assert.deepEqual(waited.ports.slice(edge * 3, edge * 3 + 3),
+      [[1, 0x10], [0, (9 - edge) & 1 ? 7 : 0], [1, 0]]);
+  }
 }
 
 function snapshot(result) {
@@ -160,5 +188,5 @@ console.log(`Raster: IRQ ${greenIrq}->green at ${greenLine}, IRQ ${redIrq}->red 
 console.log('Raster service windows tolerate R3 clobbering in compute, sort and commit.');
 console.log('Combined frame: 400 control/game/scene/commit frames select both vertical axes and score.');
 console.log(`Largest instruction traces: compute ${maxComputeSteps}, prepare ${maxPrepareSteps}, commit ${maxCommitSteps} (capture/BIOS calls stubbed).`);
-console.log('No scanline, arbitration or actual interrupt timing is modeled; sound is not connected.');
+console.log('No scanline, arbitration or actual interrupt timing is modeled; sound edges are checked against a scripted VPOS.');
 console.log(`SHA256: ${crypto.createHash('sha256').update(rom).digest('hex')}`);

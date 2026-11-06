@@ -249,6 +249,16 @@ PatentGameBoyToggle:
         xi 1
         dci PATENT_GAME_BOY_PHASE
         st
+        ; Footstep: retail pitch follows the ball boy's position (Y/4 lines).
+        dci PATENT_GAME_BOY_Y
+        lm
+        sr 1
+        sr 1
+        com
+        lr 6,A
+        lis 4
+        lr 5,A
+        pi PatentSoundStart
         jmp PatentGameDone
 PatentGameBoyHide:
         dci PATENT_GAME_BOY_X
