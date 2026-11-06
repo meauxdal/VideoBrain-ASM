@@ -1,5 +1,39 @@
 const assert = require('node:assert/strict');
 
+// F3850 timing in half short-cycles (short cycle = 4 clocks; long = 3 halves).
+// Branches cost more when taken. Approximate; ignores UV201 bus stalls.
+function halfCycles(op, taken) {
+  if (op <= 0x07 || op === 0x0a || op === 0x0b) return 2;
+  if (op === 0x08 || op === 0x09 || (op >= 0x0d && op <= 0x11)) return 8;
+  if (op === 0x0c) return 10;
+  if (op >= 0x12 && op <= 0x15) return 2;
+  if (op === 0x16 || op === 0x17) return 5;
+  if (op === 0x1c || op === 0x1d) return 4;
+  if (op >= 0x18 && op <= 0x1f) return 2;
+  if (op >= 0x20 && op <= 0x25) return 5;
+  if (op === 0x26 || op === 0x27) return 8;
+  if (op === 0x28) return 13;
+  if (op === 0x29) return 11;
+  if (op === 0x2a) return 12;
+  if (op === 0x2b) return 2;
+  if (op === 0x2c) return 4;
+  if (op >= 0x30 && op <= 0x3f) return 3;
+  if (op >= 0x40 && op <= 0x7f) return 2;
+  if ((op >= 0x80 && op <= 0x87) || (op >= 0x90 && op <= 0x9f)) return taken ? 7 : 6;
+  if (op >= 0x88 && op <= 0x8e) return 5;
+  if (op === 0x8f) return taken ? 5 : 4;
+  if (op === 0xa0 || op === 0xa1 || op === 0xb0 || op === 0xb1) return 4;
+  if (op >= 0xa0 && op <= 0xbf) return 8;
+  if (op >= 0xd0 && op <= 0xdf) return 4;
+  return 2;
+}
+
+// No interrupt is taken at the boundary after these (F3850): PK, LR P,K, LR P0,Q,
+// LR W,J, POP, DI, EI, PI, JMP, OUT, OUTS 4-15. The BIOS K-stack stubs end in
+// LR W,J + POP, so they neither add a window nor end a masked run.
+const PRIVILEGED = new Set([0x09, 0x0c, 0x0d, 0x1a, 0x1b, 0x1c, 0x1d, 0x27, 0x28, 0x29,
+  ...Array.from({ length: 12 }, (_, i) => 0xb4 + i)]);
+
 // Implements only the instructions used here. Flag order matches f8_pack.vhd.
 function execute(rom, symbols, label, inputs, options = {}) {
   const mem = new Uint8Array(65536).fill(0xa5);
@@ -11,6 +45,8 @@ function execute(rom, symbols, label, inputs, options = {}) {
   const writes = [], ports = [];
   let pc = symbols[label], pc1 = 0xffff, a = inputs[0], dc = 0, dc1 = 0, is = 0, w = options.status || 0;
   const calls = [], stack = [];
+  let halves = 0, maskedRun = 0, maskedMax = 0, runFrom = 0, maskedFrom = 0, lastAt = 0;
+  const runs = [];
   if (options.j !== undefined) regs[9] = options.j;
   const getK = () => (regs[12] << 8) | regs[13];
   function setK(value) { regs[12] = value >> 8; regs[13] = value & 255; }
@@ -23,6 +59,19 @@ function execute(rom, symbols, label, inputs, options = {}) {
     flags(a, sum > 255);
   }
   const fetch = () => mem[pc++];
+  function account(op, taken, masked, at) {
+    const cost = halfCycles(op, taken);
+    halves += cost;
+    if (masked) {
+      if (!maskedRun) runFrom = at;
+      lastAt = at;
+      maskedRun += cost;
+      if (maskedRun > maskedMax) { maskedMax = maskedRun; maskedFrom = runFrom; }
+    } else {
+      if (maskedRun) runs.push([runFrom, lastAt, maskedRun / 2, (halves - cost - maskedRun) / 2]);
+      maskedRun = 0;
+    }
+  }
   function indirect(code) {
     const index = is;
     if (code === 13) is = (is & 56) | ((is + 1) & 7);
@@ -55,7 +104,7 @@ function execute(rom, symbols, label, inputs, options = {}) {
       continue;
     }
     if (options.observe) options.observe({ pc, w, mem, regs });
-    const op = fetch();
+    const op = fetch(), startPc = pc;
     if (op >= 0x40 && op <= 0x4b) a = regs[op & 15];
     else if (op >= 0x4c && op <= 0x4e) a = regs[indirect(op & 15)];
     else if (op >= 0x50 && op <= 0x5b) regs[op & 15] = a;
@@ -91,7 +140,10 @@ function execute(rom, symbols, label, inputs, options = {}) {
         pc = getK();
         if (pc !== 0xffff) break;
         assert.equal(stack.length, 0, 'balanced BIOS K stack');
-        return { a, regs, mem, writes, calls, ports, w, steps: steps + 1 };
+        account(op, false, true, startPc - 1);
+        if (maskedRun) runs.push([runFrom, lastAt, maskedRun / 2, (halves - maskedRun) / 2]);
+        return { a, regs, mem, writes, calls, ports, w, steps: steps + 1,
+          cycles: halves / 2, maskedCycles: maskedMax / 2, maskedFrom, runs };
       case 0x12: a >>= 1; flags(a); break;
       case 0x13: a = (a << 1) & 255; flags(a); break;
       case 0x14: a >>= 4; flags(a); break;
@@ -142,8 +194,11 @@ function execute(rom, symbols, label, inputs, options = {}) {
         break;
       default: throw Error(`Unhandled opcode ${op.toString(16)} at ${(pc - 1).toString(16)}`);
     }
+    account(op, pc !== startPc + ((op >= 0x80 && op <= 0x8f) || (op >= 0x90 && op <= 0x9f) ? 1 : 0), !(w & 16) || PRIVILEGED.has(op), startPc - 1);
   }
   throw Error('Instruction limit');
 }
 
-module.exports = { execute };
+// VideoBrain CPU clock = 3.579545 MHz / 2; short cycle = 4 clocks; NTSC line = 1/15734.26 s (~28.4 cycles).
+const CYCLES_PER_LINE = (3579545 / 2 / 4) * (1 / 15734.26);
+module.exports = { execute, CYCLES_PER_LINE };

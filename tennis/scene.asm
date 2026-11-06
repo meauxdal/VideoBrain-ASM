@@ -179,8 +179,13 @@ PatentSceneUpdate:
         sr 4
         lr 2,A
         pi PatentPaddleUpdate
-        ; No IRQ window here: the field transfer would pair the right paddle's
-        ; old shadow pointers with its new direct DX ($0821) and garble it.
+        ifconst PATENT_CARTRIDGE
+        ; Left slot pointers and cached DX are consistent; the field transfer
+        ; copies both together, so a field may show left-new/right-old only.
+        ei
+        nop
+        di
+        endif
         lis 1
         lr 0,A
         dci $0cde

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { execute } = require('./f8.cjs');
+const { execute, CYCLES_PER_LINE } = require('./f8.cjs');
 const rom = fs.readFileSync(process.argv[2]);
 const symbols = {};
 for (const line of fs.readFileSync(process.argv[3], 'utf8').split(/\r?\n/)) {
@@ -141,6 +141,13 @@ memory = snapshot(firstPrepared);
 memory = snapshot(execute(rom, symbols, 'PatentDisplayCommit', [...firstPrepared.regs],
   { memory, biosStack: true, j: 0, stepLimit: 10000 }));
 let maxComputeSteps = 0, maxPrepareSteps = 0, maxCommitSteps = 0, points = 0;
+const lines = { compute: [0, 0], prepare: [0, 0], commit: [0, 0] };
+const track = (name, result) => {
+  lines[name][0] = Math.max(lines[name][0], result.cycles / CYCLES_PER_LINE);
+  if (result.maskedCycles / CYCLES_PER_LINE > lines[name][1]) {
+    lines[name][1] = result.maskedCycles / CYCLES_PER_LINE; lines[name][2] = result.maskedFrom;
+  }
+};
 for (let frame = 0; frame < 400; frame++) {
   const smiWrites = [];
   let smiEnabled = 1;
@@ -180,6 +187,9 @@ for (let frame = 0; frame < 400; frame++) {
   maxComputeSteps = Math.max(maxComputeSteps, computed.steps);
   maxPrepareSteps = Math.max(maxPrepareSteps, prepared.steps);
   maxCommitSteps = Math.max(maxCommitSteps, committed.steps);
+  track("compute", computed); track("prepare", prepared); track("commit", committed);
+  // MASK_LOG=1 lists every masked run over ~10 lines: start, end, cycles, start offset.
+  if (process.env.MASK_LOG) for (const [name, r] of [["C", computed], ["P", prepared]]) for (const [s, e, c, at] of r.runs) if (c > 300) console.log("RUN", name, s.toString(16), e.toString(16), (c / CYCLES_PER_LINE).toFixed(1), (at / CYCLES_PER_LINE).toFixed(1));
 }
 assert(points >= 1, 'combined control/game/scene path must score');
 console.log(`Cartridge: 4,096 bytes; ${0x2000 - symbols.PatentCartridgeEnd} padding bytes; stock header and vector checked.`);
@@ -190,3 +200,6 @@ console.log('Combined frame: 400 control/game/scene/commit frames select both ve
 console.log(`Largest instruction traces: compute ${maxComputeSteps}, prepare ${maxPrepareSteps}, commit ${maxCommitSteps} (capture/BIOS calls stubbed).`);
 console.log('No scanline, arbitration or actual interrupt timing is modeled; sound edges are checked against a scripted VPOS.');
 console.log(`SHA256: ${crypto.createHash('sha256').update(rom).digest('hex')}`);
+console.log('Scanlines (total / longest masked run): ' + Object.entries(lines)
+  .map(([name, [total, masked, from]]) =>
+    `${name} ${total.toFixed(1)}/${masked.toFixed(1)} (from $${(from || 0).toString(16)})`).join(', ') + '.');

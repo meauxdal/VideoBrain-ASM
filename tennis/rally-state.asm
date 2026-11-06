@@ -122,6 +122,12 @@ PatentRallySave:
         lr A,3
         ni PATENT_EVENT_PADDLE
         bz PatentRallyStepDone
+        ifconst PATENT_CARTRIDGE
+        ; Hit frame: events are stored and R3 is dead; split the masked run.
+        ei
+        nop
+        di
+        endif
         lr A,2
         lr 1,A
         lr A,10

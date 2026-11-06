@@ -125,6 +125,9 @@ PatentFrameCompute:
 PatentFrameTone:
         pi PatentSoundStart
 PatentFrameQuiet:
+        ; Raster IRQ window; PatentSceneUpdate saves K before its DI.
+        ei
+        nop
         pi PatentSceneUpdate
         pi $40bc
         di
