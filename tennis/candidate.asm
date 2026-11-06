@@ -2,7 +2,14 @@
         processor f8
 PATENT_CARTRIDGE = 1
 PATENT_FIELD_SERVICE = 1
-PATENT_FIELD_TRANSFER_LINE = 236
+; Raster IRQs are requested early; the handler polls VPOS ($08FB) to the exact
+; line so color edges stay hidden under the white boundary lines (Y 50-53 and
+; 234-237) despite wrapper/masking latency. Transfer waits for the lower line.
+PATENT_GREEN_IRQ = 37
+PATENT_GREEN_LINE = 51
+PATENT_RED_IRQ = 221
+PATENT_RED_LINE = 235
+PATENT_FIELD_TRANSFER_LINE = 238
 PATENT_FIELD_LINE = $0d09
         org $1000
         db $aa,$55,$01,$00,$00,$00,$00,$07,$0b,$2b,$2b,$01,$21,$00,$00,$00,$00,$00
@@ -51,7 +58,7 @@ PatentCartridgeCalibration:
         outs 12
         li <PatentStockInterrupt
         outs 13
-        li 52
+        li PATENT_GREEN_IRQ
         dci PATENT_FIELD_LINE
         st
         dci $08f0
@@ -165,30 +172,47 @@ PatentFrameEnable:
 
 ; Field events continue while the main loop waits or runs across fields.
 ; The stock wrapper preserves the interrupted machine state around this leaf.
+; Only A, DC and K are used: R3 holds the interrupted A for the wrapper.
+; Each wait exits once VPOS - IRQ line reaches the target offset; a VPOS that
+; wrapped below the IRQ line reads as a large offset and also exits.
 PatentFieldService:
         lr K,P
         ; YINT is write-only; keep the scheduled phase in cartridge RAM.
         dci PATENT_FIELD_LINE
         lm
-        ci 52
-        bz PatentFieldGreen
-PatentFieldRed:
+        ci PATENT_GREEN_IRQ
+        bz PatentFieldGreenWait
+PatentFieldRedWait:
+        dci $08fb
+        lm
+        ai 256 - PATENT_RED_IRQ
+        ci PATENT_RED_LINE - PATENT_RED_IRQ - 1
+        bc PatentFieldRedWait
         lis 1
         dci $08f5
         st
-        li 52
+        li PATENT_GREEN_IRQ
         dci PATENT_FIELD_LINE
         st
         dci $08f0
         st
+PatentFieldTransferWait:
+        dci $08fb
+        lm
+        ai 256 - PATENT_RED_IRQ
+        ci PATENT_FIELD_TRANSFER_LINE - PATENT_RED_IRQ - 1
+        bc PatentFieldTransferWait
         jmp $424d
-PatentFieldGreen:
+PatentFieldGreenWait:
+        dci $08fb
+        lm
+        ai 256 - PATENT_GREEN_IRQ
+        ci PATENT_GREEN_LINE - PATENT_GREEN_IRQ - 1
+        bc PatentFieldGreenWait
         lis 2
         dci $08f5
         st
-        li 236
-        br PatentFieldSchedule
-PatentFieldSchedule:
+        li PATENT_RED_IRQ
         dci PATENT_FIELD_LINE
         st
         dci $08f0

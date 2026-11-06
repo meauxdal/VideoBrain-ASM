@@ -10,7 +10,7 @@ $assembler = (Resolve-Path -LiteralPath $Dasm).Path
 $nodeCommand = Get-Command -Name $NodeExe -CommandType Application -ErrorAction SilentlyContinue
 if (!$nodeCommand) { throw 'Node.js was not found. Pass -NodeExe <path-to-node.exe>.' }
 $nodePath = $nodeCommand.Source
-$output = Join-Path $root 'local/tennis-adaptation'
+$output = Join-Path (Split-Path $PSScriptRoot -Parent) 'local/tennis'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $binary = Join-Path $output 'tennis-adaptation.bin'

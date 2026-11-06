@@ -29,27 +29,54 @@ assert.deepEqual(bytes('PatentStockInterrupt', 115), expectedInterrupt);
 const systemRom = fs.readFileSync(process.argv[5]);
 const transferLine = symbols.PATENT_FIELD_TRANSFER_LINE;
 const fieldLine = symbols.PATENT_FIELD_LINE;
-for (const [line, next, color] of [[52, 236, 2]]) {
-  const event = execute(rom, symbols, 'PatentFieldService', [], { memory: { [fieldLine]: line, 0x8f0: 255 } });
-  assert.equal(event.mem[0x8f0], next);
-  assert.equal(event.mem[fieldLine], next);
-  assert.equal(event.mem[0x8f5], color);
+const greenIrq = symbols.PATENT_GREEN_IRQ, greenLine = symbols.PATENT_GREEN_LINE;
+const redIrq = symbols.PATENT_RED_IRQ, redLine = symbols.PATENT_RED_LINE;
+assert(greenIrq < greenLine && greenLine <= 52, 'green must land under the upper line');
+assert(redIrq < redLine && redLine < transferLine, 'red precedes the transfer');
+const waitLoops = ['PatentFieldGreenWait', 'PatentFieldRedWait', 'PatentFieldTransferWait'].map(n => symbols[n]);
+// Each wait-loop visit advances VPOS one line from the IRQ arrival line.
+function service(phase, arrival, memory = {}, options = {}) {
+  let line = arrival, visits = 0, colorAt, transferAt;
+  const event = execute(rom, symbols, 'PatentFieldService', [], {
+    ...options,
+    memory: { [fieldLine]: phase, 0x8f0: 255, 0x8f5: 0, 0x8fb: arrival & 255, ...memory },
+    observe: context => {
+      if (waitLoops.includes(context.pc) && visits++) context.mem[0x8fb] = ++line & 255;
+      if (colorAt === undefined && context.mem[0x8f5]) colorAt = line;
+      if (context.pc === 0x424d && transferAt === undefined) transferAt = line;
+    },
+  });
+  return { event, colorAt, transferAt, visits };
+}
+for (const arrival of [greenIrq, greenIrq + 6, greenLine, greenLine + 9]) {
+  const { event, colorAt } = service(greenIrq, arrival);
+  assert.equal(colorAt, Math.max(arrival, greenLine), `green from IRQ at ${arrival}`);
+  assert.equal(event.mem[0x8f5], 2);
+  assert.equal(event.mem[0x8f0], redIrq);
+  assert.equal(event.mem[fieldLine], redIrq);
   assert.deepEqual(event.writes, [0x8f5, fieldLine, 0x8f0]);
 }
 for (const parity of [0, 128]) {
-  const memory = { [fieldLine]: transferLine, 0x8f0: 255, 0x8fa: parity, 0xffa: 16, 0xffb: 1,
-    0xffc: 12, 0xffd: 32, 0xffe: 12, 0xfff: 80 };
-  for (let offset = 0; offset < 96; offset++) memory[0xc20 + offset] = (offset + 1) & 255;
-  const event = execute(rom, symbols, 'PatentFieldService', [], { memory, systemRom, stepLimit: 10000 });
-  const source = parity ? 0xc20 : 0xc50;
-  assert.equal(event.mem[0x8f0], 52);
-  assert.equal(event.mem[fieldLine], 52);
-  assert.equal(event.mem[0x8f5], 1);
-  for (let offset = 0; offset < 16; offset++) {
-    assert.equal(event.mem[0x800 + offset], memory[source + offset]);
-    assert.equal(event.mem[0x810 + offset], memory[source + 16 + offset]);
-    assert.equal(event.mem[0x830 + offset], memory[source + 32 + offset]);
-    assert.equal(event.mem[0x820 + offset], 0xa5, 'BIOS transfer must leave DX unchanged');
+  for (const arrival of [redIrq, redIrq + 8, redLine + 1, 262 + 3]) {
+    const memory = { 0x8fa: parity, 0xffa: 16, 0xffb: 1, 0xffc: 12, 0xffd: 32, 0xffe: 12, 0xfff: 80 };
+    for (let offset = 0; offset < 96; offset++) memory[0xc20 + offset] = (offset + 1) & 255;
+    const { event, colorAt, transferAt, visits } = service(redIrq, arrival, memory, { systemRom, stepLimit: 10000 });
+    if (arrival > 255) {
+      assert.equal(visits, 2, 'a wrapped late IRQ must not spin a whole field');
+    } else {
+      assert.equal(colorAt, Math.max(arrival, redLine), `red from IRQ at ${arrival}`);
+      assert.equal(transferAt, Math.max(arrival, transferLine), `transfer from IRQ at ${arrival}`);
+    }
+    const source = parity ? 0xc20 : 0xc50;
+    assert.equal(event.mem[0x8f0], greenIrq);
+    assert.equal(event.mem[fieldLine], greenIrq);
+    assert.equal(event.mem[0x8f5], 1);
+    for (let offset = 0; offset < 16; offset++) {
+      assert.equal(event.mem[0x800 + offset], memory[source + offset]);
+      assert.equal(event.mem[0x810 + offset], memory[source + 16 + offset]);
+      assert.equal(event.mem[0x830 + offset], memory[source + 32 + offset]);
+      assert.equal(event.mem[0x820 + offset], 0xa5, 'BIOS transfer must leave DX unchanged');
+    }
   }
 }
 for (const lines of [[170, 171, 52, 56], [170, 171, 52, 60], [52, 60], [56]]) {
@@ -126,7 +153,7 @@ for (let frame = 0; frame < 400; frame++) {
 assert(points >= 1, 'combined control/game/scene path must score');
 console.log(`Cartridge: 4,096 bytes; ${0x2000 - symbols.PatentCartridgeEnd} padding bytes; stock header and vector checked.`);
 console.log('Transport: capture bytes match retail; interrupt wrapper changes only the dispatch call target.');
-console.log(`Raster: green at 52, red/BIOS transfer at ${transferLine}; both parities checked.`);
+console.log(`Raster: IRQ ${greenIrq}->green at ${greenLine}, IRQ ${redIrq}->red at ${redLine}, BIOS transfer at ${transferLine}; late/wrapped IRQs and both parities checked.`);
 console.log('Raster service windows tolerate R3 clobbering in compute, sort and commit.');
 console.log('Combined frame: 400 control/game/scene/commit frames select both vertical axes and score.');
 console.log(`Largest instruction traces: compute ${maxComputeSteps}, prepare ${maxPrepareSteps}, commit ${maxCommitSteps} (capture/BIOS calls stubbed).`);

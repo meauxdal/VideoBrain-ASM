@@ -102,7 +102,7 @@ $missing = @(
     [regex]::Matches($adamSource, 'Missing line in assembly listing \(\$([0-9a-f]{4})\)', 'IgnoreCase') |
         ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } | Sort-Object -Unique
 )
-$output = Join-Path $root 'local/tennis-adaptation'
+$output = Join-Path (Split-Path $PSScriptRoot -Parent) 'local/tennis'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $report = Join-Path $output ('assets-{0}.json' -f (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 [ordered]@{

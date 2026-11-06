@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
 $source = Join-Path $PSScriptRoot 'tennis.asm'
-$output = Join-Path $root 'local/tennis-adaptation'
+$output = Join-Path (Split-Path $PSScriptRoot -Parent) 'local/tennis'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 
