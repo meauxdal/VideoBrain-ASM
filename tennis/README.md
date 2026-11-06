@@ -37,6 +37,10 @@ checkout location.
 .\tennis\check-candidate.ps1 -Dasm <path-to-dasm.exe>
 ```
 
+Node.js is required for the checks. If it is outside PATH, add
+`-NodeExe <path-to-node.exe>`. The script validates the executable before
+assembly starts.
+
 This assembles `tennis-adaptation.bin` under `local/tennis-adaptation/`,
 checks the 4 KB limit/header/vector, compares retained capture and interrupt
 bytes with retail, and executes 400 combined control/game/scene/display
@@ -46,21 +50,28 @@ RES1 BIOS transfer routine for both parities. They do not validate cold
 startup, scanline deadlines, bus arbitration or interrupt execution.
 Sound is not connected.
 
-The field-service candidate V2 is packaged as `tennis-adaptation-v2.vbc`
+The field-service candidate V4 is packaged as `tennis-adaptation-v4.vbc`
 with the Standard mapper and Tennis timing preset. It is separate from the
-patent-court V2 reference. Focused instruction checks passed; correction of
-the reported every-field red/green and sprite alternation remains unconfirmed
-on hardware. A V1/V2 simulator comparison is pending review.
+patent-court V2 reference. V3 keeps the raster phase in RAM rather than reading
+write-only YINT and allows a scanline wait to cross its target during an IRQ.
+The right serve button uses controller 2 alongside its vertical axis. Focused
+instruction checks pass. V3 is playable on MiSTer but retains severe color
+flashing and sprite instability. V4 adds interrupt service windows in scene/list
+work and combines red with field transfer; integrated validation remains pending.
+Earlier artifacts are retained.
 
 Raster events are scheduled independently of the game loop: green at line
-52, red at 236, and next-field pointer transfer at 244. Scanline waits allow
+52, red and next-field pointer transfer at 236. Scanline waits allow
 interrupts. SMI requests are gated only around joystick capture edges, and
 UV raster requests are restored after each capture. Actual timing and
 interlaced output still require integrated validation.
+Scene/list service windows occur where R3 is dead, since the stock IRQ uses
+it as accumulator scratch. Rally saves its event mask outside R3 during its
+window. Complete scene publication is not yet transactional.
 
 The candidate omits all old four-player, movement, serve, collision, results
 and reflected-graphics consumers. Its new state owns records 22/23 and
-$0CE0-$0D08; $0D0C-$0D1B caches X origins after retirement of reflected assets.
+$0CE0-$0D09; $0D0C-$0D1B caches X origins after retirement of reflected assets.
 It includes all 13 patent scene objects and hides unused slots explicitly.
 
 ## Paddle source work

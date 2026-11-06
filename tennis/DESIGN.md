@@ -25,7 +25,7 @@ fixtures establish policy/data contracts, not hardware timing.
    The V1/V2 simulator comparison awaits review.
 2. Validate a complete playable cycle on hardware: cold startup, both
    controls and serve buttons, rally, retrieval, scoring, restart and sound.
-   Reconcile the right serve button mask with the selected joystick axes.
+   Validate physical controller 1/2 movement and serve buttons together.
 3. Compare with retail using reproducible observations. Keep preserved
    patent evidence, reconstructed choices and observed retail differences
    distinct; retain unresolved source gaps as unresolved.
@@ -382,7 +382,7 @@ timing or retirement of live retail callers.
 
 `game.asm` connects retrieval and serving to `PatentRallyStep`.
 `PatentGameInit` initializes replacement state; `PatentGameStep` takes an
-active-high button mask in R0 (left $01, right $04) and returns ball events
+active-high button mask in R0 (left $01, right $02) and returns ball events
 in A. The caller captures paddles before the step and renders afterward.
 Both routines leave J intact; the step returns with interrupts disabled.
 
@@ -482,10 +482,17 @@ The candidate initializes the stock calibration records and BIOS stack,
 then game/scene/display state. Its loop waits for line 56, captures both
 vertical controls/buttons, advances game and scene, prepares the order,
 then waits for line 164 and commits. Scanline waits enable interrupts.
-The interrupt chain independently writes green at line 52, red at 236,
-and transfers next-field pointers at 244 before scheduling line 52 again.
-Line 244 follows the visible objects and leaves time to read current field
-parity before the field seam. SMI is gated only across the two joystick
+The scheduled raster line is mirrored in $0D09 because YINT is write-only.
+Waits entered after their target first cross the field wrap; a rising wait
+accepts the first observed line at or beyond its target, allowing an IRQ
+to span the exact scanline. The right serve uses physical joystick 2's fire
+bit $02 alongside vertical axis 2, an adaptation of the patent's $04 mask.
+The interrupt chain independently writes green at line 52, then red and
+next-field pointers at 236 before scheduling line 52 again. Interrupt service
+windows separate completed object/list entries where R3 is dead. The rally
+window saves its event mask in R8 while the IRQ can clobber R3. This bounds
+some long masked intervals; full scene publication remains nontransactional.
+Actual field parity must still be read before the seam. SMI is gated across the two joystick
 captures because their timer edges share the external interrupt input.
 The combined instruction check runs 400 compute/prepare/commit sequences
 with capture/BIOS K-stack boundary stubs. It does not execute cold startup,

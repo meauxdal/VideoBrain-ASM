@@ -2,7 +2,8 @@
         processor f8
 PATENT_CARTRIDGE = 1
 PATENT_FIELD_SERVICE = 1
-PATENT_FIELD_TRANSFER_LINE = 244
+PATENT_FIELD_TRANSFER_LINE = 236
+PATENT_FIELD_LINE = $0d09
         org $1000
         db $aa,$55,$01,$00,$00,$00,$00,$07,$0b,$2b,$2b,$01,$21,$00,$00,$00,$00,$00
 
@@ -51,6 +52,8 @@ PatentCartridgeCalibration:
         li <PatentStockInterrupt
         outs 13
         li 52
+        dci PATENT_FIELD_LINE
+        st
         dci $08f0
         st
         dci $08f5
@@ -113,14 +116,21 @@ PatentFrameButtons:
         pk
 
 ; R1 = target scanline. The scheduler calls this with no live R3 value.
+; Enter a fresh rising window if already late; an IRQ may span the target.
 PatentFrameWaitLine:
         lr K,P
         lr A,1
         ei
+PatentFrameWaitWrap:
+        dci $08fb
+        cm
+        bz PatentFrameWaitDone
+        bc PatentFrameWaitWrap
 PatentFrameWaitLoop:
         dci $08fb
         cm
-        bnz PatentFrameWaitLoop
+        bnc PatentFrameWaitLoop
+PatentFrameWaitDone:
         di
         pk
 
@@ -148,22 +158,27 @@ PatentFrameEnable:
         include "rally-state.asm"
         include "game.asm"
         include "scores.asm"
+        include "stock-interrupt.asm"
         include "scene.asm"
         include "display.asm"
         include "stock-input.asm"
-        include "stock-interrupt.asm"
 
 ; Field events continue while the main loop waits or runs across fields.
 ; The stock wrapper preserves the interrupted machine state around this leaf.
 PatentFieldService:
         lr K,P
-        dci $08f0
+        ; YINT is write-only; keep the scheduled phase in cartridge RAM.
+        dci PATENT_FIELD_LINE
         lm
         ci 52
         bz PatentFieldGreen
-        ci 236
-        bz PatentFieldRed
+PatentFieldRed:
+        lis 1
+        dci $08f5
+        st
         li 52
+        dci PATENT_FIELD_LINE
+        st
         dci $08f0
         st
         jmp $424d
@@ -173,13 +188,9 @@ PatentFieldGreen:
         st
         li 236
         br PatentFieldSchedule
-PatentFieldRed:
-        lis 1
-        dci $08f5
-        st
-        ; Read current parity before the field seam; next-field images follow it.
-        li PATENT_FIELD_TRANSFER_LINE
 PatentFieldSchedule:
+        dci PATENT_FIELD_LINE
+        st
         dci $08f0
         st
         pk

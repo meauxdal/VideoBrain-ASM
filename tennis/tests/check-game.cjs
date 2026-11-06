@@ -88,7 +88,7 @@ for (const server of [0, 1]) {
   let current = initial();
   current[11] = server;
   for (let frame = 1; frame <= 134; frame++) {
-    current = step(current, 5);
+    current = step(current, 3);
     assert.equal(current[13], 0);
     assert.equal(current[14], 0);
     if (frame < 60) {
@@ -117,20 +117,20 @@ for (const server of [0, 1]) {
       assert.deepEqual(current.slice(15, 17), [94, 255]);
     }
   }
-  for (const buttons of [0, server ? 1 : 4]) {
+  for (const buttons of [0, server ? 1 : 2, 4, 8]) {
     current = step(current, buttons);
     assert.equal(current[10], 3);
     assert.equal(current[8], 4);
     assert.equal(current[9], 0);
   }
-  const launched = step(current, server ? 4 : 1, 144, 144);
+  const launched = step(current, server ? 2 : 1, 144, 144);
   assert.equal(launched[10], 4);
   assert.equal(launched[0], server ? 148 : 40);
   assert.deepEqual(launched.slice(4, 8), [3, 1, 128, server ? 254 : 1]);
   assert.equal(launched[8], 3);
   assert.equal(launched[9], 64);
 
-  const waiting = step(current, 5, 70, 70);
+  const waiting = step(current, 3, 70, 70);
   assert.equal(waiting[10], 4);
   assert.equal(waiting[0], server ? 149 : 39);
   assert.deepEqual(waiting.slice(4, 8), [0, 0, 0, 0]);
@@ -146,7 +146,7 @@ for (const server of [0, 1]) {
   current[11] = server;
   for (; frame < 6000; frame++) {
     const previousMode = current[10];
-    current = step(current, current[10] === 3 && points < 15 ? 5 : 0,
+    current = step(current, current[10] === 3 && points < 15 ? 3 : 0,
       server ? 70 : 148, server ? 148 : 70);
     if (current[9] & 6) {
       points++;
@@ -163,10 +163,10 @@ for (const server of [0, 1]) {
   assert(frame < 6000, 'complete-game frame limit');
   assert.equal(points, 15);
   assert.equal(current[13 + server], 0x15);
-  const wrongButton = step(current, server ? 1 : 4, server ? 70 : 148, server ? 148 : 70);
+  const wrongButton = step(current, server ? 1 : 2, server ? 70 : 148, server ? 148 : 70);
   assert.equal(wrongButton[10], 3);
   assert.equal(wrongButton[13 + server], 0x15);
-  const restarted = step(wrongButton, server ? 4 : 1, 148, 148);
+  const restarted = step(wrongButton, server ? 2 : 1, 148, 148);
   assert.deepEqual(restarted.slice(13, 15), [0, 0]);
   assert.equal(restarted[10], 4);
   assert.equal(restarted[9], 64);

@@ -81,6 +81,12 @@ PatentSceneWriteObject:
         adc
         lis 0
         st
+        ifconst PATENT_CARTRIDGE
+        ; R3 is dead at this boundary; the stock IRQ uses it to save A.
+        ei
+        nop
+        di
+        endif
         pk
 
 ; Initializes all 16 slots, fixed court and paddle bodies, then the live scene.

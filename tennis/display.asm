@@ -54,6 +54,11 @@ PatentDisplayCacheX:
         br7 PatentDisplayCacheNext
         lisu 6
 PatentDisplayCacheNext:
+        ifconst PATENT_CARTRIDGE
+        ei
+        nop
+        di
+        endif
         ds 0
         bnz PatentDisplayCacheX
         lis 1
@@ -105,6 +110,12 @@ PatentDisplayInsertStore:
         adc
         lr A,1
         st
+        ifconst PATENT_CARTRIDGE
+        ; The insertion index in R3 is no longer live.
+        ei
+        nop
+        di
+        endif
         lr A,0
         inc
         lr 0,A
@@ -170,6 +181,11 @@ PatentDisplayListEntry:
         adc
         lr A,2
         st
+        ifconst PATENT_CARTRIDGE
+        ei
+        nop
+        di
+        endif
         lr A,0
         inc
         lr 0,A
@@ -187,6 +203,11 @@ PatentDisplayWriteX:
         br7 PatentDisplayWriteXNext
         lisu 6
 PatentDisplayWriteXNext:
+        ifconst PATENT_CARTRIDGE
+        ei
+        nop
+        di
+        endif
         ds 0
         bnz PatentDisplayWriteX
         pi $40bc

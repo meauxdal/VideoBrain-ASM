@@ -118,6 +118,7 @@ function execute(rom, symbols, label, inputs, options = {}) {
       }
       case 0x29: pc = (fetch() << 8) | fetch(); a = pc >> 8; break;
       case 0x2a: dc = (fetch() << 8) | fetch(); break;
+      case 0x2b: break;
       case 0x2c: [dc, dc1] = [dc1, dc]; break;
       case 0x88: add(mem[dc]); dc = (dc + 1) & 65535; break;
       case 0x8a: a &= mem[dc]; dc = (dc + 1) & 65535; flags(a); break;

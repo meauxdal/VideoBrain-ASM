@@ -145,6 +145,17 @@ PatentRallyRightExit:
         lr 3,A
         jmp PatentRallyDone
 PatentRallyPaddles:
+        ifconst PATENT_CARTRIDGE
+        ; Keep the event mask out of the stock ISR's accumulator scratch.
+        lr A,3
+        lr 8,A
+        ei
+        nop
+        di
+        lr A,8
+        lr 3,A
+        lr A,0
+        endif
         ci 28
         bnc PatentRallyLeftRegion
         jmp PatentRallyDone

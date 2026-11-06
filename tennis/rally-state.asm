@@ -84,6 +84,12 @@ PatentRallyStep:
         st
         lr A,3
         st
+        ifconst PATENT_CARTRIDGE
+        ; Fractions are stored; the resolver replaces R3 with its event mask.
+        ei
+        nop
+        di
+        endif
         pi PatentRallyResolve
         dci PATENT_BALL_EVENTS
         lr A,3

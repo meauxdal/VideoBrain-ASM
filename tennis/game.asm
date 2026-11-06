@@ -70,7 +70,7 @@ PatentScoreCarry:
 PatentScoreDone:
         pk
 
-; R0 = active-high button mask (left $01, right $04).
+; R0 = active-high button mask (physical joysticks 1/2: left $01, right $02).
 ; Runs one frame of serve/retrieval or rally. Returns ball event mask in A.
 ; Caller captures both paddles first, then consumes state/events and commits.
 ; Requires initialized BIOS K stack/J. Returns with interrupts disabled.
@@ -273,7 +273,7 @@ PatentGameReady:
         ai 0
         lis 1
         bz PatentGameServeButton
-        lis 4
+        lis 2
 PatentGameServeButton:
         lr 2,A
         dci PATENT_GAME_BUTTONS
