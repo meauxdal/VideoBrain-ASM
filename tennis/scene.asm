@@ -173,15 +173,9 @@ PatentSceneUpdate:
         dci $0cda
         lm
         lr 1,A
-        dci PATENT_BALL_EVENTS
-        lm
-        ni PATENT_EVENT_LEFT_IMAGE
-        sr 4
-        lr 2,A
-        pi PatentPaddleUpdate
+        pi PatentPaddleUpdateHeld
         ifconst PATENT_CARTRIDGE
-        ; Left slot pointers and cached DX are consistent; the field transfer
-        ; copies both together, so a field may show left-new/right-old only.
+        ; Left slot pointers and cached DX are consistent; the field transfer copies both together, so a field may show left-new/right-old Y only (the right paddle's pose was already redrawn from events at capture).
         ei
         nop
         di
@@ -191,13 +185,7 @@ PatentSceneUpdate:
         dci $0cde
         lm
         lr 1,A
-        dci PATENT_BALL_EVENTS
-        lm
-        ni PATENT_EVENT_RIGHT_IMAGE
-        sr 4
-        sr 1
-        lr 2,A
-        pi PatentPaddleUpdate
+        pi PatentPaddleUpdateHeld
         ifconst PATENT_CARTRIDGE
         ; Both paddles' pointers and DX are now consistent. R3/DC0 are dead;
         ; R0-R2 are reloaded before use.

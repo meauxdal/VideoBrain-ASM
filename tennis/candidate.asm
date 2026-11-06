@@ -95,13 +95,10 @@ PatentFrameCompute:
         lis 0
         outs 14
         lr 0,A
-        lr 2,A
         pi PatentPaddleCaptureUpdate
         pi PatentFrameEnable
         lis 1
         lr 0,A
-        lis 0
-        lr 2,A
         pi PatentPaddleCaptureUpdate
         pi PatentFrameEnable
         lis 1

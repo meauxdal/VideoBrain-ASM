@@ -35,6 +35,17 @@ PatentPaddleMapDone:
 ; Returns clamped logical Y in R1. Clobbers R3-R8, R10-R11, A, W, K, DC0.
 ; Updates display slots 1/2 (DX via PATENT_PADDLE_DX) and collision bodies 22/23.
 ; Call with interrupts disabled during the scene update phase.
+; PatentPaddleUpdateHeld takes the hit image from the stored ball events ($0ce9 = PATENT_BALL_EVENTS, bit $10 left / $20 right) instead of R2, so every redraw (capture or scene) keeps the held return pose; a field transfer between them can no longer show the normal pose. Sets R2 = image 0/1.
+PatentPaddleUpdateHeld:
+        lr A,0
+        inc
+        sl 4
+        dci $0ce9
+        nm
+        ai $ff
+        lis 0
+        lnk
+        lr 2,A
 PatentPaddleUpdate:
         lr K,P
         lr A,1
