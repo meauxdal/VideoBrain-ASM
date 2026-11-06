@@ -172,7 +172,7 @@ PatentFrameEnable:
 
 ; Field events continue while the main loop waits or runs across fields.
 ; The stock wrapper preserves the interrupted machine state around this leaf.
-; Only A, DC and K are used: R3 holds the interrupted A for the wrapper.
+; Only A, DC0/DC1 and K are used: R3 holds the interrupted A for the wrapper.
 ; Each wait exits once VPOS - IRQ line reaches the target offset; a VPOS that
 ; wrapped below the IRQ line reads as a large offset and also exits.
 PatentFieldService:
@@ -202,6 +202,17 @@ PatentFieldTransferWait:
         ai 256 - PATENT_RED_IRQ
         ci PATENT_FIELD_TRANSFER_LINE - PATENT_RED_IRQ - 1
         bc PatentFieldTransferWait
+        ; Paddle DX lands with the pointers (DC1 is restored by the wrapper).
+        dci $0821
+        xdc
+        dci PATENT_PADDLE_DX
+        lm
+        xdc
+        st
+        xdc
+        lm
+        xdc
+        st
         jmp $424d
 PatentFieldGreenWait:
         dci $08fb

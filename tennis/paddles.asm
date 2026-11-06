@@ -9,6 +9,9 @@ PATENT_PADDLE_HALF_HEIGHT = 16
 PATENT_PADDLE_HALF_WIDTH = 4
 PATENT_PADDLE_LEFT_X = 34
 PATENT_PADDLE_RIGHT_X = 154
+; DX cache for slots 1/2. The red field service copies it to $0821/$0822
+; with the BIOS pointer transfer, so width and image change together.
+PATENT_PADDLE_DX = $0d0a
 
 ; R1 = patent MAP result, 0-199. Returns logical center Y in A.
 ; Clobbers A, W, K. This does not replace the stock joystick capture ISR.
@@ -30,7 +33,7 @@ PatentPaddleMapDone:
 
 ; R0 = side (0 left, 1 right), R1 = logical center Y, R2 = hit image (0/1).
 ; Returns clamped logical Y in R1. Clobbers R3-R8, R10-R11, A, W, K, DC0.
-; Updates display slots 1/2 and fixed collision bodies 22/23.
+; Updates display slots 1/2 (DX via PATENT_PADDLE_DX) and collision bodies 22/23.
 ; Call with interrupts disabled during the scene update phase.
 PatentPaddleUpdate:
         lr K,P
@@ -101,7 +104,7 @@ PatentPaddleUpdateY:
         adc
         lr A,11
         st
-        dci $0821
+        dci PATENT_PADDLE_DX
         lr A,0
         adc
         lr A,7

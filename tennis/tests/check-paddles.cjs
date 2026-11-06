@@ -41,7 +41,7 @@ for (let side = 0; side < 2; side++) for (let image = 0; image < 2; image++) {
     assert.equal(result.regs[1], centerY);
     assert.equal(result.regs[2], image);
     assert.equal(result.regs[9], 0x5a, 'retail saved status J');
-    assert.equal(result.mem[0x820 + slot], 0x41 + image);
+    assert.equal(result.mem[symbols.PATENT_PADDLE_DX + side], 0x41 + image, 'DX is cached for the field service');
     assert.equal(result.mem[0xc40 + slot], 32);
     assert.equal(result.mem[0xc70 + slot], 32);
     const prefix = `Patent${side ? 'RP' : 'LP'}${image + 1}`;
@@ -55,7 +55,7 @@ for (let side = 0; side < 2; side++) for (let image = 0; image < 2; image++) {
     const allowed = [display, display + 1, display + 2, display + 3,
       body, body + 1, body + 2, body + 3,
       0xc20 + slot, 0xc30 + slot, 0xc50 + slot, 0xc60 + slot,
-      0x820 + slot, 0xc40 + slot, 0xc70 + slot];
+      symbols.PATENT_PADDLE_DX + side, 0xc40 + slot, 0xc70 + slot];
     assert.deepEqual([...result.writes].sort((a, b) => a - b), allowed.sort((a, b) => a - b));
     for (let reg = 14; reg < 64; reg++) assert.equal(result.regs[reg], 0x5a);
     checks++;

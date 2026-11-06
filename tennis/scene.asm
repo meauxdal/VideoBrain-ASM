@@ -138,6 +138,17 @@ PatentSceneInitBlank:
         lr 2,A
         pi PatentPaddleUpdate
         pi PatentSceneUpdate
+        ; Interrupts are still off: apply paddle DX now (field service does it later).
+        dci $0821
+        xdc
+        dci PATENT_PADDLE_DX
+        lm
+        xdc
+        st
+        xdc
+        lm
+        xdc
+        st
         pi $40bc
         di
         pk
@@ -168,6 +179,8 @@ PatentSceneUpdate:
         sr 4
         lr 2,A
         pi PatentPaddleUpdate
+        ; No IRQ window here: the field transfer would pair the right paddle's
+        ; old shadow pointers with its new direct DX ($0821) and garble it.
         lis 1
         lr 0,A
         dci $0cde
@@ -180,6 +193,13 @@ PatentSceneUpdate:
         sr 1
         lr 2,A
         pi PatentPaddleUpdate
+        ifconst PATENT_CARTRIDGE
+        ; Both paddles' pointers and DX are now consistent. R3/DC0 are dead;
+        ; R0-R2 are reloaded before use.
+        ei
+        nop
+        di
+        endif
         dci PATENT_BALL_STATE
         lm
         lr 1,A

@@ -60,6 +60,8 @@ for (const parity of [0, 128]) {
   for (const arrival of [redIrq, redIrq + 8, redLine + 1, 262 + 3]) {
     const memory = { 0x8fa: parity, 0xffa: 16, 0xffb: 1, 0xffc: 12, 0xffd: 32, 0xffe: 12, 0xfff: 80 };
     for (let offset = 0; offset < 96; offset++) memory[0xc20 + offset] = (offset + 1) & 255;
+    memory[symbols.PATENT_PADDLE_DX] = 0x42;
+    memory[symbols.PATENT_PADDLE_DX + 1] = 0x41;
     const { event, colorAt, transferAt, visits } = service(redIrq, arrival, memory, { systemRom, stepLimit: 10000 });
     if (arrival > 255) {
       assert.equal(visits, 2, 'a wrapped late IRQ must not spin a whole field');
@@ -75,7 +77,8 @@ for (const parity of [0, 128]) {
       assert.equal(event.mem[0x800 + offset], memory[source + offset]);
       assert.equal(event.mem[0x810 + offset], memory[source + 16 + offset]);
       assert.equal(event.mem[0x830 + offset], memory[source + 32 + offset]);
-      assert.equal(event.mem[0x820 + offset], 0xa5, 'BIOS transfer must leave DX unchanged');
+      const dx = offset === 1 ? 0x42 : offset === 2 ? 0x41 : 0xa5;
+      assert.equal(event.mem[0x820 + offset], dx, 'only cached paddle DX may change with the transfer');
     }
   }
 }

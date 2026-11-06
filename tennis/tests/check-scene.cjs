@@ -28,7 +28,9 @@ function decode(result, slot, field = 0) {
   const { mem } = result;
   const body = 0xc80 + slot * 4;
   const height = mem[(field ? 0xc70 : 0xc40) + slot];
-  const dx = mem[0x820 + slot], width = dx & 31;
+  // Paddle DX (slots 1/2) is cached and reaches $0821/$0822 with the field transfer.
+  const dx = slot === 1 || slot === 2 ? mem[symbols.PATENT_PADDLE_DX + slot - 1] : mem[0x820 + slot];
+  const width = dx & 31;
   const low = mem[(field ? 0xc50 : 0xc20) + slot];
   const high = mem[(field ? 0xc60 : 0xc30) + slot];
   return { x: (mem[body] - mem[body + 1]) & 255,
@@ -52,9 +54,11 @@ for (const [slot, x, y, width, height] of [[7, 1, 50, 23, 4], [8, 1, 234, 23, 4]
 assert.equal(decode(initialized, 5).y, 511);
 assert.equal(decode(initialized, 12).y, 58);
 assert.equal(decode(initialized, 13).y, 58);
+for (const side of [0, 1]) assert.equal(initialized.mem[0x821 + side], initialized.mem[symbols.PATENT_PADDLE_DX + side],
+  'init applies cached paddle DX');
 
 const baseMemory = {};
-for (let address = 0xc20; address <= 0xd08; address++) baseMemory[address] = initialized.mem[address];
+for (let address = 0xc20; address <= 0xd0b; address++) baseMemory[address] = initialized.mem[address];
 for (let slot = 0; slot < 16; slot++) baseMemory[0x820 + slot] = initialized.mem[0x820 + slot];
 const allowed = new Set();
 for (const slot of [0, 1, 2, 3, 5, 6, 9, 10, 11, 12, 13]) {
@@ -62,6 +66,8 @@ for (const slot of [0, 1, 2, 3, 5, 6, 9, 10, 11, 12, 13]) {
   for (const bank of [0xc20, 0xc30, 0xc40, 0xc50, 0xc60, 0xc70, 0x820]) allowed.add(bank + slot);
   allowed.add(symbols.PATENT_SCENE_FLAGS + slot);
 }
+allowed.add(symbols.PATENT_PADDLE_DX);
+allowed.add(symbols.PATENT_PADDLE_DX + 1);
 allowed.add(symbols.PATENT_SCENE_SELECTION);
 allowed.add(symbols.PATENT_SCENE_SAVED_J);
 allowed.add(symbols.PATENT_SCENE_SCORE_CACHE);
@@ -73,7 +79,7 @@ let scenes = 0;
 let commits = 0;
 function checkCommit(scene, reverse = false) {
   const memory = {};
-  for (let address = 0xc20; address <= 0xd08; address++) memory[address] = scene.mem[address];
+  for (let address = 0xc20; address <= 0xd0b; address++) memory[address] = scene.mem[address];
   for (let index = 0; index < 16; index++) memory[0x880 + index] = reverse ? 15 - index : index;
   const prepared = execute(rom, symbols, 'PatentDisplayPrepare', [],
     { memory, biosStack: true, j: 16, sceneInterrupts: true, stepLimit: 10000 });
@@ -152,7 +158,7 @@ for (const x of [8, 28, 33, 34, 40, 43, 44, 91, 92, 94, 95, 96, 97, 144, 145, 14
   }
 }
 const cachedMemory = {};
-for (let address = 0xc20; address <= 0xd08; address++) cachedMemory[address] = initialized.mem[address];
+for (let address = 0xc20; address <= 0xd0b; address++) cachedMemory[address] = initialized.mem[address];
 for (let address = 0xf60; address < 0xf7c; address++) cachedMemory[address] = initialized.mem[address];
 const cached = execute(rom, symbols, 'PatentSceneUpdate', [],
   { memory: cachedMemory, biosStack: true, j: 16, sceneInterrupts: true, stepLimit: 10000 });
