@@ -66,10 +66,10 @@ console.log('Scene: 1,024 side/image/Y cases preserve fixed collision bodies and
 for (let side = 0; side < 2; side++) for (const center of [70, 144, 218]) {
   for (let delta = -19; delta <= 19; delta++) {
     const result = execute('PatentPaddleHit', [side, center + delta, center]);
-    const vertical = delta <= -13 ? -0x256 : delta <= -5 ? -0x103 :
-      delta <= 3 ? 0 : delta <= 11 ? 0x103 : 0x256;
+    const vertical = delta <= -13 ? -0x4ac : delta <= -5 ? -0x206 :
+      delta <= 3 ? 0 : delta <= 11 ? 0x206 : 0x4ac;
     assert.equal(result.regs[4] | (result.regs[5] << 8), vertical & 65535);
-    assert.equal(result.regs[6] | (result.regs[7] << 8), (side ? -0x180 : 0x180) & 65535);
+    assert.equal(result.regs[6] | (result.regs[7] << 8), (side ? -0x300 : 0x300) & 65535);
     assert.deepEqual([...result.regs.slice(0, 3)], [side, center + delta, center]);
     assert.deepEqual(result.writes, []);
     checks++;

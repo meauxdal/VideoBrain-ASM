@@ -40,7 +40,7 @@ PatentGameClear:
         lis 4
         st
         dci PATENT_GAME_DELAY
-        li 60
+        li 30
         st
         dci PATENT_GAME_BOY_X
         li 86
@@ -48,17 +48,15 @@ PatentGameClear:
         li $ff
         st
         dci PATENT_GAME_BOY_TICK
-        lis 7
+        lis 4
         st
         pk
 
-; R1 = packed-decimal score 00-15. Returns score + 1, saturated at 15, in A.
+; R1 = packed-decimal score 00-14. Returns score + 1 in A. No saturation: a 15 is reset at the next launch before any point can be scored.
 ; Clobbers A, W, K. Preserves scratch registers and J.
 PatentScoreIncrement:
         lr K,P
         lr A,1
-        ci $15
-        bz PatentScoreDone
         ni $0f
         ci 9
         lr A,1
@@ -67,7 +65,6 @@ PatentScoreIncrement:
         pk
 PatentScoreCarry:
         ai 7
-PatentScoreDone:
         pk
 
 ; R0 = active-high button mask (physical joysticks 1/2: left $01, right $02).
@@ -129,7 +126,7 @@ PatentGamePickupX:
         st
         lis 0
         st
-        lis 7
+        lis 4
         st
         lr A,0
         ai 0
@@ -139,7 +136,7 @@ PatentGamePickupX:
 PatentGamePickupBall:
         dci PATENT_BALL_STATE
         st
-        li 210
+        li 208
         st
         lis 0
         st
@@ -164,9 +161,9 @@ PatentGameCarry:
         lm
         lr 0,A
         ai 0
-        li $ff
+        li $fe
         bz PatentGameCarryVelocity
-        lis 1
+        lis 2
 PatentGameCarryVelocity:
         lr 1,A
         dci PATENT_GAME_BOY_X
@@ -194,7 +191,7 @@ PatentGameCarryMove:
         dci PATENT_BALL_STATE
         st
         lm
-        ai $fe
+        ai $fc
         dci PATENT_BALL_STATE+1
         st
         jmp PatentGameBoyUp
@@ -225,7 +222,7 @@ PatentGameExit:
 PatentGameBoyUp:
         dci PATENT_GAME_BOY_Y
         lm
-        ai $fe
+        ai $fc
         dci PATENT_GAME_BOY_Y
         st
         ; The patent selects the current image before advancing its phase.
@@ -241,7 +238,7 @@ PatentGameBoyUp:
         bz PatentGameBoyToggle
         jmp PatentGameDone
 PatentGameBoyToggle:
-        lis 7
+        lis 4
         dci PATENT_GAME_BOY_TICK
         st
         dci PATENT_GAME_BOY_PHASE
@@ -275,7 +272,7 @@ PatentGameReady:
         lis 4
         st
         dci PATENT_GAME_DELAY
-        li 60
+        li 30
         st
         dci PATENT_GAME_SERVER
         lm
@@ -336,6 +333,15 @@ PatentGamePointSide:
         lr 1,A
         pi PatentScoreIncrement
         lr 1,A
+        ; Game win: stand-in for retail warble $12F2 (30 fields alternating 8/24-line half-periods). COM $15 = $EA serves as 234 edges and -22 lines (near retail's 24); the frame scheduler chops the tone at frame rate.
+        ci $15
+        bnz PatentGameScoreStore
+        com
+        dci PATENT_SOUND
+        st
+        st
+        st
+PatentGameScoreStore:
         dci PATENT_GAME_LEFT_SCORE
         lr A,0
         adc
@@ -345,7 +351,7 @@ PatentGamePointSide:
         lis PATENT_MODE_PAUSE
         st
         dci PATENT_GAME_DELAY
-        li 60
+        li 30
         st
 PatentGameDone:
         pi $40bc

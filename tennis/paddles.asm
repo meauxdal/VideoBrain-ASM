@@ -167,21 +167,21 @@ PatentPaddleHitBand:
         lr 4,A
         lm
         lr 5,A
-        li $80
+        lis 0
         lr 6,A
         lr A,0
         ni 1
         bz PatentPaddleHitLeft
-        li $fe
+        li $fd
         lr 7,A
         pk
 PatentPaddleHitLeft:
-        lis 1
+        lis 3
         lr 7,A
         pk
 
 PatentPaddleHitVelocities:
-        db $aa,$fd,$fd,$fe,$00,$00,$03,$01,$56,$02
+        db $54,$fb,$fa,$fd,$00,$00,$06,$02,$ac,$04
 
 ; Draw center X, draw half-width, DX, odd pointer/color, even pointer/color,
 ; collision center X. Image growth must not move or widen the collision body.

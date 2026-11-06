@@ -35,13 +35,13 @@ PatentRallyStartX:
         st
         st
         st
-        li $80
+        lis 0
         st
         lr A,0
         ai 0
-        lis 1
+        lis 3
         bz PatentRallyStartVelocity
-        li $fe
+        li $fd
 PatentRallyStartVelocity:
         st
         lis 4
