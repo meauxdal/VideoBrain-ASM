@@ -26,10 +26,12 @@ Patent addresses below use e5frog's reconstructed cartridge layout.
 object mapping, asset disagreements, and assembly batches. Hardware checks
 are planned at integrated milestones; they are not required after each edit.
 
-Run these commands from the VideoBrain-ASM repository root. Scripts use the
-sibling VideoBrain_MiSTer checkout for reference ROMs and
-`local/tennis-adaptation/` outputs. Pass `-CoreRoot <path>` for another
-checkout location.
+Run these commands from the VideoBrain-ASM repository root. All Tennis files
+live in this repository: source and tests here, build outputs, logs, packaged
+BIN/VBC revisions and diagnostic runs in the ignored `local/tennis/`. The
+sibling VideoBrain_MiSTer checkout is only read: retail ROM, BIOS, `tools/vbc.py`
+and the headless simulator. Pass `-CoreRoot <path>` for another checkout
+location.
 
 ## Combined candidate
 
@@ -41,14 +43,15 @@ Node.js is required for the checks. If it is outside PATH, add
 `-NodeExe <path-to-node.exe>`. The script validates the executable before
 assembly starts.
 
-This assembles `tennis-adaptation.bin` under `local/tennis-adaptation/`,
+This assembles `tennis-adaptation.bin` under `local/tennis/`,
 checks the 4 KB limit/header/vector, compares retained capture and interrupt
 bytes with retail, and executes 400 combined control/game/scene/display
 frames. The candidate uses the Standard mapper. Capture and BIOS K-stack
 calls use boundary stubs. The field-service checks execute the supplied
 RES1 BIOS transfer routine for both parities. They do not validate cold
 startup, scanline deadlines, bus arbitration or interrupt execution.
-Sound is not connected.
+Sound (sound.asm): paddle hit, wall and ball-boy footstep tones after retail
+$148F, played as non-blocking edges while the frame scheduler idles.
 
 The field-service candidate V4 is packaged as `tennis-adaptation-v4.vbc`
 with the Standard mapper and Tennis timing preset. It is separate from the
@@ -73,6 +76,23 @@ The candidate omits all old four-player, movement, serve, collision, results
 and reflected-graphics consumers. Its new state owns records 22/23 and
 $0CE0-$0D09; $0D0C-$0D1B caches X origins after retirement of reflected assets.
 It includes all 13 patent scene objects and hides unused slots explicitly.
+
+## Simulator diagnostics
+
+```powershell
+.\tennis\diagnostics\diagnose-tennis.ps1
+```
+
+Assembles `candidate.asm`, checks that it matches the selected VBC
+(`-Container`, default `local/tennis/tennis-adaptation-v4.vbc`) and runs it
+in the core's existing headless Verilator binary under WSL; it does not build
+the simulator. `-Dasm`, `-CoreRoot`, `-Simulator`, `-Frames` (default 120)
+and `-Minutes` (default 45) override defaults. Results go to a new
+`local/tennis/diagnostic-*` directory: `summary.json`, `events.jsonl`,
+`machine.csv` (with `--machine-trace` builds), `sim.log`, `trace-tail.txt`
+and PNG pairs around the scripted paddle and fire inputs. Completion means
+collection finished, not that controls or rendering passed. Parser tests:
+`python -m unittest tennis/diagnostics/test_diagnose_tennis.py`.
 
 ## Paddle source work
 
@@ -166,7 +186,7 @@ From the repository root, with DASM F8 support:
 .\tennis\build.ps1 -Dasm <path-to-dasm.exe>
 ```
 
-Outputs go to `local/tennis-adaptation/`, with timestamped assembly stdout,
+Outputs go to `local/tennis/`, with timestamped assembly stdout,
 stderr and verification logs. The script verifies the retail SHA256,
 the first experiment's SHA256, all 12 changed bytes in V2, and the decoded
 court geometry. All instruction bytes remain identical to retail.

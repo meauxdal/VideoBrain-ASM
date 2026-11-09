@@ -17,7 +17,14 @@ PatentDisplayOriginLoop:          LM
                 LR   13,A
                 BR7  PatentDisplayOriginNext
                 LISU 6
-PatentDisplayOriginNext:          LR   A,$2
+PatentDisplayOriginNext:
+        ifconst PATENT_CARTRIDGE
+                ; Raster IRQ window: A is reloaded; R3 is unused here.
+                EI
+                NOP
+                DI
+        endif
+                LR   A,$2
                 ADC
                 DS   $0
                 BF   $4,PatentDisplayOriginLoop

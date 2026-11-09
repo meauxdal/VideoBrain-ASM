@@ -11,9 +11,9 @@ for (const line of fs.readFileSync(process.argv[3], 'utf8').split(/\r?\n/)) {
 const base = symbols.PATENT_BALL_STATE;
 const state = result => [...result.mem.slice(base, base + 21)];
 const bcd = number => Math.floor(number / 10) * 16 + number % 10;
-for (let number = 0; number <= 15; number++) {
+for (let number = 0; number <= 14; number++) {
   const result = execute(rom, symbols, 'PatentScoreIncrement', [0, bcd(number)]);
-  assert.equal(result.a, bcd(Math.min(15, number + 1)));
+  assert.equal(result.a, bcd(number + 1));
   assert.equal(result.regs[1], bcd(number));
   assert.equal(result.regs[9], 0x5a);
   assert.deepEqual(result.writes, []);
@@ -55,14 +55,15 @@ for (const side of [0, 1]) for (let number = 0; number <= 15; number++) {
 
 function initial() {
   const result = execute(rom, symbols, 'PatentGameInit', [], { sceneInterrupts: true });
-  const expected = [180, 144, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 60, 0, 0, 86, 255, 0, 7, 0, 0];
+  const expected = [180, 144, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 30, 0, 0, 86, 255, 0, 4, 0, 0];
   assert.deepEqual(state(result), expected);
   for (const address of result.writes) assert(address >= base && address < base + 21);
   assert.equal(result.regs[9], 0x5a);
   return expected;
 }
 
-let frameChecks = 0;
+let frameChecks = 0, footsteps = 0, wins = 0;
+const sound = symbols.PATENT_SOUND;
 function step(previous, buttons, leftY = 148, rightY = 148) {
   const memory = {};
   previous.forEach((value, index) => { memory[base + index] = value; });
@@ -79,6 +80,20 @@ function step(previous, buttons, leftY = 148, rightY = 148) {
     const direct = execute(rom, symbols, 'PatentPaddleUpdate', [side, side ? rightY : leftY, 0]);
     for (const address of direct.writes) { allowed.add(address); assert.equal(result.mem[address], direct.mem[address]); }
   }
+  const won = (next[9] & 6) && next.slice(13, 15).includes(0x15);
+  if (won) {
+    // Game win: 234 edges at a 22-line half-period.
+    assert(result.writes.includes(sound), 'win tone started');
+    for (let i = 0; i < 3; i++) allowed.add(sound + i);
+    assert.deepEqual([...result.mem.slice(sound, sound + 3)], [0xea, 0xea, 0xea]);
+    wins++;
+  } else if (result.writes.includes(sound)) {
+    // Ball-boy step: four edges, half-period from the new Y as in retail $176D.
+    for (let i = 0; i < 3; i++) allowed.add(sound + i);
+    assert.equal(result.mem[sound], 4);
+    assert.equal(result.mem[sound + 2], ~(next[symbols.PATENT_GAME_BOY_Y - base] >> 2) & 255);
+    footsteps++;
+  }
   for (const address of result.writes) assert(allowed.has(address), `unexpected write ${address.toString(16)}`);
   frameChecks++;
   return next;
@@ -87,28 +102,28 @@ function step(previous, buttons, leftY = 148, rightY = 148) {
 for (const server of [0, 1]) {
   let current = initial();
   current[11] = server;
-  for (let frame = 1; frame <= 134; frame++) {
+  for (let frame = 1; frame <= 67; frame++) {
     current = step(current, 3);
     assert.equal(current[13], 0);
     assert.equal(current[14], 0);
-    if (frame < 60) {
+    if (frame < 30) {
       assert.equal(current[10], 0);
-      assert.equal(current[12], 60 - frame);
+      assert.equal(current[12], 30 - frame);
       assert.equal(current[16], 255);
-    } else if (frame <= 90) {
-      const moves = frame - 59;
+    } else if (frame <= 44) {
+      const moves = frame - 29;
       assert.equal(current[10], 1);
-      assert.equal(current[15], server ? 103 + moves : 85 - moves);
-      assert.equal(current[16], 202 - moves * 2);
-      assert.equal(current[0], server ? 113 + moves : 75 - moves);
-      assert.equal(current[1], 210 - moves * 2);
-      assert.equal(current[17], Math.floor((moves - 1) / 7) % 2);
-      assert.equal(current[20], Math.floor(moves / 7) % 2);
-      assert.equal(current[18], 7 - moves % 7);
-    } else if (frame < 134) {
+      assert.equal(current[15], server ? 103 + moves * 2 : 85 - moves * 2);
+      assert.equal(current[16], 202 - moves * 4);
+      assert.equal(current[0], server ? 113 + moves * 2 : 75 - moves * 2);
+      assert.equal(current[1], 208 - moves * 4);
+      assert.equal(current[17], Math.floor((moves - 1) / 4) % 2);
+      assert.equal(current[20], Math.floor(moves / 4) % 2);
+      assert.equal(current[18], 4 - moves % 4);
+    } else if (frame < 67) {
       assert.equal(current[10], 2);
-      assert.equal(current[15], server ? 134 : 54);
-      assert.equal(current[16], 140 - (frame - 90) * 2);
+      assert.equal(current[15], server ? 133 : 55);
+      assert.equal(current[16], 138 - (frame - 45) * 4);
       assert.equal(current[0], server ? 148 : 40);
       assert.equal(current[1], 148);
       assert.deepEqual(current.slice(4, 8), [0, 0, 0, 0]);
@@ -126,7 +141,7 @@ for (const server of [0, 1]) {
   const launched = step(current, server ? 2 : 1, 144, 144);
   assert.equal(launched[10], 4);
   assert.equal(launched[0], server ? 148 : 40);
-  assert.deepEqual(launched.slice(4, 8), [3, 1, 128, server ? 254 : 1]);
+  assert.deepEqual(launched.slice(4, 8), [6, 2, 0, server ? 253 : 3]);
   assert.equal(launched[8], 3);
   assert.equal(launched[9], 64);
 
@@ -153,7 +168,7 @@ for (const server of [0, 1]) {
       assert.equal(previousMode, 4);
       assert.equal(current[10], 0);
       assert.equal(current[11], server);
-      assert.equal(current[12], 60);
+      assert.equal(current[12], 30);
       assert.equal(current[13 + server], bcd(points));
       assert.equal(current[14 - server], 0);
       assert.equal(current[9], server ? 4 : 2);
@@ -171,9 +186,12 @@ for (const server of [0, 1]) {
   assert.equal(restarted[10], 4);
   assert.equal(restarted[9], 64);
 }
-console.log('Scores: all 16 packed-decimal values, including 09->10 and saturation at 15.');
+assert.equal(wins, 2, 'one win tone per complete game');
+console.log('Scores: packed-decimal 00->15 including 09->10; each complete game starts one win tone.');
 console.log('Score display: 96 side/value/status cases, both fields, colors, bounds and exact write sets.');
-console.log('Serve: both 134-frame retrievals, seven-frame animation, delivery and exit coordinates.');
+console.log('Serve: both 67-frame retrievals, four-frame animation, delivery and exit coordinates.');
 console.log('Buttons: wrong-side presses, held/both buttons, delayed paddle contact and valid restart.');
 console.log(`Controller: ${frameChecks} assembled frames, including two natural 15-point games and restarts.`);
+assert(footsteps > 0, 'ball-boy walks must queue footsteps');
+console.log(`Sound: ${footsteps} ball-boy footsteps queued.`);
 console.log('BIOS K-stack calls are boundary stubs; live display/input scheduling remains untested.');

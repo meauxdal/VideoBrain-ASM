@@ -59,9 +59,9 @@ function resolve(x, y, vy, vx, leftY, rightY) {
   } else if (x <= 33) x = 28;
   else if (x > 154) x = 160;
   else {
-    const angle = delta <= -13 ? -0x256 : delta <= -5 ? -0x103 :
-      delta <= 3 ? 0 : delta <= 11 ? 0x103 : 0x256;
-    vy = angle & 65535; vx = (side ? -0x180 : 0x180) & 65535;
+    const angle = delta <= -13 ? -0x4ac : delta <= -5 ? -0x206 :
+      delta <= 3 ? 0 : delta <= 11 ? 0x206 : 0x4ac;
+    vy = angle & 65535; vx = (side ? -0x300 : 0x300) & 65535;
     x = side ? 148 : 40; events |= 64;
   }
   return { x, y, vy, vx, events, side, paddleY };
@@ -100,6 +100,22 @@ for (const center of [70, 76, 144, 212, 218]) {
   }
 }
 
+// Tunnelling: the loop runs at 30 Hz, so speeds are doubled (3 px/frame, 6 after the fourth hit) and the front window (5 px) is narrower than the top speed. Every rally X starts from a front hit at 40/148 and VX has no fraction, so the ball must still land in the opposite front window at both speeds.
+let tunnelChecks = 0;
+for (const side of [0, 1]) for (const vx of [0x300, 0x600]) for (let paddleY = 76; paddleY <= 212; paddleY++) {
+  let x = side ? 148 : 40, step = side ? -(vx >> 8) : vx >> 8, hit = false;
+  for (let frame = 0; frame < 100 && !hit; frame++) {
+    x += step;
+    const next = resolve(x, paddleY, 0, (side ? -vx : vx) & 65535, paddleY, paddleY);
+    assert.equal(next.events & 6, 0, `ball tunnelled: ${JSON.stringify({ side, vx, paddleY, x })}`);
+    hit = (next.events & 64) !== 0;
+    x = next.x;
+  }
+  assert(hit);
+  tunnelChecks++;
+}
+
+console.log(`Tunnelling: ${tunnelChecks} aligned returns at 3 and 6 px/frame land in the front window.`);
 console.log(`Motion: ${motionChecks} signed 8.8 carry, fraction and wrap cases.`);
 console.log(`Speed: ${speedChecks} hit-count and signed velocity doubling cases.`);
 console.log(`Collision: ${collisionChecks} wall, exit, net, image, front, side and penetration cases.`);
@@ -118,7 +134,7 @@ for (const side of [0, 1]) {
   const result = execute(rom, symbols, 'PatentRallyStart', [side],
     { memory: memoryFor(new Array(10).fill(0xa5), 76, 212), status: 0 });
   assert.deepEqual([...result.mem.slice(stateBase, stateBase + 10)],
-    stateBytes((side ? 148 : 40) << 8, (side ? 212 : 76) << 8, 0, side ? 0xfe80 : 0x180, 4));
+    stateBytes((side ? 148 : 40) << 8, (side ? 212 : 76) << 8, 0, side ? 0xfd00 : 0x300, 4));
   assert.deepEqual(result.writes, Array.from({ length: 10 }, (_, i) => stateBase + i));
 }
 

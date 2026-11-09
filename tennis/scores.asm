@@ -36,6 +36,12 @@ PatentScoreDestination:
         ni $0f
         lr 1,A
         pi PatentScoreCopyDigit
+        ifconst PATENT_CARTRIDGE
+        ; Both digits are written; R3 and A are dead. Split the point-frame run.
+        ei
+        nop
+        di
+        endif
         dci $0cb0
         lr A,0
         sl 1

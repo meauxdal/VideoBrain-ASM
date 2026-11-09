@@ -4,6 +4,7 @@
         include "rally.asm"
         include "rally-state.asm"
         include "game.asm"
+        include "sound.asm"
         include "scores.asm"
         include "scene.asm"
         include "display.asm"

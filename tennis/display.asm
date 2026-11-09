@@ -75,9 +75,9 @@ PatentDisplayInsert:
         lm
         lr 2,A
         lr A,0
-        lr 3,A
+        lr 5,A
 PatentDisplayInsertCompare:
-        lr A,3
+        lr A,5
         ai 0
         bz PatentDisplayInsertStore
         ai $ff
@@ -98,20 +98,26 @@ PatentDisplayInsertCompare:
         bp PatentDisplayInsertStore
 PatentDisplayInsertShift:
         dci $0880
-        lr A,3
+        lr A,5
         adc
         lr A,4
         st
-        ds 3
+        ifconst PATENT_CARTRIDGE
+        ; Raster IRQ window inside the shift chain; A is reloaded at the compare.
+        ei
+        nop
+        di
+        endif
+        ds 5
         br PatentDisplayInsertCompare
 PatentDisplayInsertStore:
         dci $0880
-        lr A,3
+        lr A,5
         adc
         lr A,1
         st
         ifconst PATENT_CARTRIDGE
-        ; The insertion index in R3 is no longer live.
+        ; Insertion index R5 survives the stock IRQ (only R3 is clobbered).
         ei
         nop
         di

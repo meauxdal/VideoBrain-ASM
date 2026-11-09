@@ -31,8 +31,10 @@ console.log('Mapping: 256 inputs cover clamps, scale transitions and midpoint 14
 let checks = 0;
 for (let side = 0; side < 2; side++) for (let image = 0; image < 2; image++) {
   for (let sample = 0; sample < 256; sample++) for (const j of [0, 16, 31]) {
-    const options = { capture: sample, j, status: j, sceneInterrupts: true };
-    const inputs = [side, 0, image];
+    // Other side's image bit and unrelated event bits must not leak in.
+    const events = (image ? 0x10 << side : 0) | (0x20 >> side) | 0x0b;
+    const options = { capture: sample, j, status: j, sceneInterrupts: true, memory: { 0xce9: events } };
+    const inputs = [side, 0, image ^ 1];
     const result = execute(rom, symbols, 'PatentPaddleCaptureUpdate', inputs, options);
     const y = expected(sample), slot = side + 1;
     const direct = execute(rom, symbols, 'PatentPaddleUpdate', [side, y, image]);

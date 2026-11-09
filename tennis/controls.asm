@@ -30,11 +30,11 @@ PatentPaddleStockDone:
         lr A,4
         pk
 
-; R0 = side 0/1, R2 = hit image 0/1; returns logical Y in R1.
+; R0 = side 0/1; hit image comes from stored ball events (R2 = image 0/1 on return). Returns logical Y in R1.
 ; Caller supplies valid retail J status and initialized BIOS K stack.
 ; Selects vertical axis 0/2; captures one paddle per call.
 ; Returns with interrupts disabled for the remaining scene update.
-; Clobbers R1, R3-R8, R10-R17, A, W, K, DC0/DC1, IS; preserves R0/R2/J.
+; Clobbers R1, R3-R8, R10-R17, A, W, K, DC0/DC1, IS; preserves R0/J.
 ; BIOS K-stack scratch registers are also used normally.
 ; Retire retail collision users of bodies 22/23 before enabling this path.
 PatentPaddleCaptureUpdate:
@@ -48,7 +48,7 @@ PatentPaddleCaptureUpdate:
         lr 1,A
         pi PatentPaddleMapStockInput
         lr 1,A
-        pi PatentPaddleUpdate
+        pi PatentPaddleUpdateHeld
         pi $40bc
         di
         pk

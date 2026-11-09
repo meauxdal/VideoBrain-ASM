@@ -138,6 +138,17 @@ PatentSceneInitBlank:
         lr 2,A
         pi PatentPaddleUpdate
         pi PatentSceneUpdate
+        ; Interrupts are still off: apply paddle DX now (field service does it later).
+        dci $0821
+        xdc
+        dci PATENT_PADDLE_DX
+        lm
+        xdc
+        st
+        xdc
+        lm
+        xdc
+        st
         pi $40bc
         di
         pk
@@ -162,24 +173,26 @@ PatentSceneUpdate:
         dci $0cda
         lm
         lr 1,A
-        dci PATENT_BALL_EVENTS
-        lm
-        ni PATENT_EVENT_LEFT_IMAGE
-        sr 4
-        lr 2,A
-        pi PatentPaddleUpdate
+        pi PatentPaddleUpdateHeld
+        ifconst PATENT_CARTRIDGE
+        ; Left slot pointers and cached DX are consistent; the field transfer copies both together, so a field may show left-new/right-old Y only (the right paddle's pose was already redrawn from events at capture).
+        ei
+        nop
+        di
+        endif
         lis 1
         lr 0,A
         dci $0cde
         lm
         lr 1,A
-        dci PATENT_BALL_EVENTS
-        lm
-        ni PATENT_EVENT_RIGHT_IMAGE
-        sr 4
-        sr 1
-        lr 2,A
-        pi PatentPaddleUpdate
+        pi PatentPaddleUpdateHeld
+        ifconst PATENT_CARTRIDGE
+        ; Both paddles' pointers and DX are now consistent. R3/DC0 are dead;
+        ; R0-R2 are reloaded before use.
+        ei
+        nop
+        di
+        endif
         dci PATENT_BALL_STATE
         lm
         lr 1,A
@@ -224,15 +237,7 @@ PatentSceneNetLoop:
         sl 1
         sl 1
         sl 1
-        lr 1,A
-        dci PATENT_SCENE_SELECTION
-        lm
-        ni 2
-        lis 0
-        bz PatentSceneNetOffset
-        li 24
-PatentSceneNetOffset:
-        as 1
+        ; Both net sides draw the same pixels ($03 at X 91 = $c0 at X 97).
         dci PatentSceneNets
         adc
         pi PatentSceneWriteObject
@@ -381,9 +386,6 @@ PatentSceneNets:
         db 60,$41,97,84,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
         db 60,$41,97,144,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
         db 60,$41,97,204,<PatentNL,>PatentNL+$e0,<PatentNL,>PatentNL+$e0
-        db 60,$41,91,84,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
-        db 60,$41,91,144,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
-        db 60,$41,91,204,<PatentNR,>PatentNR+$e0,<PatentNR,>PatentNR+$e0
 PatentSceneBoys:
         db 32,$42,0,0,<PatentLB1O,>PatentLB1O+$e0,<PatentLB1E,>PatentLB1E+$e0
         db 32,$42,0,0,<PatentLB2O,>PatentLB2O+$e0,<PatentLB2E,>PatentLB2E+$e0

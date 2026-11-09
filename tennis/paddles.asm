@@ -9,6 +9,9 @@ PATENT_PADDLE_HALF_HEIGHT = 16
 PATENT_PADDLE_HALF_WIDTH = 4
 PATENT_PADDLE_LEFT_X = 34
 PATENT_PADDLE_RIGHT_X = 154
+; DX cache for slots 1/2. The red field service copies it to $0821/$0822
+; with the BIOS pointer transfer, so width and image change together.
+PATENT_PADDLE_DX = $0d0a
 
 ; R1 = patent MAP result, 0-199. Returns logical center Y in A.
 ; Clobbers A, W, K. This does not replace the stock joystick capture ISR.
@@ -30,8 +33,19 @@ PatentPaddleMapDone:
 
 ; R0 = side (0 left, 1 right), R1 = logical center Y, R2 = hit image (0/1).
 ; Returns clamped logical Y in R1. Clobbers R3-R8, R10-R11, A, W, K, DC0.
-; Updates display slots 1/2 and fixed collision bodies 22/23.
+; Updates display slots 1/2 (DX via PATENT_PADDLE_DX) and collision bodies 22/23.
 ; Call with interrupts disabled during the scene update phase.
+; PatentPaddleUpdateHeld takes the hit image from the stored ball events ($0ce9 = PATENT_BALL_EVENTS, bit $10 left / $20 right) instead of R2, so every redraw (capture or scene) keeps the held return pose; a field transfer between them can no longer show the normal pose. Sets R2 = image 0/1.
+PatentPaddleUpdateHeld:
+        lr A,0
+        inc
+        sl 4
+        dci $0ce9
+        nm
+        ai $ff
+        lis 0
+        lnk
+        lr 2,A
 PatentPaddleUpdate:
         lr K,P
         lr A,1
@@ -101,7 +115,7 @@ PatentPaddleUpdateY:
         adc
         lr A,11
         st
-        dci $0821
+        dci PATENT_PADDLE_DX
         lr A,0
         adc
         lr A,7
@@ -153,21 +167,21 @@ PatentPaddleHitBand:
         lr 4,A
         lm
         lr 5,A
-        li $80
+        lis 0
         lr 6,A
         lr A,0
         ni 1
         bz PatentPaddleHitLeft
-        li $fe
+        li $fd
         lr 7,A
         pk
 PatentPaddleHitLeft:
-        lis 1
+        lis 3
         lr 7,A
         pk
 
 PatentPaddleHitVelocities:
-        db $aa,$fd,$fd,$fe,$00,$00,$03,$01,$56,$02
+        db $54,$fb,$fa,$fd,$00,$00,$06,$02,$ac,$04
 
 ; Draw center X, draw half-width, DX, odd pointer/color, even pointer/color,
 ; collision center X. Image growth must not move or widen the collision body.

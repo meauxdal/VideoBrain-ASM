@@ -1,12 +1,16 @@
 param(
     [Parameter(Mandatory = $true)][string]$Dasm,
+    [string]$NodeExe = 'node',
     [string]$CoreRoot = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'VideoBrain_MiSTer')
 )
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath $CoreRoot).Path
 $assembler = (Resolve-Path -LiteralPath $Dasm).Path
-$output = Join-Path $root 'local/tennis-adaptation'
+$nodeCommand = Get-Command -Name $NodeExe -CommandType Application -ErrorAction SilentlyContinue
+if (!$nodeCommand) { throw 'Node.js was not found. Pass -NodeExe <path-to-node.exe>.' }
+$nodePath = $nodeCommand.Source
+$output = Join-Path (Split-Path $PSScriptRoot -Parent) 'local/tennis'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 $binary = Join-Path $output 'scene-unit.bin'
@@ -19,7 +23,7 @@ $checkErrors = Join-Path $output "scene-check-$stamp.err"
     "-I$PSScriptRoot" "-o$binary" "-s$symbols" `
     "-l$(Join-Path $output 'scene-unit.lst')" '-R' 1> $assemblyLog 2> $assemblyErrors
 if ($LASTEXITCODE -ne 0) { throw "Assembly failed: $assemblyLog; $assemblyErrors" }
-& node (Join-Path $PSScriptRoot 'tests/check-scene.cjs') $binary $symbols 1> $checkLog 2> $checkErrors
+& $nodePath (Join-Path $PSScriptRoot 'tests/check-scene.cjs') $binary $symbols 1> $checkLog 2> $checkErrors
 if ($LASTEXITCODE -ne 0) { throw "Scene checks failed: $checkLog; $checkErrors" }
 Get-Content -LiteralPath $checkLog
 Write-Output "Assembly log: $assemblyLog"

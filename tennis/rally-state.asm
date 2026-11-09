@@ -35,13 +35,13 @@ PatentRallyStartX:
         st
         st
         st
-        li $80
+        lis 0
         st
         lr A,0
         ai 0
-        lis 1
+        lis 3
         bz PatentRallyStartVelocity
-        li $fe
+        li $fd
 PatentRallyStartVelocity:
         st
         lis 4
@@ -122,6 +122,12 @@ PatentRallySave:
         lr A,3
         ni PATENT_EVENT_PADDLE
         bz PatentRallyStepDone
+        ifconst PATENT_CARTRIDGE
+        ; Hit frame: events are stored and R3 is dead; split the masked run.
+        ei
+        nop
+        di
+        endif
         lr A,2
         lr 1,A
         lr A,10
