@@ -18,6 +18,10 @@ Expander I code matches, and cartridge text. These listings have not all
 been verified by assembly; the Information Manager checks below apply only
 to Information Manager.
 
+## Diagnostics
+
+[Hardware and simulator diagnostics](diagnostics/README.md): DAC, self-test, joystick, timing and Information Manager test material, with sources and rebuild steps.
+
 ## Information Manager
 
 - [Annotated VB-1200 listing](infoman/infoman.lst), September 25/26, 1978.
