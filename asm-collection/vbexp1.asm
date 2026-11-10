@@ -1173,10 +1173,9 @@ A0562:          LR   K,P                 ; 0562 08
                 PK                       ; 05b6 0c
 
 ;this looks like leftover code
-; Candidate main-machine code remnant: copies $16 bytes from $12F8
-; to $0C00 and jumps to $0C00. Nearby code accesses video register
-; $08FB. These addresses fit the main VideoBrain memory map.
-; Unused status and the origin of the fragment remain unverified.
+
+; Copies $16 bytes from $12F8 to $0C00 and jumps to $0C00
+; Nearby code accesses video register $08FB
                 LR   P0,Q                ; 05b7 0d
                 LR   Q,DC                ; 05b8 0e
                 LR   DC,Q                ; 05b9 0f
@@ -1404,8 +1403,7 @@ A06c8:          DS   $0                  ; 06c8 30
                 LR   A,KU                ; 06dd 00
                 LR   A,KU                ; 06de 00
                 LR   A,KU                ; 06df 00
-; Exact byte matches to Money_Minder_vb1000mm.asm:
-; $06E0-$06FB = $16E4-$16FF (28 bytes).
+; Matches with Money_Minder_vb1000mm.asm: $06E0-$06FB = $16E4-$16FF
                 PI   $40a9               ; 06e0 28 40 a9
                 LISU 3                   ; 06e3 63
                 LISL 3                   ; 06e4 6b
@@ -1430,8 +1428,7 @@ A06ef:          LM                       ; 06ef 16
                 PI   $1772               ; 06fe 28 17 72
                 JMP  $31ad               ; 0701 29 31 ad
 
-; Exact byte match: Money_Minder_vb1000mm.asm $1708-$1771
-; (106 bytes). Calls retain main-machine ROM addresses.
+; Matches with Money_Minder_vb1000mm.asm $1708-$1771
                 LR   K,P                 ; 0704 08
                 PI   $40a9               ; 0705 28 40 a9
                 LISU 3                   ; 0708 63
@@ -1515,10 +1512,7 @@ A0760:          LIS  $0                  ; 0760 70
 A076e:          PI   $40bc               ; 076e 28 40 bc
                 PK                       ; 0771 0c
 
-; Exact byte match: Money_Minder_vb1000mm.asm $1775-$17FF
-; through $07FC (139 bytes, including three trailing zero bytes).
-; Shared bytes support a code-remnant hypothesis, not execution or
-; development order. This block still calls RES1 $40A9 and $41C8.
+; Matches Money_Minder_vb1000mm.asm $1775-$17FF through $07FC
                 LR   K,P                 ; 0772 08
                 PI   $40a9               ; 0773 28 40 a9
                 PI   $41c8               ; 0776 28 41 c8

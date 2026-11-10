@@ -606,8 +606,8 @@ A1382:          JMP  A1ff5               ; 1382 29 1f f5
                 LI   $27                 ; 13a1 20 27
                 LR   (IS),A              ; 13a3 5c
 ; RES1 $4686 copies bit-reversed bitmap bytes. Both
-; calls here use R16 = R17 = 1, so source and destination advance by
-; two bytes per iteration; R18 = $27 bytes per call.
+; calls use R16 = R17 = 1. Source and destination advance by
+; two bytes per iteration. R18 = $27 bytes per call
                 PI   $4686               ; 13a4 28 46 86
                 DCI  $0d00               ; 13a7 2a 0d 00
                 XDC                      ; 13aa 2c
@@ -2319,8 +2319,6 @@ A1a96:          LNK                      ; 1a96 19
                 SL   1                   ; 1c36 13
                 NS   $7                  ; 1c37 f7
 ; Demo text advertises creating programs in VIDEO BASIC ($1C5B).
-; The following sample at $1C76 includes WHILE TX LE 96, DO SHOW TANK,
-; ENDWHILE and ENDPROGRAM. Text alone does not establish an interpreter.
                 DS   $1                  ; 1c38 31
                 LR   P,K                 ; 1c39 09
                 LR   IS,A                ; 1c3a 0b
@@ -2604,7 +2602,6 @@ A1a96:          LNK                      ; 1a96 19
                 SR   1                   ; 1d87 12
                 NS   $8                  ; 1d88 f8
 ; Demo text: SOON I CAN KEEP YOUR KITCHEN INVENTORY!
-; An advertised future capability, not evidence that a cartridge shipped.
                 NI   $13                 ; 1d89 21 13
                 SL   1                   ; 1d8b 13
                 NOP                      ; 1d8c 2b
@@ -2698,8 +2695,7 @@ A1a96:          LNK                      ; 1a96 19
                 EI                       ; 1ded 1b
                 LR   IS,A                ; 1dee 0b
                 ASD  (IS)+               ; 1def dd
-; Demo text: (LIKE-HELLO BOB). This is a typing example; it does not
-; establish a programmer credit.
+; Demo text: (LIKE-HELLO BOB).
                 COM                      ; 1df0 18
                 OUT  $01                 ; 1df1 27 01
                 SL   4                   ; 1df3 15

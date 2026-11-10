@@ -1,8 +1,5 @@
-; Financier (VB-81). This listing covers only $1000-$1FFF (4096 bytes).
-; Calls and data references into $3000-$3FFF require bytes absent here.
-; TODO: Obtain the missing region and verify cartridge address decoding.
-; Physical ROM count and total capacity remain unverified; do not infer
-; a missing chip or repair the image by mirroring this 4K window.
+; Financier (VB-81). This listing covers only $1000-$1FFF (4096 bytes)
+; Calls and data references into $3000-$3FFF go to bytes missing from this dump
 ; Source: https://orphanedgames.com/videobrain/f8_programming/f8_source.htm
 
 org $1000
@@ -200,8 +197,8 @@ A1079:          LR   IS,A                ; 1079 0b
                 LR   A,$a                ; 10f2 4a
                 LR   $9,A                ; 10f3 59
                 LR   H,DC                ; 10f4 11
-; A mirror of $30F7 would enter $10F7, the low address operand of
-; this DCI. The missing $3000 window is not a simple copy of this one.
+; $10F7 is the low address byte of this DCI, so $30F7 can't be a mirror
+; of $10F7
                 DCI  $0c04               ; 10f5 2a 0c 04
                 LR   A,(IS)-             ; 10f8 4e
                 ADC                      ; 10f9 8e
@@ -2296,10 +2293,9 @@ A1c7c:          JMP  A1e1b               ; 1c7c 29 1e 1b
                 AS   (IS)                ; 1c9a cc
                 LR   (IS),A              ; 1c9b 5c
 A1c9c:          JMP  A1e1b               ; 1c9c 29 1e 1b
-; NEXT submission reaches this call after entering A in simulation.
-; With the $3000-$3FFF window unmapped, reads return $FF and execution
-; continues to BIOS entry $4000, restarting the cartridge title.
-; The intended $30F7 routine is absent from this listing.
+; NEXT reaches this call after entering A (in simulation). With $3000-$3FFF
+; unmapped, reads return $FF and execution runs on into BIOS $4000,
+; restarting the cartridge
                 PI   $30f7               ; 1c9f 28 30 f7
                 LISU 4                   ; 1ca2 64
                 LISL 7                   ; 1ca3 6f
@@ -2331,7 +2327,7 @@ A1cbb:          PI   A1b95               ; 1cbb 28 1b 95
                 LIS  $0                  ; 1cce 70
                 LR   (IS)+,A             ; 1ccf 5d
                 LR   (IS)+,A             ; 1cd0 5d
-; Another call to the missing $30F7 routine; retain the original target.
+; Another call to the missing $30F7 routine
                 PI   $30f7               ; 1cd1 28 30 f7
                 LISU 4                   ; 1cd4 64
                 LISL 7                   ; 1cd5 6f

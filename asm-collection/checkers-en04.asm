@@ -1081,7 +1081,6 @@ A15ec:          LR   P,K                 ; 15ec 09
                 LR   A,KU                ; 15ed 00
                 NOP                      ; 15ee 2b
 ; Opponent-selection menu: ABE, BETTY, CHARLIE and DOROTHY.
-; A/B/C/D select opponent settings; these names are not known credits.
 A15ef:          LR   QL,A                ; 15ef 07
                 SL   1                   ; 15f0 13
                 LR   A,KU                ; 15f1 00

@@ -1106,7 +1106,7 @@ A16dd:          DS   $0                  ; 16dd 30
                 JMP  A17f9               ; 16e0 29 17 f9
                 
 A16e3:          LR   K,P                 ; 16e3 08
-; Also present verbatim at Expander I $06E0-$06FB (28 bytes).
+; Also present in Expander I BIOS at $06E0-$06FB (28 bytes)
                 PI   $40a9               ; 16e4 28 40 a9
                 LISU 3                   ; 16e7 63
                 LISL 3                   ; 16e8 6b
@@ -1131,7 +1131,7 @@ A16f3:          LM                       ; 16f3 16
                 PI   $4122               ; 1702 28 41 22
                 JMP  A19a3               ; 1705 29 19 a3
                 
-; Also present verbatim at Expander I $0704-$076D (106 bytes).
+; Also present in Expander I BIOS at $0704-$076D (106 bytes)
 A1708:          LR   K,P                 ; 1708 08
                 PI   $40a9               ; 1709 28 40 a9
                 LISU 3                   ; 170c 63
@@ -1214,8 +1214,8 @@ A1764:          LIS  $0                  ; 1764 70
                 LR   $8,A                ; 1771 58
 A1772:          JMP  A17f9               ; 1772 29 17 f9
 
-; Also present verbatim at Expander I $0772-$07FC through $17FF
-; (139 bytes, including three trailing zero bytes).
+; Also present in Expander I BIOS at $0772-$07FC through $17FF
+; (139 bytes including three zeros at the end)
 A1775:          LR   K,P                 ; 1775 08
                 PI   $40a9               ; 1776 28 40 a9
                 PI   $41c8               ; 1779 28 41 c8

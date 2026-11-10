@@ -1366,15 +1366,15 @@ A4642:			db   $01,$0f,$b1,$0f,$b1				;memcopied to ffb
                 db   $46,$5c,$70,$86,$9c,$b4,$40,$d0          
                 db   $00,$01,$02,$03,$04,$05,$06,$87,$08
 
-; $4686: Copy bit-reversed bytes with adjustable spacing.
-; No internal RES1 caller is identified, but vbdemo.asm calls this entry
-; at $13A4 and $13B1; it is not globally unused.
-; DC0 = source; DC1 = destination; R18 = byte count (nonzero).
-; R16 = extra destination increment after ST; destination step = 1 + R16.
-; R17 = extra source increment after LM; source step = 1 + R17.
-; Uses R6-R8 as temporaries; K holds the return address. For example,
-; $01 becomes $80 and $00 stays $00. Pointer steps include the automatic
-; increments performed by LM and ST.
+; $4686: Copy bit-reversed bytes with adjustable spacing
+; No internal RES1 caller identified (vbdemo.asm calls $4686
+; at $13A4 and $13B1)
+; DC0 = source; DC1 = destination; R18 = byte count (nonzero)
+; R16 = extra destination increment after ST; destination step = 1 + R16
+; R17 = extra source increment after LM; source step = 1 + R17
+; Uses R6-R8 as temporaries; K holds the return address
+; Example: $01 becomes $80, $00 stays $00. Pointer steps include the
+; automatic increments from LM and ST
 
                 LR   K,P                 ; 4686 08     ;save return address
                 LISU 2                   ; 4687 62     ;point to R16

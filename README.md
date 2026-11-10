@@ -6,17 +6,11 @@ Annotated disassembly and analysis tools for VideoBrain software.
 
 [Enhanced development status and tape troubleshooting](TINYBASIC-PROGRESS.md).
 
-[Preserved tested baseline and Timeshare display work](tinybasic/README.md).
-The phase 1 source rebuilds byte-for-byte to CRC32 F3BFF3D3. The separate
-24x15 display probe passes on MiSTer with the Timeshare mapper.
+[Baseline, Enhanced 2.0 and Timeshare display work](tinybasic/README.md). The baseline source rebuilds byte-for-byte to CRC32 F3BFF3D3.
 
 ## ASM collection
 
-[Historical listings and source](asm-collection/README.md), with additional
-comments on Financier's missing ROM window, the RES1 bitmap routine,
-Expander I code matches, and cartridge text. These listings have not all
-been verified by assembly; the Information Manager checks below apply only
-to Information Manager.
+[Historical listings and source](asm-collection/README.md), with added comments on Financier's missing ROM window, the RES1 bitmap routine, Expander I code matches and cartridge text.
 
 ## Diagnostics
 
@@ -30,7 +24,7 @@ to Information Manager.
 - [Assembly source generator](tools/make_infoman_asm.py), using the verified listing.
 - [User manual](https://github.com/meauxdal/VideoBrain_MiSTer/blob/main/docs/INFOMAN-MANUAL.md) and [research notes](https://github.com/meauxdal/VideoBrain_MiSTer/blob/main/docs/INFOMAN.md) in VideoBrain_MiSTer.
 
-The listing retains addresses and raw bytes. The assembly source retains its annotations and labels, with additional notes on the optional printer corrections. It preserves the original ROM bytes; no corrections are applied. Comments distinguish traced behavior from remaining runtime questions.
+The listing retains addresses and raw bytes. The assembly source retains its annotations and labels, with additional notes on the optional printer corrections. It preserves the original ROM bytes; no corrections are applied.
 
 ## Generate the listing
 
@@ -64,4 +58,4 @@ See the [printer correction notes](https://github.com/meauxdal/VideoBrain_MiSTer
 
 ## Export for sharing
 
-`python tools/export_asm.py` packages the disassemblies, programs, Tiny BASIC builds and notes listed in [export/manifest.json](export/manifest.json) into `build/export/`, plus a dated zip. ASM files are flattened and rewritten in the column layout of Sean Riddle's listings, and each one must reassemble with DASM to its original binary. [export/STATE.json](export/STATE.json) records source and output hashes, so each run reports which files are new, changed or removed since the last export. Use `--skip-prebuild` to reuse existing Tiny BASIC builds.
+`python tools/export_asm.py` produced the shared package of 2026-11-09 from [export/manifest.json](export/manifest.json): ASM files flattened into the column layout of Sean Riddle's listings, each one checked to reassemble to its original binary. The package was then edited by hand, so the script, manifest and [export/STATE.json](export/STATE.json) no longer match it; the cleaned comments and notes were copied back into this repository.

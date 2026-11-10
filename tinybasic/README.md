@@ -1,34 +1,23 @@
 # Tiny BASIC
 
-## Phase 1 baseline
+All of this starts from Jerry D. Fox's Tiny BASIC for the F8 (Dr. Dobb's #39, October 1979) as ported to the VideoBrain by Sean Riddle in 2012.
 
-`baseline/tinybasic.f8` is the complete, assembled source of the tested
-`F3BFF3D3` variant. Its matching `baseline/tinybasic.bin` is preserved.
-This version includes string-marker cleanup, empty-input backspace protection,
-and cancelled-line capacity reset. It does not include the PRINT bank patch.
-Use Mapper Fallback -> 4K RAM.
+## Baseline
 
-Build and compare all 4,096 bytes with the preserved image:
+`baseline/tinybasic.f8` is the complete source of the F3BFF3D3 build: the port with string-marker cleanup, empty-input backspace protection and cancelled-line capacity reset (no PRINT bank patch). It is a 4 KB cartridge and needs 4K of expansion RAM at $3000-$3FFF (Mapper Fallback -> 4K RAM). The source and its two include files are self-contained.
+
+Build and compare all 4,096 bytes with the saved image (output goes to `build/tinybasic/baseline`):
 
 ```sh
 python tinybasic/baseline/build.py --dasm <path-to-dasm>
 ```
 
-Output goes to `build/tinybasic/baseline`. The source and two include files
-are self-contained; no intermediate ROMs or patch scripts are needed.
+The earlier fixes and their test results are in [asm-collection/tinybasic_record_count_fix](../asm-collection/tinybasic_record_count_fix/LEARNINGS.md).
 
-[Validation results and refactor contracts](../asm-collection/tinybasic_record_count_fix/LEARNINGS.md)
-distinguish tested behavior from source findings and remaining coverage.
-The original imported sources and incremental fixes remain preserved.
+## Enhanced 2.0
 
-## Phase 2 display
+[Tiny BASIC Enhanced](banked/README.md) is a 16 KB banked cartridge with a 24x15 text display modeled on Timeshare's layout, plus tape LOAD and SAVE. It has eight 2 KB banks at $1000-$17FF: 0 boot, 1-4 interpreter, 5 console, 6 keyboard, 7 dispatch. On the MiSTer core, LOAD, LIST and RUN work from tape.
 
-The Timeshare reference is a 24-column, 15-row bitmap layout with 6-pixel
-character cells and a 5-by-7 font. It uses internal RAM and cartridge RAM;
-the BASIC expansion-RAM mapper cannot provide that display unchanged.
-See `timeshare/DESIGN.md` for the mapping and integration constraints.
+## Timeshare display
 
-The combined BASIC mapping probe passes on hardware. The
-[banked 24x15 interpreter](banked/README.md) passes native arithmetic and
-stored-program checks. Version 0.5 runs stored programs on MiSTer with the
-24x15 display. Broader language and memory-limit acceptance remains.
+Timeshare uses a 24-column, 15-row bitmap layout with 6-pixel character cells and a 5x7 font, in internal RAM and cartridge RAM; the BASIC expansion-RAM mapper can't provide it unchanged. [timeshare/DESIGN.md](timeshare/DESIGN.md) covers the mapping. The display and console probes in `timeshare/` were used to develop the layout, and the combined BASIC mapping probe runs on the MiSTer core.

@@ -241,9 +241,8 @@ A118d:          DCI  $0e10               ; 118d 2a 0e 10
                 PI   A1356               ; 1194 28 13 56
                 PI   A1682               ; 1197 28 16 82
                 PI   A14ff               ; 119a 28 14 ff
-; Colour announcement always selects message 9 (YOU PLAY BLACK).
-; There is no conditional selection of message 10 (YOU LPAY WHITE)
-; here, including when the player chooses to move second.
+; Colour announcement always selects message 9 (YOU PLAY BLACK),
+; even when the player moves second
                 LIS  $9                  ; 119d 79
 A119e:          LR   $0,A                ; 119e 50
                 PI   A11ec               ; 119f 28 11 ec
@@ -299,8 +298,7 @@ A11b5:          LIS  $0                  ; 11b5 70
 ; Direct call sites and selected indices:
 ; $1181: 0,13,14; $119F: 5,6,9; $17D9: 12; $1832: 7,8,17,18;
 ; $183C: 4; $1ABD: 15,16; $1B07: 3; $1B3A: 2; $1C07: 11; $1C34: 1.
-; No normal caller selects index 10; the white-player message appears
-; to be unused. Merely having a table entry does not make it reachable.
+; No caller selects index 10, so YOU LPAY WHITE is never shown
 A11ec:          LR   K,P                 ; 11ec 08
                 PI   $40a9               ; 11ed 28 40 a9
                 DCI  $0872               ; 11f0 2a 08 72
@@ -509,9 +507,8 @@ A125c:          SR   1                   ; 125c 12
                 OUT  $11                 ; 12e5 27 11
                 DS   $1                  ; 12e7 31
                 SL   4                   ; 12e8 15
-; Unused message 10: YOU LPAY WHITE, with LPAY transposed.
-; No normal caller selects it; see $11EC and the fixed selector at $119D.
-; Preserve the original bytes.
+; Unused message 10: YOU LPAY WHITE (sic); see $11EC and the fixed
+; selector at $119D
                 LR   KL,A                ; 12e9 05
                 SL   1                   ; 12ea 13
                 LR   A,QL                ; 12eb 03
@@ -988,7 +985,7 @@ A154c:          LR   KL,A                ; 154c 05
                 LR   A,KU                ; 1564 00
                 NOP                      ; 1565 2b
 ; Opponent-selection menu: ABE, BETTY, CHARLIE, DOROTHY, ERNEST and
-; A FRIEND. These names are not known programmer credits.
+; A FRIEND
 A1566:          LR   QL,A                ; 1566 07
                 SL   1                   ; 1567 13
                 LR   A,KU                ; 1568 00
