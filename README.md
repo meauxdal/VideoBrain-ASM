@@ -61,3 +61,7 @@ dasm infoman\infoman.asm -f3 -obuild\infoman.bin -R
 On Linux, use forward slashes. The raw 8,192-byte cartridge contains the three original chips and a 2 KB zero-filled gap. Its SHA256 is `9b580726ad5d899a316901ad4513622a9e66e8131da3d6ac3de40180a2200d8f`.
 
 See the [printer correction notes](https://github.com/meauxdal/VideoBrain_MiSTer/blob/main/docs/INFOMAN.md#printer-corrections) for the separate optional patches.
+
+## Export for sharing
+
+`python tools/export_asm.py` packages the disassemblies, programs, Tiny BASIC builds and notes listed in [export/manifest.json](export/manifest.json) into `build/export/`, plus a dated zip. ASM files are flattened and rewritten in the column layout of Sean Riddle's listings, and each one must reassemble with DASM to its original binary. [export/STATE.json](export/STATE.json) records source and output hashes, so each run reports which files are new, changed or removed since the last export. Use `--skip-prebuild` to reuse existing Tiny BASIC builds.
