@@ -1,6 +1,6 @@
 # Patent Pinball adaptation
 
-Target: a cartridge for the MiSTer VideoBrain core (the machine-cycle-accurate target; there is no physical VideoBrain) that plays the patent's Pinball (US4177462, pages 14-24), built on the machine interface of retail Pinball EN02, the same way Tennis was adapted from retail Tennis EN03. Expect this to be far from working at first; the first milestones are about understanding and about getting a field on screen.
+Target: a cartridge for the MiSTer VideoBrain core (machine-cycle accurate, and the test target, since no original unit is available to test on) that plays the patent's Pinball (US4177462, pages 14-24), built on the machine interface of retail Pinball EN02, the same way Tennis was adapted from retail Tennis EN03. Expect this to be far from working at first; the first milestones are about understanding and about getting a field on screen.
 
 This is a first-pass analysis from reading the sources. It is not yet checked against a build or the simulator. Items marked **unverified** need a second look before anyone relies on them. Retail EN02 was read through roughly $1630 (the code); the data tables from about $167A onward were not read in detail.
 
@@ -11,9 +11,69 @@ This is a first-pass analysis from reading the sources. It is not yet checked ag
 | `asm-collection/pinball (patent source).f8.txt` | Adam Trionfo's retyped patent listing (tape 134A), 865 lines, assembled for $F800-$FFAF | Code only. No data tables at all |
 | `asm-collection/protopinball.zip` (`protopinball.asm`) | e5frog's port of the patent code to a 4 KB cart: patent code placed at $1800/$1900, header and `JMP $1900` added | The register setup block, numeral graphics and object graphics are **made up** (see below) |
 | `asm-collection/pinball-en02.asm` | Sean Riddle's disassembly of retail Pinball, a 2 KB cart at $1000 | Data tables are disassembled as code in places |
-| `asm-collection/pinballadam.zip` | Adam's other copy | Not read yet |
+| `asm-collection/pinballadam.zip` | Adam's v.04 of the same retyped listing (.f8/.lst/.bin/.sym), code only, ends at $FD2A | Same code as the 1.0 text; no data |
 
 The Tennis patent source came with a data dump (`US4232374 data $1200.bin`, 1,301 bytes). **Pinball has no equivalent.** The patent listing says the display-composer registers live at $0800-$0BFF and "ROM segment information" at $1000-$17FF, but that data was not printed. Every table the patent code reads has to be reconstructed.
+
+## Viability (2026-11-09)
+
+Question: can a patent Pinball for the MiSTer core be a proper reconstruction, or would it mostly be invention? Checked before writing any port code.
+
+### What the evidence fixes
+
+The patent printed the code but no data. The code itself still fixes much of the playfield, because every collision object's coordinates are encoded as `DCI` immediates (high byte Y, low byte X) plus an `LI`/`ADC` offset for the mirrored partner. Register bank layout used below: $800 pointer low, $810 hue (bits 7-5) + pointer bits 12-8, $820 X-copy/intensity (bits 6-5)/byte width, $830 height, $840 X, $850/$860 Y lists A/B, $870/$880 Y bit 8 + X-order A/B (confirmed against `uv202_pack.vhd` and `uv201_fetcher.vhd` in the core).
+
+| Fixed by the code | Values |
+| --- | --- |
+| Game logic | All of it: physics, boundaries, collision cascade, score, flippers, ball count, restart. The retyped listing is proofread (v1.0 binary = v.04) |
+| Bumpers (logical obj 2-7), 26x26 | (X,Y) $13,$8F / $2B,$A7 / $43,$BF and mirrors $A7,$BF / $BF,$A7 / $D7,$8F; score 1 each |
+| Upper targets (obj 8-11), 18x10 | $2F,$6B (3 pts) and $C7,$6B; $47,$53 (2 pts) and $B1,$53 |
+| Central bumper (obj 13), 18x14 | $79,$7B; 0 pts; hue cycles every 8 frames (display slot 8, `CENB` adds $40 to $818) |
+| Flippers (obj 12/14) | Collision $57,$D9 and $93/$9B; 16 or 24 wide, 20 tall. Display slots 7 (left) and 9 (right); right flipper X $A0 rest / $98 raised |
+| Flipper images | Four images in one page at offsets $00 (1 byte x 20 rows, rest), $17 (2 bytes x 8 rows, raised), $2A and $41 for the right flipper; intensity bits 11. The images themselves are not printed |
+| Score | Slots 0 and 1, digits at $1500 with a 15-byte stride, hue bits all set; final-mod register $8F2 advances by 2 every 100 points |
+| Ball | Slot 15, about 8x8 (from the `TBCL` offsets +7 and -9); start X $7E, Y $3A; hue shifts by $E0 each new ball; 5 balls |
+| Field | Ball X 22..222, Y $38..$F0 (drain); background purple from line 8, red from line $38 |
+| Init block | One 119-byte table at $1230 ($800-$85F, $870-$87F, $8F0-$8F6). `RSET` reloads $1270-$129F, which is the $840-$87F part of the same table, so the two are consistent |
+
+That covers all 16 display slots: two digits, six bumpers, four targets, central bumper, two flippers and the ball.
+
+### What nothing fixes
+
+- Every bitmap: bumpers, targets, central bumper, ball, flippers, digits. Sizes are known; shapes are not.
+- Hues of every object except the digits; intensity of everything except the flippers.
+- Which display slot (2-6, 10-14) holds which bumper or target.
+- The exact display-vs-collision offset. The right flipper's collision X ($93/$9B) and display X ($98/$A0) differ by 5, so drawn images were not simply the collision boxes.
+- The flipper image page (pointer bits 12-8 live in the unprinted init block).
+
+Places checked and empty: the patent has only two figures, both block diagrams, with no screen picture. pinballadam.zip has no data. Retail EN02's 2 KB contains none of the patent's coordinate pairs, so its playfield cannot be read back as the prototype's. e5frog's protopinball data is not the prototype's: its playfield X/Y/size values are retail EN02's register values (see below) and its flipper image is retail's $16EC bytes, so it is patent code driving the retail playfield. It was not assembled for this reason.
+
+### Retail EN02 playfield vs patent bounds
+
+Retail sets up its 16 objects from a 6-byte-per-object table at $1755 (height, $820 width byte, center X, center Y, pointer hi, pointer lo), committed by `A12FE`; register X = center X - 4 x bytes, register Y = center Y - height/2 (`A1214`, $13DD-$1408). Decoded in register units (left, top, width x height):
+
+| Role | Patent (collision boxes from code) | Retail EN02 (display objects) |
+| --- | --- | --- |
+| Field width | ball X 22..230, about 208 px, axis about 131 | objects span X 30..160 under a 128-px top bar at X 32..160, axis 93 |
+| Bumpers | 26x26 at (19,143) (43,167) (67,191) + mirrors; steps of 24/24 | 16x14 at (30,153) (40,169) (56,185) + mirrors; steps 10-16 X, 16 Y |
+| Targets | 18x10; inner pair higher (71,83), outer pair lower (47,107) | 8x14; outer pair higher (30,89), inner pair lower (54,109) |
+| Center object | 18x14 bumper at (121,123), on the axis | 8x14 checkerboard at (81,121), 8 px off the axis (role unverified) |
+| Flippers | about 16-24 x 20 at Y 217, X 87 / 147-155 | 8x32 at Y 200, X 64 / 114 |
+| Other | none | 128x7 top bar at (32,37); ball images in slots 0 and 15 |
+
+Same vocabulary, different geometry: both have two mirrored diagonal triples of bumpers descending inward, four targets in mirrored pairs above them, a center object near Y 122-130 and two flippers near Y 200-217. But retail's field is about 60% as wide, its bumpers about 40% of the area, its target pairs are arranged the other way up, and it adds a top bar. Retail's horizontal bumper offsets from the axis are about 0.58x the patent's, but the vertical spacing does not scale the same way, so retail is not a uniform rescale of the prototype. Retail's shapes (checkerboard bumpers and targets, 1-byte-wide flipper strokes) can be borrowed as a style, but its bounds cannot stand in for the patent's.
+
+### Verdict
+
+A faithful reconstruction of the game's behavior and layout is possible; a faithful reconstruction of its appearance is not. This is a lower ceiling than Tennis, where the patent's data dump supplied the real images and colors.
+
+That still makes it worth doing, provided the result is labeled honestly:
+
+- Rules, physics, collisions, scoring, flipper logic, object positions and sizes come from the patent code, with no invention.
+- First milestone, using evidence only: every object drawn as a solid box of its collision size at its collision position. That is what the code says the playfield is, and it needs no invented pixels.
+- Optional second skin: plausible bitmaps (round bumpers, flipper shapes, digits) inside those boxes, marked as reconstruction in the source, with a build switch back to the evidence-only boxes.
+
+If the goal is "looks like the 1976 prototype", stop here: no surviving source shows that. If the goal is "plays like the 1976 prototype", go ahead.
 
 ## The patent program, in brief
 
@@ -99,6 +159,5 @@ Retire: retail's multi-player mode selection, retail's own ball physics and obje
 
 ## Open questions
 
-- Whether `pinballadam.zip` carries data that protopinball lacks.
 - Whether to keep the patent's raster color bands (purple/red backgrounds) or let the stock path own the background.
 - Whether the target should be the prototype's look (bumper layout from the patent figures) or keep retail's playfield.

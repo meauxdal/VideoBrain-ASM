@@ -1,0 +1,425 @@
+{
+ "exported": "2026-11-09",
+ "items": {
+  "disassemblies/infoman.asm": {
+   "sources": {
+    "infoman/infoman.asm": "4789373dc4837eec"
+   },
+   "output": "6adf27739ab39ff8",
+   "info": "8192 bytes, CRC32 B5CB57CE"
+  },
+  "annotated/vbfinancier.asm": {
+   "sources": {
+    "asm-collection/vbfinancier.asm": "60afaa45bb9f727b"
+   },
+   "output": "60afaa45bb9f727b",
+   "info": "copied unchanged"
+  },
+  "annotated/uvres-1n-2129-7802.asm": {
+   "sources": {
+    "asm-collection/uvres-1n-2129-7802.asm": "20cfddaaeb96d36f"
+   },
+   "output": "20cfddaaeb96d36f",
+   "info": "copied unchanged"
+  },
+  "annotated/uvres-1n-2129-7802_rev1.asm": {
+   "sources": {
+    "asm-collection/uvres-1n-2129-7802_rev1.asm": "c95a738ac3210f8b"
+   },
+   "output": "c95a738ac3210f8b",
+   "info": "copied unchanged"
+  },
+  "annotated/vbexp1.asm": {
+   "sources": {
+    "asm-collection/vbexp1.asm": "9dd4837520b30bb1"
+   },
+   "output": "9dd4837520b30bb1",
+   "info": "copied unchanged"
+  },
+  "annotated/Money_Minder_vb1000mm.asm": {
+   "sources": {
+    "asm-collection/Money_Minder_vb1000mm.asm": "442ff80b19116bff"
+   },
+   "output": "442ff80b19116bff",
+   "info": "copied unchanged"
+  },
+  "annotated/vbdemo.asm": {
+   "sources": {
+    "asm-collection/vbdemo.asm": "69cf7818ae88f66f"
+   },
+   "output": "69cf7818ae88f66f",
+   "info": "copied unchanged"
+  },
+  "annotated/viceversa-en06.asm": {
+   "sources": {
+    "asm-collection/viceversa-en06.asm": "bbc3e356e58926fb"
+   },
+   "output": "bbc3e356e58926fb",
+   "info": "copied unchanged"
+  },
+  "annotated/checkers-en04.asm": {
+   "sources": {
+    "asm-collection/checkers-en04.asm": "3a67cd16cfaf5f17"
+   },
+   "output": "3a67cd16cfaf5f17",
+   "info": "copied unchanged"
+  },
+  "tennis/tennis-patent-court.asm": {
+   "sources": {
+    "tennis/tennis.asm": "c1acbb7d2f8f0939",
+    "tennis/stock-input.asm": "1936892996c71ec4"
+   },
+   "output": "165e5ed425681dd7",
+   "info": "4096 bytes, CRC32 E6D08187"
+  },
+  "tennis/tennis-candidate.asm": {
+   "sources": {
+    "tennis/candidate.asm": "3a3b26f71aab5059",
+    "tennis/paddles.asm": "e2845bbe4d57c909",
+    "tennis/paddle-images.inc": "a474d4783e7aa3d7",
+    "tennis/controls.asm": "d7557f86078ff9dd",
+    "tennis/stock-interrupt.asm": "ecf89c7757020dd0",
+    "tennis/rally.asm": "939651d6bd239d05",
+    "tennis/rally-state.asm": "80d6cf128b367706",
+    "tennis/game.asm": "d42474ceabe6dc8e",
+    "tennis/scores.asm": "a7c2b4a2825243bb",
+    "tennis/score-digits.inc": "9ec57dd0576e4e25",
+    "tennis/scene.asm": "980a3bc45a843540",
+    "tennis/scene-images.inc": "8c81092af4e064f9",
+    "tennis/display.asm": "ad9643cb0fefda45",
+    "tennis/display-sort.inc": "03dd0b96b572ede3",
+    "tennis/stock-input.asm": "1936892996c71ec4",
+    "tennis/sound.asm": "33d5ac1af5c177c2"
+   },
+   "output": "8bfe3bf9587be78f",
+   "info": "4096 bytes, CRC32 F4E312C0"
+  },
+  "diagnostics/dac_test.asm": {
+   "sources": {
+    "diagnostics/dac-test/dac_test.asm": "2d5682009a5e6ed8"
+   },
+   "output": "ae5c3e297f5a62d9",
+   "info": "37 bytes, CRC32 2DD9E112"
+  },
+  "diagnostics/selftest.asm": {
+   "sources": {
+    "diagnostics/selftest/selftest.asm": "ecbd5e13638c705a"
+   },
+   "output": "39f0f3db2bc40579",
+   "info": "2048 bytes, CRC32 7AD84746"
+  },
+  "diagnostics/selftest_int.asm": {
+   "sources": {
+    "diagnostics/selftest/selftest_int.asm": "af1b4c86a043ba2c"
+   },
+   "output": "fa779b4725f68dda",
+   "info": "2048 bytes, CRC32 F00B7413"
+  },
+  "diagnostics/JoystickDiag.asm": {
+   "sources": {
+    "diagnostics/joystick-diag/JoystickDiag.asm": "9ee25764cd72119f"
+   },
+   "output": "53c59f5b00a5d5ae",
+   "info": "180 bytes, CRC32 51C4FFE3"
+  },
+  "diagnostics/TimingBaseline.asm": {
+   "sources": {
+    "diagnostics/timing/TimingBaseline.asm": "56b675b58061a20f"
+   },
+   "output": "4bcfeb463db21ecc",
+   "info": "2048 bytes, CRC32 BA9080A7"
+  },
+  "diagnostics/TimingScreen.asm": {
+   "sources": {
+    "diagnostics/timing/TimingScreen.asm": "9b24e1d2e1c5de7f"
+   },
+   "output": "39140a9587fe8d2c",
+   "info": "2048 bytes, CRC32 F750A743"
+  },
+  "tinybasic/tinybasic-baseline.asm": {
+   "sources": {
+    "tinybasic/baseline/tinybasic.f8": "b0a1e58fd8abcb07",
+    "tinybasic/baseline/VBCHARS.ASM": "b9760213afe5eb13",
+    "tinybasic/baseline/VBBIOS.ASM": "47ab1f7600a685a7"
+   },
+   "output": "07a2ded14c6e7179",
+   "info": "4096 bytes, CRC32 F3BFF3D3"
+  },
+  "tinybasic-enhanced/bank0-boot.asm": {
+   "sources": {
+    "tinybasic/banked/boot.f8": "45c7c2c50275fccc",
+    "tinybasic/baseline/VBCHARS.ASM": "b9760213afe5eb13",
+    "build/tinybasic/banked/runtime_equates.inc": "afbed75dc9e2975c",
+    "build/tinybasic/banked/boot_title.inc": "338084de92b35893",
+    "build/tinybasic/banked/boot_ids.inc": "5818d7891bff807f",
+    "build/tinybasic/banked/tape_ids.inc": "3e2f11c39e3b76fa",
+    "tinybasic/banked/tape_core.f8": "10a9a5552844add3",
+    "build/tinybasic/banked/console_save.inc": "da7652b297e7883b",
+    "build/tinybasic/banked/console_restore.inc": "87eea4d4a6428358",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "b2905664976340bb",
+   "info": "2048 bytes, CRC32 DD71CC60"
+  },
+  "tinybasic-enhanced/bank1-interpreter.asm": {
+   "sources": {
+    "build/tinybasic/banked/bank-1.f8": "6b6481f3d519b5d6",
+    "build/tinybasic/banked/shared.inc": "f0425267eb35a74f",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "bca82d61e9b1f563",
+   "info": "2048 bytes, CRC32 CD4DD019"
+  },
+  "tinybasic-enhanced/bank2-interpreter.asm": {
+   "sources": {
+    "build/tinybasic/banked/bank-2.f8": "708d98b01d63d568",
+    "build/tinybasic/banked/shared.inc": "f0425267eb35a74f",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "b7c99d2ddb8b35bc",
+   "info": "2048 bytes, CRC32 46788275"
+  },
+  "tinybasic-enhanced/bank3-interpreter.asm": {
+   "sources": {
+    "build/tinybasic/banked/bank-3.f8": "8e303bfd2d5b3ffc",
+    "build/tinybasic/banked/shared.inc": "f0425267eb35a74f",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "63bb90545f2414a5",
+   "info": "2048 bytes, CRC32 F4218262"
+  },
+  "tinybasic-enhanced/bank4-interpreter.asm": {
+   "sources": {
+    "build/tinybasic/banked/bank-4.f8": "8e8f9db016ba6994",
+    "build/tinybasic/banked/shared.inc": "f0425267eb35a74f",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "0ccaf56d568de715",
+   "info": "2048 bytes, CRC32 E3B3E5FC"
+  },
+  "tinybasic-enhanced/bank5-console.asm": {
+   "sources": {
+    "tinybasic/banked/console.f8": "972cf131a16980cb",
+    "build/tinybasic/banked/runtime_equates.inc": "afbed75dc9e2975c",
+    "build/tinybasic/banked/serial_ids.inc": "51bebfadd8865d7f",
+    "build/tinybasic/banked/console_save.inc": "da7652b297e7883b",
+    "build/tinybasic/banked/console_restore.inc": "87eea4d4a6428358",
+    "build/tinybasic/banked/console_routines.inc": "abdb37e6882ec207",
+    "build/tinybasic/banked/drawchar.inc": "2313c81d58c9b7f4",
+    "build/tinybasic/banked/console_data.inc": "f34d076e6511c26f",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "2fe6882cccd1da3a",
+   "info": "2048 bytes, CRC32 4D202347"
+  },
+  "tinybasic-enhanced/bank6-keyboard.asm": {
+   "sources": {
+    "tinybasic/banked/keyboard.f8": "2b6a706d54aa51f8",
+    "build/tinybasic/banked/runtime_equates.inc": "afbed75dc9e2975c",
+    "build/tinybasic/banked/key_id.inc": "15e87b6b8f679844",
+    "build/tinybasic/banked/console_save.inc": "da7652b297e7883b",
+    "build/tinybasic/banked/console_restore.inc": "87eea4d4a6428358",
+    "build/tinybasic/banked/key_data.inc": "836d3856cabb6007",
+    "tinybasic/banked/serial.f8": "554d7d5029f8ef49",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "dd391cc87a550b29",
+   "info": "2048 bytes, CRC32 B22BDC51"
+  },
+  "tinybasic-enhanced/bank7-dispatch.asm": {
+   "sources": {
+    "build/tinybasic/banked/dispatch.f8": "9d2669ebf3d755a1",
+    "build/tinybasic/banked/runtime_equates.inc": "afbed75dc9e2975c",
+    "build/tinybasic/banked/tape_ids.inc": "3e2f11c39e3b76fa",
+    "build/tinybasic/banked/targets.inc": "330fae2d0ea9a142",
+    "tinybasic/banked/tape_io.f8": "31da2c95cf84c3db",
+    "build/tinybasic/banked/common.inc": "496396af64adf937"
+   },
+   "output": "85b1f6a228cb1c73",
+   "info": "2048 bytes, CRC32 DF678B58"
+  },
+  "tinybasic-timeshare/display-probe.asm": {
+   "sources": {
+    "tinybasic/timeshare/probe.f8": "ab78d17ea4053ccf",
+    "tinybasic/baseline/VBCHARS.ASM": "b9760213afe5eb13",
+    "build/tinybasic/timeshare/drawchar.inc": "2313c81d58c9b7f4",
+    "build/tinybasic/timeshare/display_data.inc": "a62acd8c5d5cb7a7"
+   },
+   "output": "0f16f2b82d893e74",
+   "info": "2048 bytes, CRC32 7463DD42"
+  },
+  "tinybasic-timeshare/console-probe.asm": {
+   "sources": {
+    "tinybasic/timeshare/console.f8": "d744cd03b7d755ca",
+    "tinybasic/baseline/VBCHARS.ASM": "b9760213afe5eb13",
+    "build/tinybasic/timeshare/drawchar.inc": "2313c81d58c9b7f4",
+    "build/tinybasic/timeshare/console_data.inc": "afa1a134b62aff87"
+   },
+   "output": "6baebc6df7bb459c",
+   "info": "2048 bytes, CRC32 8257C31E"
+  },
+  "tinybasic-fixes/tinybasicvb-recordfix.asm": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/tinybasicvb-recordfix.f8": "b34c8288e2458e17",
+    "asm-collection/tinybasic_record_count_fix/VBCHARS.ASM": "b9760213afe5eb13",
+    "asm-collection/tinybasic_record_count_fix/VBBIOS.ASM": "47ab1f7600a685a7"
+   },
+   "output": "6c932dcc75f2855e",
+   "info": "4096 bytes, CRC32 D40A8E2B"
+  },
+  "tinybasic-fixes/tinybasic_recordfix_README.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/tinybasic_recordfix_README.txt": "b1bbc6c1bdb670ee"
+   },
+   "output": "b1bbc6c1bdb670ee",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/cancelfix_README.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/cancelfix_README.txt": "2fed7442d5ea2c76"
+   },
+   "output": "2fed7442d5ea2c76",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/inputfix_README.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/inputfix_README.txt": "2b64242e34f27461"
+   },
+   "output": "2b64242e34f27461",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/printfix_README.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/printfix_README.txt": "784a0c820b51160a"
+   },
+   "output": "784a0c820b51160a",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/stringfix_README.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/stringfix_README.txt": "56b074f316162bbd"
+   },
+   "output": "56b074f316162bbd",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/validation.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/validation.txt": "6da2995e31b8e875"
+   },
+   "output": "6da2995e31b8e875",
+   "info": "copied unchanged"
+  },
+  "tinybasic-fixes/learnings.txt": {
+   "sources": {
+    "asm-collection/tinybasic_record_count_fix/LEARNINGS.md": "b02bf49c870db759"
+   },
+   "output": "3f4bd0bef794f70a",
+   "info": "converted from Markdown"
+  },
+  "notes/asm-collection-annotations.txt": {
+   "sources": {
+    "asm-collection/README.md": "df33a3501a01f3cc"
+   },
+   "output": "b3dccb561d17b686",
+   "info": "converted from Markdown"
+  },
+  "notes/infoman.txt": {
+   "sources": {
+    "README.md": "12f793fd285f823b"
+   },
+   "output": "629eea5db0096e3c",
+   "info": "converted from Markdown"
+  },
+  "notes/pinball-design.txt": {
+   "sources": {
+    "pinball/DESIGN.md": "c8bc4891f97be755"
+   },
+   "output": "78d27033076ad906",
+   "info": "converted from Markdown"
+  },
+  "notes/tennis-design.txt": {
+   "sources": {
+    "tennis/DESIGN.md": "8278b5e72931a939"
+   },
+   "output": "6e591f8031e27c2f",
+   "info": "converted from Markdown"
+  },
+  "notes/tennis-readme.txt": {
+   "sources": {
+    "tennis/README.md": "9aa3287608b2a39c"
+   },
+   "output": "b2b806684f625f86",
+   "info": "converted from Markdown"
+  },
+  "notes/tinybasic-readme.txt": {
+   "sources": {
+    "tinybasic/README.md": "ee444fc6eb2b87d0"
+   },
+   "output": "f1253e9379289dac",
+   "info": "converted from Markdown"
+  },
+  "notes/tinybasic-enhanced-history.txt": {
+   "sources": {
+    "tinybasic/banked/README.md": "87c7a8ea2939b08d"
+   },
+   "output": "aac570bfecb3df40",
+   "info": "converted from Markdown"
+  },
+  "notes/tinybasic-progress.txt": {
+   "sources": {
+    "TINYBASIC-PROGRESS.md": "cbfce25cb1887d7a"
+   },
+   "output": "0b690a92ad9af0a9",
+   "info": "converted from Markdown"
+  },
+  "notes/timeshare-display-design.txt": {
+   "sources": {
+    "tinybasic/timeshare/DESIGN.md": "c8f9decc1e1473ff"
+   },
+   "output": "e6e2586719e60991",
+   "info": "converted from Markdown"
+  },
+  "notes/diagnostics.txt": {
+   "sources": {
+    "diagnostics/README.md": "e0e033e55f901995"
+   },
+   "output": "fe53fe3964df4b57",
+   "info": "converted from Markdown"
+  },
+  "notes/timing-baseline.txt": {
+   "sources": {
+    "diagnostics/timing/TimingBaseline.md": "952b718415a11cff"
+   },
+   "output": "4c8476cd8c722884",
+   "info": "converted from Markdown"
+  },
+  "notes/timing-screen.txt": {
+   "sources": {
+    "diagnostics/timing/TimingScreen.md": "9a3678c84e476bc6"
+   },
+   "output": "35e1efb31fd24f4f",
+   "info": "converted from Markdown"
+  },
+  "notes/joystick-diag.txt": {
+   "sources": {
+    "diagnostics/joystick-diag/README.md": "bb6c1a92d843a28f"
+   },
+   "output": "a160fab169fd6c10",
+   "info": "converted from Markdown"
+  },
+  "notes/infoman-test-plan.txt": {
+   "sources": {
+    "diagnostics/infoman/HARDWARE-TEST-PLAN.md": "5fcfd4d7d9bdc525"
+   },
+   "output": "39aa66647036f226",
+   "info": "converted from Markdown"
+  },
+  "notes/infoman-test-results.txt": {
+   "sources": {
+    "diagnostics/infoman/RESULTS.md": "d3dccfee3ec2ad4a"
+   },
+   "output": "d324f7e71e00c7b5",
+   "info": "converted from Markdown"
+  }
+ }
+}
